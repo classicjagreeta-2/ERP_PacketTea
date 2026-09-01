@@ -1,0 +1,774 @@
+﻿
+
+
+@using PacketTea.Utility
+@using PagedList.Mvc;
+@using PagedList;
+@model PacketTea.Models.PT.PT_ALL_LIST
+
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!doctype html>
+<html lang="en">
+
+<head>
+
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
+    <style>
+        .table.table-sm td, .table.table-sm th {
+            padding: 0.6rem;
+        }
+
+        tbody div {
+            overflow: unset !important;
+            height: auto !important;
+            max-height: none !important;
+        }
+
+        .btn-link {
+            font-weight: 500;
+            color: black;
+            border-radius: 0;
+        }
+    </style>
+
+
+
+</head>
+
+<body>
+    @*<input type="hidden" id="currentPage" value="@ViewBag.Page" />
+        <input type="hidden" id="isLoading" value="0" />
+        <input type="hidden" id="totalRows" value="@Model.TotalItemCount" />
+        <input type="hidden" id="pageSize" value="@ViewBag.PageSize" />*@
+    <input type="hidden" id="hiddenUNIT" />
+    <input type="hidden" id="hiddenGLOCA" />
+
+
+    <!-- first screen start -->
+    <div class="general-container">
+
+
+        <div class="action-btns">
+            <ul>
+                <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                <li>
+                    <button type="button"
+                            class="IdaddNewRecord btn btn-link"
+                            disabled="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false))">
+                        <i class="fa fa-plus"></i> New
+                    </button>
+                </li>
+
+                <li>
+                    <a href="javascript:void(0)" id="editBtn"
+                       style="@( !((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false)
+                        ? "pointer-events:none; opacity:0.5;"
+                        : "" )">
+                        <i class="fa fa-pencil"></i> Edit
+                    </a>
+                </li>
+
+                <li>
+                    <a href="javascript:void(0)"
+                       id="deleteBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Delete ?? false)
+                        ? "pointer-events:none; opacity:0.5;"
+                        : "")">
+                        <i class="fa fa-trash-o"></i> Delete
+                    </a>
+                </li>
+
+                <li><a href="#"><i class="fa fa-eye"></i> View</a></li>
+                <li><a href="#"><i class="fa fa-list-ul"></i> Lines</a></li>
+                <li style="margin-left:auto">
+                    <label class="btn btn-inverse pull-right" style="margin: 10px;">
+                        LIST
+                    </label>
+                </li>
+            </ul>
+        </div>
+        <!-- action btns end -->
+
+        <div class="title-heading"> Master Blend Street   </div>
+
+        <!-- Your existing search form - NO CHANGES to your current code -->
+        <!-- Just add id="searchIcon" to your search icon -->
+
+        <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
+            <div style="position: relative; width: 250px;">
+                <input type="text"
+                       name="searchString"
+                       @*value="@ViewBag.CurrentFilter"*@
+                       placeholder="Search"
+                       style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
+                <i class="fa fa-search"
+                   id="searchInput"
+                   style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333; cursor: pointer;"></i>
+            </div>
+        </div>
+        @using (Ajax.BeginForm("Index", "BlendEntry",
+                new AjaxOptions
+                {
+                    HttpMethod = "POST",
+                    InsertionMode = InsertionMode.InsertAfter,
+                    UpdateTargetId = "prContainer",
+                    OnSuccess = "onLoadSuccess"
+                },
+                new { id = "loadMoreForm" }))
+        {
+            <input type="hidden" id="page" name="page" value="@ViewBag.Page" />
+            <input type="hidden" name="pageSize" value="@ViewBag.PageSize" />
+            <input type="hidden" name="searchString" value="@ViewBag.CurrentFilter" />
+            <input type="hidden" name="sortOrder" value="@ViewBag.CurrentSort" />
+            <input type="hidden" id="hiddenUNIT" />
+            <input type="hidden" id="hiddenDOCTYPE" />
+
+        }
+
+
+        <!-- Make sure your table has an ID -->
+        <table id="mainTable" class="table table-bordered">
+            <!-- your thead and tbody -->
+        </table>
+
+
+        <div class="table-responsive" id="tableScroll">
+            <table class="border main-table" id="poTable">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAll" class="checkbox-round" /></th>
+                        <th></th>
+                        <th>Doc No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+
+                        <th>Party <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Blend Details <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+
+                        <th>Master Blend No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+
+                        <th>Final Blend No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+
+                        <th>Warehouse <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Allocation <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Blend Mark <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Blend Grade <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>No of Chest <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Net WT/Chest <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Gross WT/Chest <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+
+                        <th>Shipping Mark <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Export Ref. No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Transporter <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Blend Qty <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    </tr>
+                </thead>
+                <tbody id="prContainer">
+                    @*@Html.Partial("_PRList", Model)*@
+                </tbody>
+
+            </table>
+            <div id="loading" style="display:none; text-align:center; padding:20px;">
+                Loading...
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xs-12 col-sm-12 col-md-5">
+                <div class="dataTables_info" id="dom-jqry_info" role="status" aria-live="polite">
+                    @*Showing <span id="shownCount">@Model.LastItemOnPage</span> of @Model.TotalItemCount*@
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="~/libraries/assetspo/js/jquery-ui.js"></script>
+    <script src="~/libraries/assetspo/js/custom.js"></script>
+
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
+    @*<script>
+                let isLoading = false;
+                $("#tableScroll").on("scroll", function () {
+                    debugger;
+                    let element = $(this)[0];
+                    if (element.scrollTop + element.clientHeight >= element.scrollHeight - 10) {
+
+                        if (!isLoading) {
+                            isLoading = true;
+                            $("#loading").show();
+                            let page = parseInt($("#page").val());
+                         /*   alert(page);*/
+                            $("#page").val(page + 1);
+
+                            $("#loadMoreForm").submit();
+                        }
+                    }
+                });
+                function onLoadSuccess() {
+
+            let pageSize = parseInt("@Model.PageSize");
+            let page = parseInt($("#page").val());
+
+            let shown = page * pageSize;
+
+            let total = parseInt("@Model.TotalItemCount");
+            if (shown > total) shown = total;
+
+            $("#shownCount").text(shown);
+
+            $("#loading").hide();
+            isLoading = false;
+        }
+
+
+
+            </script>
+            <script>
+                $(document).ready(function () {
+                    debugger;
+                    var $searchInput = $('input[name="searchString"]');
+                    var searchInput = $('#searchInput');
+                    var $tableBody = $('#prContainer');
+                    var searchTimeout;
+
+                    // Store the original table content (before any search)
+                    var originalContent = $tableBody.html();
+
+                    // If page loads with existing search term
+                    if ($searchInput.val() && $searchInput.val().length > 0) {
+                        searchInput.removeClass('fa-search').addClass('fa-times').css('cursor', 'pointer');
+                    }
+
+                    function performSearch(query) {
+                        debugger;
+
+                        if (!query || !query.trim()) {
+                            $("#page").val(1);
+                            $searchInput.val('');
+                            $('#loadMoreForm input[name="searchString"]').val('');
+                            isLoading = false;
+                            $("#loadMoreForm").submit();
+                            return;
+                        }
+
+                        // Just clear, don't show loading message
+                        $tableBody.empty();
+
+                        // Update both search inputs
+                        $("#page").val(1);
+                        $searchInput.val(query);
+                        $('#loadMoreForm input[name="searchString"]').val(query);
+                        isLoading = false;
+                        $("#loadMoreForm").submit();
+                    }
+
+                    // Typing → debounced search
+                    $searchInput.on('input', function () {
+                        var value = $(this).val().trim();
+
+                        // Toggle X icon
+                        if (value) {
+                            searchInput.removeClass('fa-search').addClass('fa-times').css('cursor', 'pointer');
+                        } else {
+                            searchInput.removeClass('fa-times').addClass('fa-search').css('cursor', 'default');
+                        }
+
+                        clearTimeout(searchTimeout);
+                        searchTimeout = setTimeout(function () {
+                            performSearch(value);
+                        }, 500);
+                    });
+
+                    // Click on X → clear everything
+                    searchInput.on('click', function () {
+                        if ($(this).hasClass('fa-times')) {
+                            $searchInput.val('');
+                            $('#loadMoreForm input[name="searchString"]').val('');
+                            $("#page").val(1);
+                            searchInput.removeClass('fa-times').addClass('fa-search').css('cursor', 'default');
+                            isLoading = false;
+                            $("#loadMoreForm").submit();
+                        }
+                    });
+
+                    // Enter key → immediate search
+                    $searchInput.on('keypress', function (e) {
+                        if (e.which === 13) {
+                            e.preventDefault();
+                            clearTimeout(searchTimeout);
+                            performSearch($(this).val().trim());
+                        }
+                    });
+                });
+            </script>
+
+            <script>
+                //$(document).ready(function () {
+                //    // Accordion toggle
+                //    $('.accordion-header').click(function () {
+                //        // $('.accordion-header').not(this).removeClass('active').next('.accordion-body').slideUp();
+                //        $(this).toggleClass('active').next('.accordion-body').slideToggle();
+                //    });
+                //    $('.accordion-header').first().addClass('active').next('.accordion-body').show();
+
+
+                //});
+
+
+                $(document).ready(function () {
+                    $('.toggle-icon').on('click', function () {
+                        const $icon = $(this);
+                        const $mainRow = $icon.closest('tr');
+                        const $subTableRow = $mainRow.next('.sub-table-row');
+
+                        // Toggle visibility
+                        $subTableRow.toggle();
+
+                        // Toggle icon class
+                        if ($icon.hasClass('fa-plus')) {
+                            $icon.removeClass('fa-plus').addClass('fa-minus');
+                        } else {
+                            $icon.removeClass('fa-minus').addClass('fa-plus');
+                        }
+                    });
+                });
+            $(document).on("click", ".toggle-icon", function () {
+                debugger;
+            let icon = $(this);
+            let row = icon.closest("tr");
+            let childRow = row.next(".sub-table-row");
+            let tbody = childRow.find(".child-details-body");
+
+            let docno = icon.data("docno");
+            let doctype = icon.data("doctype");
+            let unit = icon.data("unit");
+            let docdt = icon.data("docdt");
+            let docyear = icon.data("docyear");
+           /* let itcd = icon.data("itcd");*/
+
+            // If already open → close it
+            if (childRow.is(":visible")) {
+                childRow.hide();
+                tbody.empty();
+                icon.removeClass("fa-minus").addClass("fa-plus");
+                return;
+            }
+
+            // Show loader
+            tbody.html(`
+                <tr>
+                    <td colspan="6" style="text-align:center;">
+                        <i class="fa fa-spinner fa-spin fa-2x"></i><br/>Loading...
+                    </td>
+                </tr>
+            `);
+
+            childRow.show();
+
+            // AJAX call
+            $.ajax({
+                url: "@Url.Action("GetDetailJson", "Purchase_Requisition")",
+                type: "GET",
+                data: {
+                    docno: docno,
+                    doctype: doctype,
+                    unit: unit,
+                    docdt: docdt,
+                    docyear: docyear,
+                   /* itcd: itcd*/
+                },
+                dataType: "json",
+                success: function (response) {
+                    tbody.empty();
+
+                    if (!response || response.length === 0) {
+                        tbody.html(`<tr><td colspan="6" style="text-align:center;">No records found</td></tr>`);
+                        return;
+                    }
+
+                    //response.forEach(function (item) {
+                    //    let html = `
+                    //        <tr>
+                    //            <td style="width:120px;">${item.ITCD}</td>
+                    //            <td>${item.ItemName}</td>
+                    //            <td>${item.ITEM_DESCN}</td>
+
+                    //            <td class="align-right">${Number(item.QUANTITY).toFixed(3)}</td>
+                    //            <td class="align-right">${Number(item.RATE).toFixed(2)}</td>
+                    //            <td class="align-right">${Number(item.AMT).toFixed(2)}</td>
+                    //        </tr>`;
+                    //    tbody.append(html);
+                    //});
+                    response.forEach(function (item) {
+                        let html = `
+                <tr>
+                    <td style="width:120px;">${item.ITCD}</td>
+                    <td>${item.ItemName}</td>
+                    <td>${item.UNIT_CD || ''}</td>
+                    <td class="align-right">${Number(item.QUANTITY).toFixed(3)}</td>
+                    <td class="align-right">${Number(item.RATE).toFixed(2)}</td>
+                    <td class="align-right">${Number(item.AMT).toFixed(2)}</td>
+                </tr>`;
+                        tbody.append(html);
+                    });
+
+                    icon.removeClass("fa-plus").addClass("fa-minus");
+                },
+                error: function (xhr) {
+                    tbody.html(`<tr><td colspan="6" style="color:red;">Error loading data!</td></tr>`);
+                    console.error("Error:", xhr);
+                }
+            });
+        });
+
+
+
+
+            </script>
+            <script>
+                function loadDocType(unitCode) {
+            console.log('📡 Loading DocTypes for UNIT:', unitCode);
+
+            // ✅ destroy safely
+            if ($('#ListingDocType').data('inputpicker')) {
+                $('#ListingDocType').inputpicker('destroy');
+            }
+
+            $('#ListingDocType').inputpicker({
+                url: '@Url.Action("GetDocType", "Purchase_Requisition")' + '?unit=' + unitCode,
+                fields: [
+                    { name: 'CODE', text: 'CODE' },
+                    { name: 'DESCN', text: 'DESCN' }
+                ],
+                fieldText: 'CODE',
+                fieldValue: 'CODE',
+                headShow: true,
+                autoOpen: true,
+                pagination: true,
+                pageField: 'p',
+                pageLimitField: 'limit',
+                pageLimit: 10,
+                pageCountField: 'count',
+                width: '140px',
+                urlDelay: 1
+            });
+
+            // ✅ prevent duplicate binding
+                    $('#ListingDocType').off('inputpicker.select');
+
+                    $('#ListingDocType').on('inputpicker.select', function (e, item) {
+                        if (item && item.CODE) {
+                            console.log('📌 Selected DOCTYPE (event):', item.CODE);
+                            $('#hiddenDOCTYPE').val(item.CODE);
+                        }
+                    });
+
+                    // ✅ BACKUP FIX (THIS WILL SOLVE YOUR ISSUE)
+                    $('#ListingDocType').on('change', function () {
+                        var val = $(this).val();
+                        console.log('📌 Selected DOCTYPE (change):', val);
+
+                        if (val) {
+                            $('#hiddenDOCTYPE').val(val);
+                        }
+                    });
+        }
+
+
+        // Build New Row
+        function buildNewRow() {
+            return `
+        <tr id="newUnitRow" class="new-entry-row">
+            <td class="text-center">
+                <i class="fa fa-pencil go-new"
+                   style="cursor:pointer;color:#black;"
+                   title="Go to New Entry"></i>
+            </td>
+            <td></td>
+
+            <!-- UNIT -->
+            <td>
+                <input type="text"
+                       id="ListingUnitCode"
+                       class="form-control"
+                       placeholder="Select Unit"
+                       autocomplete="off"
+                       style="width:140px;" />
+            </td>
+
+            <!-- DOCTYPE -->
+            <td>
+                <input type="text"
+                       id="ListingDocType"
+                       class="form-control"
+                       placeholder="Select DocType"
+                       autocomplete="off"
+                       style="width:140px;"
+                       disabled />
+            </td>
+
+            <td colspan="8"></td>
+        </tr>`;
+        }
+
+
+        // Add New Row
+        $(document).on('click', '.IdaddNewRecord', function () {
+            if ($('#newUnitRow').length) return;
+
+            $('#hiddenUNIT').val('');
+            $('#hiddenDOCTYPE').val('');
+
+            $('#prContainer').prepend(buildNewRow());
+            initUnitPicker();
+
+            setTimeout(() => {
+                $('#ListingUnitCode').focus();
+            }, 100);
+        });
+
+
+        // Unit Picker
+        function initUnitPicker() {
+
+            $('#ListingUnitCode').inputpicker({
+                url: '@Url.Action("GetUnit", "Purchase_Requisition")',
+                fields: [
+                    { name: 'code', text: 'CODE' },
+                    { name: 'descn', text: 'NAME' }
+                ],
+                fieldText: 'code',
+                fieldValue: 'code',
+                headShow: true,
+                autoOpen: true,
+                pagination: true,
+                pageField: 'p',
+                pageLimitField: 'limit',
+                pageLimit: 10,
+                pageCountField: 'count',
+                width: '140px',
+                urlDelay: 1
+            });
+
+            // select event
+            $('#ListingUnitCode').on('inputpicker.select', function (e, item) {
+                if (item && item.code) {
+                    saveUnitData(item.code);
+                }
+            });
+
+            // change fallback
+            $('#ListingUnitCode').on('change', function () {
+                var selectedCode = $(this).val();
+                if (selectedCode) {
+                    fetchUnitByCode(selectedCode);
+                }
+            });
+        }
+
+
+        // Fetch Unit
+        function fetchUnitByCode(code) {
+            $.ajax({
+                url: '@Url.Action("GetUnit", "Purchase_Requisition")',
+                data: { q: code, limit: 1, p: 1 },
+                method: 'GET',
+                success: function (response) {
+                    if (response.data && response.data.length > 0) {
+                        saveUnitData(response.data[0].code);
+                    }
+                }
+            });
+        }
+
+
+        // ✅ MAIN FIX HERE
+        function saveUnitData(code, gloca) {
+            console.log('💾 Saving unit data:', code);
+
+            $('#hiddenUNIT').val(code);
+
+            // enable doctype
+            $('#ListingDocType').prop('disabled', false);
+
+            // clear
+            $('#ListingDocType').val('');
+            $('#hiddenDOCTYPE').val('');
+
+            // load picker
+            loadDocType(code);
+
+            // 🔥 IMPORTANT: OPEN DROPDOWN
+            setTimeout(() => {
+                $('#ListingDocType').click();
+            }, 300);
+        }
+
+
+        // Go New
+        $(document).on('click', '.go-new', function (e) {
+            e.preventDefault();
+
+            var UNIT = $('#hiddenUNIT').val();
+            var DOCTYPE = $('#hiddenDOCTYPE').val();
+
+            if (!UNIT) {
+                alert("Please select Unit first");
+                return;
+            }
+
+            if (!DOCTYPE) {
+                alert("Please select DocType first");
+                return;
+            }
+
+            window.location.href =
+                '@Url.Action("Purchase_RequisitionSaveOrUpate", "Purchase_Requisition")'
+                + '?unit=' + encodeURIComponent(UNIT)
+                + '&doctype=' + encodeURIComponent(DOCTYPE);
+        });
+            </script>
+
+
+            <script>
+                        $(document).on('click', '#deleteBtn', function () {
+
+                            debugger;
+                    // ✅ get selected checkbox
+                    var $checked = $('.row-check:checked');
+
+                    if ($checked.length === 0) {
+                        $.confirm({
+                            title: "Delete",
+                            type: "orange",
+                            content: "<b>Please select one record to delete.</b>",
+                            buttons: { ok: { btnClass: "btn-primary" } }
+                        });
+                        return;
+                    }
+
+                    if ($checked.length > 1) {
+                        $.confirm({
+                            title: "Delete",
+                            type: "orange",
+                            content: "<b>Please select only ONE record.</b>",
+                            buttons: { ok: { btnClass: "btn-primary" } }
+                        });
+                        return;
+                    }
+
+                            //var id = $checked.data('id');       // 🔹 NORMAL ID
+                            /* var id = $checked.attr('data-id');*/
+                            var id = $checked.val();
+                            var docno = $checked.data('docno');   // 🔹 DISPLAY ONLY
+
+                    $.confirm({
+                        title: "Confirm Delete",
+                        type: "red",
+                        content: `<b>Are you sure you want to delete Purchase Requisition Data No <span style="color:#d9534f;">${docno}</span> ?</b>`,
+                        buttons: {
+                            yes: {
+                                text: "Yes, Delete",
+                                btnClass: "btn-danger",
+                                action: function () {
+
+                                    $('<form>', {
+                                        method: 'POST',
+                                        action: '@Url.Action("Delete", "Purchase_Requisition")'
+                                    })
+                                    .append($('<input>', {
+                                        type: 'hidden',
+                                        name: 'id',
+                                        value: id
+                                    }))
+                                    .appendTo('body')
+                                    .submit();
+                                }
+                            },
+                            no: {
+                                text: "Cancel",
+                                btnClass: "btn-primary"
+                            }
+                        }
+                    });
+                });
+            </script>
+            <script>
+                function formatDotNetDate(dateString) {
+
+                    if (!dateString) return "";
+
+                    // extract milliseconds
+                    let timestamp = parseInt(dateString.replace(/[^0-9]/g, ''));
+
+                    let date = new Date(timestamp);
+
+                    let month = String(date.getMonth() + 1).padStart(2, '0');
+                    let year = date.getFullYear();
+
+                    return month + "-" + year;
+                }
+            </script>
+            <script>
+        $(document).on('click', '#editBtn', function () {
+
+            var $checked = $('.row-check:checked');
+
+
+
+            // ✅ Get encrypted ID
+            var id = $checked.val();
+
+            // ✅ Encode ONLY here
+            window.location.href =
+                '@Url.Action("Purchase_RequisitionSaveOrUpate", "Purchase_Requisition")'
+                + '?id=' + encodeURIComponent(id);
+        });
+            </script>
+            <script>
+                $(document).on('change', '.row-check', function () {
+                    if ($(this).is(':checked')) {
+                        $('.row-check').not(this).prop('checked', false);
+                    }
+                });
+            </script>*@
+
+    @*@if (TempData["ErrorMessage"] != null)
+        {
+            <script>
+            $(function () {
+                debugger
+                $.confirm({
+                    title: 'Warning',
+                    type: 'red',
+                    content: '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(TempData["ErrorMessage"].ToString()))',
+                    buttons: {
+                        ok: {
+                            text: 'OK',
+                            btnClass: 'btn-danger'
+                        }
+                    }
+                });
+
+            });
+            </script>*@
+    @*}*@
+
+
+</body>
+
+</html>
+
+
+
+
+
+
+
+
