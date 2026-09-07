@@ -1,0 +1,69 @@
+﻿
+@{
+    ViewBag.Title = "_Notification";
+    //Layout = null;
+}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet" />
+
+@if (TempData["toastrError"] != null)
+{
+    <script type="text/javascript">
+        toastr.options = {
+            "closeButton": false,
+            "debug": false,
+            "newestOnTop": false,
+            "progressBar": false,
+            "positionClass": "toast-top-center", //"toast-top-full-width",
+            "preventDuplicates": false,
+            "onclick": null,
+            "showDuration": "300",
+            "hideDuration": "1000",
+            "timeOut": 0,
+            "extendedTimeOut": 0,
+            "showEasing": "swing",
+            "hideEasing": "linear",
+            "showMethod": "fadeIn",
+            "hideMethod": "fadeOut",
+            "tapToDismiss": false,
+            "escapeHtml" : false
+        }
+
+        $('body').on('click', '.close-toastr', function () {
+            debugger;
+            $(this).closest('.toast-error').remove();
+        });
+       
+        @*//toastr["error"]("@TempData["toastrError"] <br/><br/> <button type='button' class='btn btn-warning close-toastr'>CLOSE</button>", "Error")*@
+        toastr["error"]("@TempData["toastrError"] ", "Error")
+        @*toastr["error"]("@TempData["toastrError"] <br/><br/> <button type='button' class='btn btn-warning clear' style='width:20%;'>OK</button>", "Error")*@
+    </script>
+}
+
+
+@if (TempData["toastrSuccess"] != null)
+{
+    <script type="text/javascript">
+        toastr.options = {
+            'closeButton': 'true',
+            'debug': false,
+            'newestOnTop': true,
+            'progressBar': true,
+            'positionClass': 'toast-top-center', //toast- top - right
+            'preventDuplicates': true,
+            'onclick': null,
+            'showDuration': '300',
+            'hideDuration': '1000',
+            'timeOut': '5000',
+            'extendedTimeOut': '1000',
+            'showEasing': 'swing',
+            'hideEasing': 'linear',
+            'showMethod': 'fadeIn',
+            'hideMethod': 'fadeOut'
+        };
+        toastr.success('@TempData["toastrSuccess"]');
+    </script>
+}
+
+

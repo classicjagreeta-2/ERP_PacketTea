@@ -1,0 +1,484 @@
+﻿@model IPagedList<PacketTea.Models.PT.UNBL_HED>
+
+@using PagedList.Mvc;
+@using PagedList;
+
+@using PacketTea.Utility
+
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="~/Content/assets/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/Content/assets/css/jquery-ui.css">
+    <link rel="stylesheet" href="~/Content/assets/css/voucher-entry.css">
+    <link rel="stylesheet" href="~/Content/assets/css/voucher-entry-responsive.css">
+    <link href="~/Content/src/jquery.inputpicker.css" rel="stylesheet">
+    <script src="https://unpkg.com/slim-select@latest/dist/slimselect.js"></script>
+    <link href="https://unpkg.com/slim-select@latest/dist/slimselect.css" rel="stylesheet">
+    <style>
+        .table.table-sm td, .table.table-sm th {
+            padding: 0.6rem;
+        }
+
+        tbody div {
+            overflow: unset !important;
+            height: auto !important;
+            max-height: none !important;
+        }
+
+        .btn-link {
+            font-weight: 500;
+            color: black;
+            border-radius: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- first screen start -->
+    <div class="general-container">
+        <div class="action-btns">
+            <ul>
+                <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                <li>
+                    <button type="button" class="IdaddNewRecord btn btn-link" @(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? true) ? "disabled=\"disabled\"" : "")>
+                        <i class="fa fa-plus"></i> New
+                    </button>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="editBtn" style="@( !(true) ? "pointer-events:none; opacity:0.5;" : "" )">
+                        <i class="fa fa-pencil"></i> Edit
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="deleteBtn" style="@( !(true) ? "pointer-events:none; opacity:0.5;" : "" )"> <i class="fa fa-trash-o"></i> Delete </a>
+                </li>
+                <li>
+                    <a href="#"><i class="fa fa-eye"></i> View</a>
+                </li>
+                <li>
+                    <a href="#"><i class="fa fa-list-ul"></i> Lines</a>
+                </li>
+                <li style="margin-left:auto">
+                    <label class="btn btn-inverse pull-right" style="margin: 10px;"> LIST </label>
+                </li>
+            </ul>
+        </div>
+        <div style=" display: flex; justify-content: space-between; width: 100%; margin-bottom: 15px;">
+            <div class="title-heading">Packet Tea Invoice</div>
+            <div style="position: relative; width: 250px;">
+                <input type="text" name="searchString" value="@ViewBag.CurrentFilter" placeholder="Search" style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
+                <i class="fa fa-search" id="searchInput" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333; cursor: pointer;"></i>
+            </div>
+        </div>
+        @using (Ajax.BeginForm("Index", "PacketTeaInvoice", new AjaxOptions
+        {
+            HttpMethod = "POST",
+            InsertionMode = InsertionMode.InsertAfter,
+            UpdateTargetId = "PktTeaInvContainer",
+            OnSuccess = "onLoadSuccess"
+        },
+
+        new { id = "loadMoreForm" }))
+        {
+            <input type="hidden" id="page" name="page" value="@ViewBag.Page" />
+            <input type="hidden" name="pageSize" value="@ViewBag.PageSize" />
+            <input type="hidden" name="searchString" value="@ViewBag.CurrentFilter" />
+            <input type="hidden" name="sortOrder" value="@ViewBag.CurrentSort" />
+            <input type="hidden" id="hiddenUNIT" />
+            <input type="hidden" id="hiddenLOCA" value="@ViewBag.LOCA" />
+        }
+        <div class="table-responsive" id="tableScroll">
+            <table class="border main-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" class="checkbox-round" /></th>
+                        <th></th>
+                        <th>Bill No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Bill Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Ship To Code & Description <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Order No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th>Bill To Code & Description <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    </tr>
+                </thead>
+                <tbody id="PktTeaInvContainer">
+                    @*<tr id="newUnitRow" class="new-entry-row"></tr>*@
+                    @Html.Partial("_PT_List", Model)
+                </tbody>
+            </table>
+            <div id="loading" style="display:none; text-align:center; padding:20px;">
+                Loading...
+            </div>
+        </div>
+    </div>
+
+    <script src="~/Content/src/jquery.inputpicker.js"></script>
+    <script src="~/Content/assets/js/custom.js"></script>
+    <script>
+    $(document).on("click", ".toggle-details", function () {
+        debugger;
+     let icon = $(this);
+     let row = icon.closest("tr");
+     let childRow = row.next(".child-row");
+     let tbody = childRow.find(".child-details-body");
+     let doC_YEAR = icon.data("doC_YEAR");
+     let blno = icon.data("blno");
+     let unitRaw = icon.data("unit") || "";
+     let unit = unitRaw.split('-')[0];
+     let bldt = icon.data("bldt");
+     let formatted = bldt.split(" ")[0];
+
+     // If already open → close
+     if (childRow.is(":visible")) {
+         childRow.hide();
+         tbody.empty();
+         icon.removeClass("fa-minus").addClass("fa-plus");
+         return;
+     }
+     // Show loader
+     tbody.html(`<tr><td colspan="17"><div id="detailLoader" style="text-align:center;"><i class="fa fa-spinner fa-spin fa-2x"></i><br/>Loading...</div></td></tr>`);
+     childRow.show();
+
+     $.ajax({
+         url: '@Url.Action("GetPacketTeaInvoiceDetails", "PacketTeaInvoice")',
+         type: "GET",
+         data: {  blno: blno, unit: unit, bldt: bldt },
+         dataType: "json",
+         success: function (response) {
+             debugger;
+             tbody.empty();
+             let data = Array.isArray(response) ? response : [response];
+             data.forEach(function (d) {
+                 let net = (Number(d.GROSS || 0) - Number(d.TARE || 0)).toFixed(3);
+                 let rowHtml = `
+                 <tr>
+                     <td>${d.blno }</td>
+                     <td>${d.bldt ? new Date(parseInt(d.bldt.replace(/[^0-9]/g, ''))).toLocaleDateString('en-GB'): ''}</td>
+                     <td>${d.itcd ?? ""}</td>
+                     <td>${d.itemName ?? ""}</td>
+                     <td>${d.itdesC1 ?? ""}</td>
+                     <td>${d.mrp ?? ""}</td>
+                     <td>${d.mfgdt ? new Date(parseInt(d.mfgdt.replace(/[^0-9]/g, ''))).toLocaleDateString('en-GB') : ''}</td>
+                     <td>${d.batchno ?? ""}</td>
+                     <td>${d.qty ?? ""}</td>
+                     <td>${d.grosS_WEIGHT ?? ""}</td>
+                     <td>${d.weight ?? ""}</td>
+                 </tr>`;
+                 tbody.append(rowHtml);
+             });
+             childRow.show();
+             icon.removeClass("fa-plus").addClass("fa-minus");
+         },
+         error: function (xhr) {
+             tbody.html(`<tr><td colspan="17" style="color:red;">Error loading data!</td></tr>`);
+             console.log("Error:", xhr);
+         }
+         });
+     });
+    </script>
+    <script>
+         // Build New Row with inputpicker
+         function buildNewRow() {
+             return `
+                     <tr id="newUnitRow" class="new-entry-row">
+                     <td class="text-center"> <i class="fa fa-pencil go-new" style="cursor:pointer;color:#black;" title="Go to New Entry"></i> </td>
+                     <td></td>
+                     <!-- Inputpicker -->
+                     <td> <input type="text" id="ListingUnitCode" class="form-control" placeholder="Select Unit" autocomplete="off" style="width:140px;" /></td>
+                     <td colspan="8"></td>
+                    </tr>`;
+         }
+
+        $(document).on('click', '.IdaddNewRecord', function () {
+            if ($('#newUnitRow').length > 0) {
+                $('#ListingUnitCode').focus();
+                return;
+            }
+
+            $('#hiddenUNIT').val('');
+            $('#hiddenLOCA').val('');
+
+            $('#PktTeaInvContainer').prepend(buildNewRow());
+
+            initUnitPicker();
+
+            setTimeout(function () {
+                $('#ListingUnitCode').focus();
+            }, 100);
+        });
+
+         // Initialize inputpicker
+         function initUnitPicker() {
+             console.log('🔧 Initializing inputpicker...');
+
+             $('#ListingUnitCode').inputpicker({
+                 url: '@Url.Action("GetUnit", "PacketTeaInvoice")',
+                 fields: [
+                     { name: 'CODE', text: 'CODE' },
+                     { name: 'NAME', text: 'NAME' }
+                 ],
+                 fieldText: 'CODE',
+                 fieldValue: 'CODE',
+                 headShow: true,
+                 autoOpen: true,
+                 pagination: true,
+                 pageField: 'p',
+                 pageLimitField: 'limit',
+                 pageLimit: 10,
+                 pageCountField: 'count',
+                 width: '140px',
+                 urlDelay: 1
+             });
+
+             console.log('✅ Inputpicker initialized');
+
+             // ✅ Method 1: Try inputpicker.select event
+             $('#ListingUnitCode').on('inputpicker.select', function (e, item) {
+                 console.log('✅ inputpicker.select event fired!', item);
+                 if (item && item.CODE) {
+                     saveUnitData(item.CODE, item.LOCA);
+                 }
+             });
+
+             // ✅ Method 2: Listen to the 'change' event
+             $('#ListingUnitCode').on('change', function () {
+                 var selectedCode = $(this).val();
+                 console.log('✅ change event fired, selectedCode:', selectedCode);
+
+                 if (selectedCode) {
+                     // Fetch the full unit data including GLOCA
+                     fetchUnitByCode(selectedCode);
+                 }
+             });
+             setTimeout(function() {
+                 $(document).off('click.unitpicker');
+                 $(document).on('click.unitpicker', '.inputpicker-list li, .inputpicker-item', function() {
+                     console.log('✅ Dropdown item clicked (backup method)');
+                     var selectedText = $(this).text().trim();
+                     console.log('   Clicked text:', selectedText);
+                     var code = selectedText.split(/[\s-]/)[0].trim();
+                     console.log('   Extracted CODE:', code);
+
+                     if (code) {
+                         setTimeout(function() {
+                             fetchUnitByCode(code);
+                         }, 100);
+                     }
+                 });
+             }, 500);
+         }
+         function fetchUnitByCode(code) {
+             console.log('🔍 Fetching unit data for CODE:', code);
+
+             $.ajax({
+                 url: '@Url.Action("GetUnit", "PacketTeaInvoice")',
+                 data: { q: code, limit: 1, p: 1 },
+                 method: 'GET',
+                 success: function(response) {
+                     console.log('✅ API response:', response);
+
+                     if (response.data && response.data.length > 0) {
+                         var unit = response.data[0];
+                         console.log('   Found unit:', unit);
+                         saveUnitData(unit.CODE, unit.LOCA);
+                     } else {
+                         console.warn('⚠️ No unit found for CODE:', code);
+                     }
+                 },
+                 error: function(err) {
+                     console.error('❌ Error fetching unit:', err);
+                 }
+             });
+         }
+         function saveUnitData(code, loca) {
+             $('#hiddenUNIT').val(code);
+             $('#hiddenLOCA').val(loca || '');
+         }
+        
+    </script>
+    <script>
+            $(document).on('click', '#deleteBtn', function () {
+        var $checked = $('.row-check:checked');
+
+        if ($checked.length === 0) {
+            $.confirm({
+                title: "Delete",
+                type: "orange",
+                content: "<b>Please select one record to delete.</b>",
+                buttons: { ok: { btnClass: "btn-primary" } }
+            });
+            return;
+        }
+
+        if ($checked.length > 1) {
+            $.confirm({
+                title: "Delete",
+                type: "orange",
+                content: "<b>Please select only ONE record.</b>",
+                buttons: { ok: { btnClass: "btn-primary" } }
+            });
+            return;
+        }
+        var id = $checked.attr('data-id');
+        var desp_no = $checked.data('desp_no');
+
+        $.confirm({
+            title: "Confirm Delete",
+            type: "red",
+            content: `<b>Are you sure you want to delete Bought Leaf Purchase Data SLNO <span style="color:#d9534f;">${desp_no}</span> ?</b>`,
+            buttons: {
+                yes: {
+                    text: "Yes, Delete",
+                    btnClass: "btn-danger",
+                    action: function () {
+
+                        $('<form>', {
+                            method: 'POST',
+                            action: '@Url.Action("Delete", "PacketTeaInvoice")'
+                        })
+                        .append($('<input>', {
+                            type: 'hidden',
+                            name: 'id',
+                            value: id
+                        }))
+                        .appendTo('body')
+                        .submit();
+                    }
+                },
+                no: {
+                    text: "Cancel",
+                    btnClass: "btn-primary"
+                }
+            }
+        });
+    });
+    </script>
+    <script>
+        function formatDotNetDate(dateString) {
+            if (!dateString) return "";
+            let timestamp = parseInt(dateString.replace(/[^0-9]/g, ''));
+            let date = new Date(timestamp);
+            let month = String(date.getMonth() + 1).padStart(2, '0');
+            let year = date.getFullYear();
+
+            return month + "-" + year;
+        }
+    </script>
+    <script>
+        $(document).on('click', '#editBtn', function () {
+        var $checked = $('.row-check:checked');
+        var id = $checked.val();
+        window.location.href =
+        '@Url.Action("InsertOrUpdate", "PacketTeaInvoice")'
+        + '?id=' + encodeURIComponent(id);
+    });
+    </script>
+    <script>
+        $(document).ready(function () {
+
+            var $searchInput = $('input[name="searchString"]');
+            var searchInput = $('#searchInput');
+            var $tableBody = $('#PktTeaInvContainer');
+            var searchTimeout;
+            var originalContent = $tableBody.html();
+            if ($searchInput.val() && $searchInput.val().length > 0) {
+                searchInput.removeClass('fa-search').addClass('fa-times').css('cursor', 'pointer');
+            }
+
+            function performSearch(query) {
+                if (!query || !query.trim()) {
+                    $("#page").val(1);
+                    $searchInput.val('');
+                    $('#loadMoreForm input[name="searchString"]').val('');
+                    isLoading = false;
+                    $("#loadMoreForm").submit();
+                    return;
+                }
+                $tableBody.empty();
+                $("#page").val(1);
+                $searchInput.val(query);
+                $('#loadMoreForm input[name="searchString"]').val(query);
+                isLoading = false;
+                $("#loadMoreForm").submit();
+            }
+            $searchInput.on('input', function () {
+                var value = $(this).val().trim();
+                if (value) {
+                    searchInput.removeClass('fa-search').addClass('fa-times').css('cursor', 'pointer');
+                } else {
+                    searchInput.removeClass('fa-times').addClass('fa-search').css('cursor', 'default');
+                }
+
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function () {
+                    performSearch(value);
+                }, 500);
+            });
+            searchInput.on('click', function () {
+                if ($(this).hasClass('fa-times')) {
+                    $searchInput.val('');
+                    $('#loadMoreForm input[name="searchString"]').val('');
+                    $("#page").val(1);
+                    searchInput.removeClass('fa-times').addClass('fa-search').css('cursor', 'default');
+                    isLoading = false;
+                    $("#loadMoreForm").submit();
+                }
+            });
+            $searchInput.on('keypress', function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    clearTimeout(searchTimeout);
+                    performSearch($(this).val().trim());
+                }
+            });
+        });
+
+    </script>
+    <script>
+    $(document).on('click', '.go-new', function (e) {
+       e.preventDefault();
+       e.stopPropagation();
+       var UNIT = $('#hiddenUNIT').val();
+       var LOCA = $('#hiddenLOCA').val();
+
+       if (!UNIT || UNIT.trim() === '') {
+          $.confirm({
+               title: "Confirmation",
+               type: "orange",
+               content: "<b>Please select Unit first</b>",
+               buttons: {
+               ok: {
+                   text: "OK",
+                   btnClass: "btn-primary",
+                   action: function () {
+                       $('#ListingUnitCode').focus();
+                   }
+               }
+          }
+   });
+         return;
+       }
+
+    window.location.href =
+   '@Url.Action("InsertOrUpdate", "PacketTeaInvoice")' +
+   '?unit=' + encodeURIComponent(UNIT) +
+   '&loca=' + encodeURIComponent(LOCA || '');
+    });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+

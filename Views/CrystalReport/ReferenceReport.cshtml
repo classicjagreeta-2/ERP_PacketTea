@@ -1,0 +1,177 @@
+﻿
+@model PacketTea.Models.Master.M_BH21
+@{
+    ViewBag.Title = "ReferenceReport";
+}
+
+
+<style>
+    .select2-container .select2-selection {
+        height: 100px;
+        width: 100%;
+        overflow: scroll;
+    }
+
+    .select2-results__group {
+        cursor: pointer !important;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__rendered li {
+        color: black;
+    }
+</style>
+
+<div class="page-body">
+    <div style="text-align:center "><b>Reference Report With Account Head Grouping</b></div>
+    <div class="row">
+        <div class="col-lg-12 col-xl-5">
+            <div class="card">
+                <div class="card-block">
+
+                    <div class="row form-group col-sm-12">
+                        <div class="col-sm-3">
+                            <label class="col-form-label">Date As On</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="date" id="tdate" name="date">
+                        </div>
+                        <div class="col-sm-9">
+                            <select multiple="multiple" id='select-employee' required data-placeholder="" data-allow-clear="true" data-close-on-select="false">
+                                <optgroup id="SELECTALL" label="select all">
+
+                                    <option></option>
+
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="submit" id="btnfind" class="btn btn-info" @*onclick="location.href='@Url.Action("GetExcelList", "CrystalReport")'"*@ value="Find Account Head" />
+
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="col-form-label">Graphics</label>
+                            <input type="radio" id="graphis" name="fav_language" value="0">
+
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="col-form-label">Excel</label>
+                            <input type="radio" id="excel" name="fav_language">
+                        </div>
+
+
+                        <div class="col-sm-3">
+                            <input type="submit" id="BTNOK" class="btn btn-info" @*onclick="location.href='@Url.Action("Exportcontrol", "CrystalReport")'"*@ value="Ok" />
+
+                        </div>
+                        <div class="col-sm-3">
+                            <input type="button" id="Btn_Create" class="btn btn-info" value="Cancel" />
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+</div>
+
+@*<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>*@
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+<script>
+
+
+
+        debugger
+        $('#select-employee').select2({
+
+               ajax: {
+           url:  "@Url.Action("GETACODEACNAME", "CrystalReport")",
+           data: function (params) {
+               var query ={
+
+                   page: params.page || 1,
+                   pageSize: 25,
+
+               }
+               return query;
+
+           },
+                processResults: function (res, params) {
+                    debugger;
+                    var list = res.Data.value.results; // The data returned from the API
+
+
+
+               // Map the data into the Select2 expected format
+               return {
+                   results: $.map(list, function (x) {
+                       return {
+                           text: x._ACODENAME + "-" + x._ACODE, // The text to display in the dropdown
+                           id: x._ACODE
+                       };
+                   }),
+                   pagination: {
+                       more: res.Data.value.currentPage < res.Data.value.pageCount // Check if more results are available
+                   }
+               };
+           },
+
+           cache: true
+          }
+        });
+
+
+
+
+</script>
+
+
+
+<script>
+
+    $(document).ready(function () {
+
+          $("#BTNOK").click(function () {
+                debugger;
+             /* var selectedUnits = $('#myTextBox').val();*/ //$("#graphis").prop("checked", true)
+            var SELECTACODE = $('#select-employee').val();
+
+
+
+              if ($("#graphis").is(':checked')) {
+                  window.location.href = "@Url.Action("Exportcontrol", "CrystalReport")?ACODE=" + SELECTACODE;
+
+              } else if($("#excel").is(':checked')) {
+
+                  window.location.href = "@Url.Action("GetExcelList", "CrystalReport")?ACODE=" + SELECTACODE;
+              } else {
+                  alert(" Please Chouse Excel or Graphics ");
+              }
+
+          });
+        $("#btnfind").click(function () {
+      debugger;
+   /* var selectedUnits = $('#myTextBox').val();*/ //$("#graphis").prop("checked", true)
+  var SELECTACODE = $('#select-employee').val();
+
+
+
+    if ($("#graphis").is(':checked')) {
+        window.location.href = "@Url.Action("Exportcontrol", "CrystalReport")?ACODE=" + SELECTACODE;
+
+    } else if($("#excel").is(':checked')) {
+
+        window.location.href = "@Url.Action("GetExcelList", "CrystalReport")?ACODE=" + SELECTACODE;
+    } else {
+        alert(" Please Chouse Excel or Graphics ");
+    }
+
+});
+
+    });
+
+</script>

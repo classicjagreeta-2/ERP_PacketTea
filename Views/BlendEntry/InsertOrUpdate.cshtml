@@ -1,0 +1,616 @@
+﻿
+
+
+@*@model Inventory.Models.Inventory.Inv_Transaction.Trn_Po_Table*@
+@using PacketTea.Utility
+@{
+    ViewBag.Title = "InsertOrUpdate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <!-- CSS -->
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/jquery-ui.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
+
+    <style>
+        #prScroll {
+            max-height: 420px; /* change height */
+            overflow-y: auto;
+        }
+
+        .popup-overlay {
+            display: none;
+        }
+
+        .popup-box {
+            display: none;
+        }
+
+        tbody div {
+            overflow: visible !important;
+            height: max-content;
+        }
+
+        .table.table-sm td, .table.table-sm th {
+            padding: 0.4rem 0.2rem !important;
+        }
+
+        .inputpicker-wrapped-list {
+            min-width: max-content !important;
+            max-width: max-content !important;
+        }
+
+            .inputpicker-wrapped-list table {
+                width: max-content !important;
+            }
+
+        .table th {
+            background-color: #404e68 !important;
+        }
+    </style>
+</head>
+<body>
+
+
+    <!-- second screen start -->
+    <div class="general-container">
+        <div class="purchase-details">
+
+            @using (Html.BeginForm("SaveForm", "MasterBlendEntry", FormMethod.Post, new { id = "frmpo" }))
+            {
+                @*@Html.HiddenFor(m => m.TRN_PO_HEAD.DOCDT, new { id = "DOCDT" })
+                    @Html.Hidden("EditedTaxItems", "", new { id = "EditedTaxItems" })
+                    @Html.AntiForgeryToken()*@
+
+
+                <!-- header content start -->
+                <div class="header-content">
+                    <!-- action btns start -->
+                    <div class="action-btns">
+                        <ul>
+
+                            <li>
+                                <a href="@Url.Action("Index", "MasterBlendEntry")"
+                                   onclick="return ReleaseLockAndRedirect(this);">
+                                    <i class="fa fa-arrow-left"></i> Back
+                                </a>
+                            </li>
+                            <li>
+                                <button type="submit" style="background:none;border:0;cursor:pointer;">
+                                    <i class="fa fa-floppy-o"></i> Save
+                                </button>
+                            </li>
+                            <li><a href="@Url.Action("Index", "MasterBlendEntry")" onclick="return ReleaseLockAndRedirect(this);"><i class="fa fa-times"></i> Cancel</a></li>
+
+
+                            <li><a href="javascript:void(0)" class="openPopup" data-popup="Notes"><i class="fa fa-file-text-o"></i> Notes</a></li>
+                            <li style="margin-left:auto">
+                                <label class="btn btn-inverse pull-right" style="margin:20px; border:none;">
+
+                                    Status : <span id="statusText" style="color:white;">Add</span>
+
+                                </label>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- action btns end -->
+                    <div class="header-details">
+                        <div class="left">
+                            <div class="order-code">
+                                <div class="txt">
+                                    <div class="title-heading"> Blend Street Entry</div>
+                                </div>
+                                <div class="field">
+                                    @*Unit Code & Name*@
+                                </div>
+                            </div>
+
+                            <div class="title-heading">
+                                @*PT NO. : @(Model.TRN_PO_HEAD.DOCTYPE ?? "")@(Model.TRN_PO_HEAD.DOCNO ?? "")*@
+                            </div>
+                        </div>
+
+                        <div class="right">
+
+                            <div>
+                                Status : <span id="statusText2">Unknown</span>
+                            </div>
+
+                            @*<input type="hidden" id="approvedVal" value="@((Model.TRN_PO_HEAD.APPROVED ?? "").Trim())" />*@
+                        </div>
+                    </div>
+                </div>
+                <!-- header content end -->
+                <div class="accordion-container">
+                    <!-- Accordion for Header Section -->
+                    <div class="accordion">
+                        <div class="accordion-header"><span class="txt">Header</span></div>
+                        <div class="accordion-body ">
+                            <!-- Customer account -->
+                            <div class="form-row">
+                                <div class="form-col-10">
+                                    <label>Doc No </label>
+                                    <input type="text" />
+                                    @*@Html.TextBoxFor(model => model.TRN_PO_HEAD.DOCTYPE, new { @class = "form-control", @minlength = "2", @maxlength = "8", @id = "Doctype", @readonly = "readonly", tabindex = "-1" })*@
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Date <span>(*)</span></label>
+                                    <div class="date-field">
+                                        <input type="text" />
+                                        @*@Html.TextBoxFor(m => m.TRN_PO_HEAD.INQUIRY_DT, "{0:dd/MM/yyyy}",
+                new { @class = "form-control", @id = "InquiryDate" })*@
+                                        <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
+                                             alt="calendar"
+                                             class="calendar-icon" data-target="InquiryDate" />
+                                    </div>
+
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Party </label>
+
+                                    <input type="text" />
+                                    @*@Html.TextBoxFor(m => m.TRN_PO_HEAD.DOCDT, "{0:dd/MM/yyyy}",
+            new { @class = "form-control req", id = "PurchaseDate" })*@
+
+
+                                </div>
+                                <div class="form-col-20">
+                                    <label>Blend Details  </label>
+                                    <input type="text" />
+                                </div>
+
+                                <div class="form-col-10">
+                                    <label>Master Blend No <span>(*)</span></label>
+                                    <input type="text" />
+                                    @*@Html.TextBoxFor(model => model.TRN_PO_HEAD.INQUIRY_NO, new { @class = "form-control", @minlength = "2", @maxlength = "8" })*@
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Date <span>(*)</span></label>
+                                    <div class="date-field">
+                                        <input type="text" />
+                                        @*@Html.TextBoxFor(m => m.TRN_PO_HEAD.INQUIRY_DT, "{0:dd/MM/yyyy}",
+                new { @class = "form-control", @id = "InquiryDate" })*@
+                                        <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
+                                             alt="calendar"
+                                             class="calendar-icon" data-target="InquiryDate" />
+                                    </div>
+                                </div>
+
+
+
+                            </div>
+
+                            <div class="form-row" style="line-height:2.5;">
+
+                                <div class="form-col-10">
+                                    <label>Final Blend No  <span>(*)</span></label>
+                                    <input type="text" />
+                                    @*@Html.TextBoxFor(model => model.TRN_PO_HEAD.PCD, new { @class = "form-control req pcd-code" })*@
+
+                                </div>
+
+                                <!-- Dept Name -->
+                                <div class="form-col-20">
+                                    <label>Date <span>(*)</span> </label>
+                                    <div class="date-field">
+                                        <input type="text" />
+                                        @*@Html.TextBoxFor(m => m.TRN_PO_HEAD.INQUIRY_DT, "{0:dd/MM/yyyy}",
+            new { @class = "form-control", @id = "InquiryDate" })*@
+                                        <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
+                                             alt="calendar"
+                                             class="calendar-icon" data-target="InquiryDate" />
+                                    </div>
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Warehouse   <span>(*)</span></label>
+                                    <input type="text" />
+                                    @*@Html.TextBoxFor(model => model.TRN_PO_HEAD.PAYMENT_DAYS, new { @class = "form-control req", @minlength = "2", @maxlength = "8" })*@
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Allocation  </label>
+                                    <input type="text" />
+                                    @*@Html.TextBoxFor(model => model.TRN_PO_HEAD.ADVANCE_AMT, new
+            {
+                @class = "form-control amount-field",
+                step = "0.01",
+                value = Model.TRN_PO_HEAD.ADVANCE_AMT == 0 ? "0.00" : Model.TRN_PO_HEAD.ADVANCE_AMT.ToString("0.00")
+            })*@
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Blend Mark </label>
+                                    <input type="text" />
+                                    @*@Html.TextBoxFor(model => model.TRN_PO_HEAD.ADVANCE_AMT, new
+            {
+                @class = "form-control amount-field",
+                step = "0.01",
+                value = Model.TRN_PO_HEAD.ADVANCE_AMT == 0 ? "0.00" : Model.TRN_PO_HEAD.ADVANCE_AMT.ToString("0.00")
+            })*@
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Blend Grade <span>(*)</span></label>
+                                    <input type="text" />
+                                    @*@Html.TextBoxFor(model => model.TRN_PO_HEAD.VALIDITY_PERIOD, new { @class = "form-control", @minlength = "2", @maxlength = "8" })*@
+                                </div>
+                               
+
+                            </div>
+                            <div class="form-row" style="line-height:2.5;">
+                                <div class="form-col-20">
+                                    <label>No of Chest </label>
+                                    <input type="text" />
+                                    @*@Html.TextBoxFor(model => model.TRN_PO_HEAD.PAYMENT_REMARK, new { @class = "form-control", @minlength = "2", @maxlength = "50" })*@
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Net WT/Chest</label>
+                                    <input type="text" />
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Gross WT/Chest</label>
+                                    <input type="text" />
+                                    @*@Html.TextAreaFor(model => model.TRN_PO_HEAD.NOTE1, new { @class = "form-control", @minlength = "2", @maxlength = "160" })*@
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Export Ref. No</label>
+                                    <input type="text" />
+                                    @*@Html.TextAreaFor(model => model.TRN_PO_HEAD.NOTE1, new { @class = "form-control", @minlength = "2", @maxlength = "160" })*@
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Transporter </label>
+                                    <input type="text" />
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Shipping Mark</label>
+                                    <input type="text" />
+                                    @*@Html.TextAreaFor(model => model.TRN_PO_HEAD.NOTE1, new { @class = "form-control", @minlength = "2", @maxlength = "160" })*@
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Blend Qty <span>(*)</span>  </label>
+                                    <input type="text" />
+                                    @*@Html.TextAreaFor(model => model.TRN_PO_HEAD.NOTE1, new { @class = "form-control", @minlength = "2", @maxlength = "160" })*@
+                                </div>
+                            </div>
+
+
+                        </div>
+                    </div>
+
+                    <!-- Accordion for Header Details Section -->
+                    <div class="accordion">
+                        <div class="accordion-header"><span class="txt">Header Details</span></div>
+                        <div class="accordion-body">
+
+                            <div class="form-row">
+                                <div class="form-col-20">
+                                    <label>Informations 1</label>
+                                    <input type="text" />
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label>Informations 2</label>
+                                    <input type="text" />
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label>Informations 3</label>
+                                    <input type="text" />
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label>Informations 4</label>
+                                    <input type="text" />
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label>Informations 5</label>
+                                    <input type="text" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Accordion for Lines Section -->
+                    <div class="accordion">
+                        <div class="accordion-header"><span class="txt">Lines</span></div>
+                        <div class="accordion-body active" style="display:block;">
+                            <!-- action btns start -->
+                            <div class="action-btns">
+                                <ul>
+                                    <li><a href="#"><i class="fa fa-plus"></i> Add</a></li>
+                                    <li><a href="#" id="btnRemoveAll"><i class="fa fa-trash-o"></i> Remove</a></li>
+                                    @*<li>
+                                            <a href="javascript:void(0)" class="openPopup" data-popup="InvoNoData">
+                                                <i class="fa fa-credit-card"></i>
+                                                Invo No Data
+                                            </a>
+                                        </li>*@
+                                </ul>
+                            </div>
+                            <!-- action btns end -->
+                            <!-- table start -->
+                            <div class="table-responsive">
+                                <table class="border" id="mainTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:30px;" hidden>ID</th>
+                                            <th style="width:30px;" hidden>Loca</th>
+                                            <th style="width:30px;" hidden>Unit</th>
+                                            <th style="width:30px;" hidden>PCD</th>
+                                            <th style="width:30px;" hidden>DocDate</th>
+                                            <th style="width:30px;" hidden>DocYear</th>
+                                            <th style="width:30px;" hidden>DocNo</th>
+                                            <th style="width:30px;" hidden>DocType</th>
+                                            <th style="width:30px;" hidden>IndUnit</th>
+                                            <th style="width:30px;" hidden>IndLoca</th>
+                                            <th style="width:30px;" hidden>IndType</th>
+                                            <th style="width:30px;" hidden>SrlNo</th>
+                                            <th>Select</th>
+                                            <th>Sl.</th>
+                                            <th>Mark/Garden</th>
+                                            <th>Inv No.<span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th>Pack Date</th>
+                                            <th>Grade</th>
+                                            <th>Bag <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Qty <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Sam. Qty <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Rate</th>
+                                            <th style="text-align:right;">Amount</th>
+                                            <th>Location</th>
+                                            <th>Arrival Date</th>
+                                            <th>Arrival No</th>
+                                            <th>Warehouse</th>
+                                            <th>Tag</th>
+                                            <th>DO No</th>
+                                            <th>DO Date</th>
+                                            <th>Trans Code</th>
+                                            <th>Transporter Name</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                                <div id="modalContainer"></div>
+                            </div>
+                            <!-- table end -->
+                        </div>
+                    </div>
+
+                    <!-- Accordion for Line Details Section -->
+                    <div class="accordion">
+                        <div class="accordion-header"><span class="txt">Line Details</span></div>
+                        <div class="accordion-body active" style="display:block;">
+                            <div class="form-row">
+                                <div class="form-col-50">
+                                    <label>Noted</label>
+                                    <input type="text" />
+                                </div>
+
+                                <div class="form-col-50">
+                                    <label>Special Instruction </label>
+                                    <input type="text" />
+                                </div>
+
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- second screen end -->
+                <!-- Overlay -->
+
+                <!--<div class="popup-overlay">
+
+                    <div id="InvoNoData" class="popup-box">
+
+                        <div class="popup-header">
+                            <h2>  Invo No Data  </h2>
+                            <button class="close-btn" type="button"> X</button>
+                        </div>-->
+
+                <!-- Existing Search -->
+                <!--<div class="search-box">
+                    <div class="search">
+                        <input type="text" id="searchInput" placeholder="Search" />
+
+                    </div>
+                </div>-->
+
+                <!-- Added section only -->
+                <!--<div class="form-row" style="line-height: 2.5; margin: 0 -0.1px;">
+
+
+
+                    <div class="form-col-10">
+                        <label>Contact No</label>
+                        <input type="text"
+                               id="txtContactNo"
+                               class="form-control Catagory-desc" />
+                    </div>
+                    <div class="form-col-10">
+                        <label>Invno </label>
+                        <input type="text"
+                               id="txtInvNo"
+                               class="form-control" />
+                    </div>-->
+
+                <!-- ADD HERE -->
+                <!--<div style="display:flex; align-items:flex-end; gap:18px; margin-left:auto;">
+                        <button type="button"
+                                id="btnGetData"
+                                class="btn-blue"
+                                style="width:60px;height:30px;">
+                            Get Data
+                        </button>
+                        <button type="button"
+                                id="btnRefresh"
+                                class="btn-white"
+                                style="width:60px;height:30px;">
+                            Refresh
+                        </button>
+                    </div>
+
+                </div>-->
+
+                <!-- Existing table unchanged -->
+                <!--<div class="table-responsive" id="prScroll" style="margin-top:8px;">
+                    <table class="border main-table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <input type="checkbox" id="chkAllRows" />
+                                </th>
+                                <th style="text-align:right;">Sl.</th>
+                                <th style="text-align:right;">Sl.</th>
+                                <th>Tag</th>
+                                <th>Inv No.</th>
+                                <th>MARK</th>
+                                <th>Grade</th>
+                                <th>Category</th>
+                                <th>Bags</th>
+                                <th style="text-align:right;">Net. Wt.</th>
+                                <th style="text-align:right;">Gross Wt.</th>
+                                <th style="text-align:right;">Total Net Wt.</th>
+                                <th>Size Code</th>
+                                <th style="text-align:right;">Rate</th>
+                                <th style="text-align:right;">Amount</th>
+                                <th style="text-align:right;">Disc %</th>
+                                <th style="text-align:right;">Disc Value</th>
+                                <th style="text-align:right;">Taxable Amt</th>
+                                <th style="text-align:right;">CGST %</th>
+                                <th style="text-align:right;">CGST Amt</th>
+                                <th style="text-align:right;">SGST %</th>
+                                <th style="text-align:right;">SGST Amt</th>
+                                <th style="text-align:right;">IGST %</th>
+                                <th style="text-align:right;">IGST Amt</th>
+
+
+                            </tr>
+                        </thead>
+
+                        <tbody id="prBody"></tbody>
+                    </table>
+                </div>-->
+
+                <!-- Existing buttons -->
+                <!--<div class="bottom-btn">
+                            <button class="btn-blue" type="button" id="btnInvoNoDataOk"> OK</button>
+                            <button class="btn-white" type="button" id="btnInvoNoDataCancel"> Cancel</button>
+                        </div>
+
+                    </div>
+
+
+
+
+
+                </div>-->
+
+
+
+                <!-- Popup Notes -->
+                <div id="Notes" class="popup-box" style=" width: 50%;">
+                    <div class="popup-header">
+                        <h2>Notes</h2>
+                        <button class="close-btn" type="button">X</button>
+                    </div>
+                    <div class="terms-code">
+                        <label>Terms Code</label>
+                        <select>
+                            <option>1</option>
+                            <option>2</option>
+                            <option>3</option>
+                        </select>
+                        <button>Get Data</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="border main-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:10%;">Sl No</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><input type="text" /></td><td><input type="text" /></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="bottom-btn">
+                        <button class="btn-blue">Save</button>
+                        <button class="btn-white close-btn" type="button">Cancel</button>
+                    </div>
+
+
+                </div>
+            }
+
+        </div>
+    </div>
+
+    <script src="~/Controllers/Test/assets/js/jquery-ui.js"></script>
+    <script src="~/Controllers/Test/assets/js/custom.js"></script>
+
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            var Docno = $('#Docno').val();   // SLNO input id
+
+            if (Docno && $.trim(Docno) !== '') {
+
+                // Edit Mode
+                $('#statusText').text('Edit');
+                $("#PurchaseDate").prop("disabled", true);
+            } else {
+
+                // Add Mode
+                $('#statusText').text('Add');
+
+            }
+
+        });
+        $(document).ready(function () {
+
+            var status = $('#approvedVal').val();
+
+            console.log("STATUS RAW:", status); // debug
+
+            status = (status || "").trim().toUpperCase(); // 🔥 IMPORTANT
+
+            var text = "Unknown";
+
+            if (status === "Y") {
+                text = "Approved";
+            } else if (status === "N") {
+                text = "Pending";
+            } else if (status === "R") {
+                text = "Rejected";
+            }
+
+            $('#statusText2').text(text);
+        });
+    </script>
+
+
+
+
+</body>
+</html>
+
+
+
+
+
+
