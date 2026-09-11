@@ -77,7 +77,7 @@ namespace PacketTea.Models
         {
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
             _client.DefaultRequestHeaders.Clear();
-            _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
+            _client.DefaultRequestHeaders.Add("x-module", "PACKETTEA");
             _client.DefaultRequestHeaders.Add("x-docyear", Utility.SessionHelper.GetUser().DocYear);
             //_client.DefaultRequestHeaders.Add("x-username", Utility.SessionHelper.GetUser().getUserName ?? "");// Utility.SessionHelper.GetUser().getUserName
 
@@ -195,7 +195,7 @@ namespace PacketTea.Models
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
             JsonContent content = JsonContent.Create(model);
             _client.DefaultRequestHeaders.Clear();
-            _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
+            _client.DefaultRequestHeaders.Add("x-module", "PACKETTEA");
             _client.DefaultRequestHeaders.Add("x-docyear", Utility.SessionHelper.GetUser().DocYear);
             if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getToken))
             {

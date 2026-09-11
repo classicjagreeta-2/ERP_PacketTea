@@ -13,12 +13,12 @@ namespace Finance.Models.PT
         public virtual string GLOCA { get; set; }
         public virtual string UNIT { get; set; }
         public virtual string DOCNO { get; set; }
-        public virtual DateTime DOCDT { get; set; }
+        public virtual DateTime? DOCDT { get; set; }
         public virtual string SL_NO { get; set; }
         public virtual string GRADE { get; set; }
         public virtual string INVNO { get; set; }
         public virtual string MARK { get; set; }
-        public virtual DateTime PACK_DATE { get; set; }
+        public virtual DateTime? PACK_DATE { get; set; }
         public virtual string PUR_TYPE { get; set; }
         public virtual string PCODE_TYPE { get; set; }
         public virtual string U_NAME { get; set; }
@@ -123,5 +123,9 @@ namespace Finance.Models.PT
         public virtual string CONCT_DOCNO { get; set; }
         public virtual string CONCT_SL_NO { get; set; }
         public virtual DateTime? CONCT_DOCDT { get; set; }
+        public virtual string BROKERNAME { get; set; }
+        public virtual string TRANSPORTERNAME { get; set; }
+        public virtual string VENDORNAME { get; set; }
+       
     }
 }

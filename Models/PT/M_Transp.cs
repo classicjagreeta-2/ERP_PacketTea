@@ -9,75 +9,65 @@ using System.Threading.Tasks;
     namespace PacketTea.Models.PT
     {
         public class M_Transp
-        {
-            public string loca { get; set; }
-            public string gloca { get; set; }
-            public string unit { get; set; }
+    {
+        // ==================== NOT NULL ====================
 
-            public string code { get; set; }
-            public string name { get; set; }
+        public virtual string LOCA { get; set; }
+        public virtual string CODE { get; set; }
+        public virtual string U_NAME { get; set; }
+        public virtual string O_USER { get; set; }
+        public virtual string T_ID { get; set; }
 
-            public string adD1 { get; set; }
-            public string adD2 { get; set; }
-            public string adD3 { get; set; }
 
-            public string city { get; set; }
-            public string pin { get; set; }
+        // ==================== NULLABLE ====================
 
-            public string contacT_NO { get; set; }
-            public string e_MAIL_ID { get; set; }
+        public virtual decimal? ID { get; set; }
+        public virtual string GLOCA { get; set; }
+        public virtual string UNIT { get; set; }
+        public virtual string NAME { get; set; }
+        public virtual string ADD1 { get; set; }
+        public virtual string ADD2 { get; set; }
+        public virtual string ADD3 { get; set; }
+        public virtual string CITY { get; set; }
+        public virtual string PIN { get; set; }
+        public virtual string CONTACT_NO { get; set; }
+        public virtual string E_MAIL_ID { get; set; }
+        public virtual string TIN_ID { get; set; }
+        public virtual string CST_NO { get; set; }
+        public virtual string TMC_NO { get; set; }
+        public virtual string PAN_NO { get; set; }
+        public virtual string GST_NO { get; set; }
+        public virtual string SHT_NAME { get; set; }
+        public virtual string ACODE { get; set; }
+        public virtual string SUBCODE { get; set; }
+        public virtual string STATE_CODE { get; set; }
 
-            public string tiN_ID { get; set; }
-            public string csT_NO { get; set; }
-            public string tmC_NO { get; set; }
-            public string paN_NO { get; set; }
-            public string gsT_NO { get; set; }
+        public virtual DateTime? GST_REGDT { get; set; }
+        public virtual DateTime? EDT_UNREGD { get; set; }
+        public virtual DateTime? EDT_COMPOSITE { get; set; }
+        public virtual DateTime? EDT_REGD { get; set; }
 
-            public string shT_NAME { get; set; }
+        public virtual string ADHAAR_NO { get; set; }
+        public virtual string TCS_TAG { get; set; }
+        public virtual string TDS_TAG { get; set; }
+        public virtual string SPECIFIED_PERSON { get; set; }
 
-            public string acode { get; set; }
-            public string subcode { get; set; }
+        public virtual DateTime? U_ENTDT { get; set; }
+        public virtual string U_NAMENEW { get; set; }
+        public virtual DateTime? U_ENTDTNEW { get; set; }
 
-            public string statE_CODE { get; set; }
+        public virtual string DTAG { get; set; }
+        public virtual string O_USERNEW { get; set; }
+        public virtual string T_IDNEW { get; set; }
+        public virtual string USER_NAME { get; set; }
+        public virtual DateTime? USER_ENTDT { get; set; }
+        public virtual string USER_NAME_NEW { get; set; }
+        public virtual DateTime? USER_ENTDT_NEW { get; set; }
 
-            public DateTime? gsT_REGDT { get; set; }
-            public DateTime? edT_UNREGD { get; set; }
-            public DateTime? edT_COMPOSITE { get; set; }
-            public DateTime? edT_REGD { get; set; }
-
-            public string adhaaR_NO { get; set; }
-
-            public string tcS_TAG { get; set; }
-            public string tdS_TAG { get; set; }
-            public string specifieD_PERSON { get; set; }
-
-            public string u_NAME { get; set; }
-            public DateTime? u_ENTDT { get; set; }
-
-            public string u_NAMENEW { get; set; }
-            public DateTime? u_ENTDTNEW { get; set; }
-
-            public string o_USER { get; set; }
-            public string t_ID { get; set; }
-
-            public string dtag { get; set; }
-
-            public string o_USERNEW { get; set; }
-            public string t_IDNEW { get; set; }
-
-            public string useR_NAME { get; set; }
-            public DateTime? useR_ENTDT { get; set; }
-
-            public string useR_NAME_NEW { get; set; }
-            public DateTime? useR_ENTDT_NEW { get; set; }
-
-            public string oS_USER { get; set; }
-            public string terminaL_ID { get; set; }
-
-            public int? id { get; set; }
-
-            public string lockedbyuserid { get; set; }
-            public DateTime? lockeduntil { get; set; }
-        }
+        public virtual string OS_USER { get; set; }
+        public virtual string TERMINAL_ID { get; set; }
+        public virtual string LOCKEDBYUSERID { get; set; }
+        public virtual DateTime? LOCKEDUNTIL { get; set; }
     }
+}
 

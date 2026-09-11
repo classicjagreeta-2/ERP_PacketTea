@@ -1,0 +1,294 @@
+﻿@model IList<PacketTea.Models.PT.PT_ALL_LIST>
+
+@using PacketTea.Utility
+
+@{
+    int RowIndex = ViewBag.RowIndex ?? 0;
+}
+
+@if (Model != null && Model.Any())
+{
+    var detList = Model[0].T_TEA_DETAIL;
+
+    if (detList != null)
+    {
+        for (int j = 0; j < detList.Count; j++)
+        {
+            var det = detList[j];
+
+            if (string.IsNullOrWhiteSpace(det.MARK) &&
+                string.IsNullOrWhiteSpace(det.INVNO))
+            {
+                continue;
+            }
+
+            <tr>
+
+                <!-- Checkbox -->
+                <td>
+                    <input type="hidden" name="T_TEA_DETAIL[@(RowIndex + j)].DOCNO" value="@det.DOCNO" />
+                    <input type="hidden"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].SL_NO"
+                           value="@det.SL_NO" />
+
+                    <input type="hidden"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].UNIT"
+                           value="@det.UNIT" />
+
+                    <input type="checkbox"
+                           class="line-check"
+                           name="selectedDetail"
+                           value="@(RowIndex + j)" />
+                </td>
+
+                <td>
+
+                    <input type="hidden" name="T_TEA_DETAIL[@(RowIndex + j)].SRLNO" value="@(RowIndex + j + 1)" />
+                    @(RowIndex + j + 1)
+                </td>
+                <!-- Inv No -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].INVNO"
+                           value="@det.INVNO"
+                           class="form-control"
+                            />
+                </td>
+
+
+                <!-- Mark Code / Mark -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].MARK"
+                           value="@det.MARK"
+                           class="form-control"
+                            />
+                </td>
+                <td style="width:100px;">
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].MARK"
+                           value="@det.MARK"
+                           class="form-control"
+                           readonly 
+                           style="width:100px;"/>
+                </td>
+
+                <!-- Grade -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].GRADE"
+                           value="@det.GRADE"
+                           class="form-control"
+                            />
+                </td>
+                <td style="width:100px;">
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].GRADE"
+                           value="@det.GRADE"
+                           class="form-control"
+                           readonly 
+                           style="width:100px;"/>
+                </td>
+
+                <!-- Category -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].CAT"
+                           value="@det.CAT"
+                           class="form-control"
+                           readonly />
+                </td>
+
+
+                <!-- Bags -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].BAG_CHEST"
+                           value="@(det.BAG_CHEST?.ToString("0") ?? "0")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- Net Wt -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].QTY"
+                           value="@(det.QTY?.ToString("0.000") ?? "0.000")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- Gross Wt -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].GROSS"
+                           value="@(det.GROSS?.ToString("0.000") ?? "0.000")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- Total Net Wt -->
+                <td>
+                    <input type="text"
+                           value="@(det.QTY?.ToString("0.000") ?? "0.000")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- Size Code -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].SZ_CODE"
+                           value="@det.SZ_CODE"
+                           class="form-control"
+                           readonly />
+                </td>
+
+
+                <!-- Size -->
+                <td>
+                    <input type="text"
+                           class="form-control"
+                           readonly />
+                </td>
+
+
+                <!-- Rate -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].RATE"
+                           value="@(det.RATE?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- Amount -->
+                <td style="width:100px;">
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].AMOUNT"
+                           value="@(det.AMOUNT?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly 
+                           style="width:100px;"/>
+                </td>
+
+
+                <!-- Disc % -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].DISC_PER"
+                           value="@(det.DISC_PER?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- Disc Value -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].DISCOUNT"
+                           value="@(det.DISCOUNT?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- Taxable Amt -->
+                <td>
+                    <input type="text"
+                           value="@(det.AMOUNT.HasValue && det.DISCOUNT.HasValue
+                           ? (det.AMOUNT.Value - det.DISCOUNT.Value).ToString("0.00")
+                           : "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- CGST % -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].CGST_RT"
+                           value="@(det.CGST_RT?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- CGST Amt -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].CGST_AMT"
+                           value="@(det.CGST_AMT?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- SGST % -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].SGST_RT"
+                           value="@(det.SGST_RT?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- SGST Amt -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].SGST_AMT"
+                           value="@(det.SGST_AMT?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- IGST % -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].IGST_RT"
+                           value="@(det.IGST_RT?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- IGST Amt -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].IGST_AMT"
+                           value="@(det.IGST_AMT?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- Total Amt -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].TOT_AMT"
+                           value="@(det.TOT_AMT?.ToString("0.00") ?? "0.00")"
+                           class="form-control text-right"
+                           readonly />
+                </td>
+
+
+                <!-- WH Code -->
+                <td>
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].WAREHOUSE"
+                           value="@det.WAREHOUSE"
+                           class="form-control"
+                            />
+                </td>
+
+            </tr>
+        }
+    }
+}

@@ -42,10 +42,21 @@ namespace HRMS
 
             if (user == "REPRT")
             {
-                //string redirectUrl = "http://localhost:53706/Con_HO_03020100T/Menu_HO_03020100T";
-                string redirectUrl = $"/ReportsRedirect/OpenPage?url={currentPath}";
+                string applicationPath = context.Request.ApplicationPath;
+                string redirectUrl;
+                if (string.IsNullOrEmpty(applicationPath) || applicationPath == "/")
+                {
+                    redirectUrl =
+                        $"/ReportsRedirect/OpenPage?url={HttpUtility.UrlEncode(currentPath)}";
+                }
+                else
+                {
+                    redirectUrl =
+                        $"{applicationPath.TrimEnd('/')}/ReportsRedirect/OpenPage" +
+                        $"?url={HttpUtility.UrlEncode(currentPath)}";
+                }
+                //string redirectUrl = $"/ReportsRedirect/OpenPage?url={currentPath}";
                 context.Response.Redirect(redirectUrl, true);
-
             }
         }
 

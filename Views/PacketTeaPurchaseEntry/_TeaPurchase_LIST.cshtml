@@ -21,89 +21,77 @@
        && ho.lockeduntil.HasValue
        && ho.lockeduntil > DateTime.Now;
     var disabled1 = !string.IsNullOrEmpty(LockedByUserId) && ho.lockedbyuserid != @SessionHelper.GetUser().getUserName;
-    <tr class="main-row @(disabled ? "disabled-row" : "")"
-        title="@(disabled ? "This record is currently being edited by - " + ho.lockedbyuserid : "")"
-        data-id="@ho.id"
-        style="@(disabled ? "background-color:#f2f2f2;color:#808080;opacity:0.6;" : "")">
-        @*<td><input type="checkbox" /></td>*@
-        <td>
-            <input type="checkbox"
-                   class="row-check "
-                   @*value="@PacketTea.Utility.Cryptography.Encrypt(ho.id)"*@
-                   value="@(ho.id.HasValue
-    ? PacketTea.Utility.Cryptography.Encrypt(ho.id.Value.ToString())
-    : "")"
-                   data-unit="@ho.unit"
-                   data-desp_date="@ho.docdt"
-                   docno="@ho.docno" />
+   <tr class="main-row @(disabled ? "disabled-row" : "")"
+       title="@(disabled ? "This record is currently being edited by - " + ho.lockedbyuserid : "")"
+       data-id="@ho.id"
+       data-encrypted-id="@(ho.id.HasValue
+        ? PacketTea.Utility.Cryptography.Encrypt(ho.id.Value.ToString())
+        : "")"
+       style="@(disabled ? "background-color:#f2f2f2;color:#808080;opacity:0.6;" : "")">
+       @*<td><input type="checkbox" /></td>*@
+       <td>
+           <input type="checkbox"
+                  class="row-check"
+                  data-unit="@ho.unit"
+                  data-docdt="@ho.docdt"
+                  data-docno="@ho.docno" />
+       </td>
 
-        </td>
-
-        <td>
-            <i class="fa fa-plus toggle-details  @(disabled == true  ? "disabled-link" : "")"
-               data-unit="@ho.unit"
-               data-desp_date="@ho.docdt"
-               data-docno="@ho.docno"
-               style="cursor:pointer;">
-            </i>
-        </td>
+       <td>
+           <i class="fa fa-plus toggle-details  @(disabled == true  ? "disabled-link" : "")"
+              data-unit="@ho.unit"
+              data-docdt="@ho.docdt"
+              data-docno="@ho.docno"
+              style="cursor:pointer;">
+           </i>
+       </td>
 
 
 
 
 
-        <td>
+       <td>
+           <a href="@(disabled || !ho.id.HasValue ? "#" : Url.Action("InsertOrUpdate", "PacketTeaPurchaseEntry") + "?id=" + HttpUtility.UrlEncode(PacketTea.Utility.Cryptography.Encrypt(ho.id.Value.ToString()))
+          + "&docno=" + HttpUtility.UrlEncode(ho.docno) + "&unit=" + HttpUtility.UrlEncode(ho.unit) + "&docdt=" + HttpUtility.UrlEncode(ho.docdt?.ToString("yyyy-MM-dd")) )"
+              onclick="return @(disabled || !ho.id.HasValue ? "false" : "true");">
+               @ho.docno
+           </a>
+       </td>
 
-            @*<a href="@(disabled ? "#" : Url.Action("InsertOrUpdate","PacketTeaPurchaseEntry")+ "?id=" + @HttpUtility.UrlEncode(PacketTea.Utility.Cryptography.Encrypt(ho.id)))"
-           onclick="return @(disabled ? "false" : "true");">
-            @(ho.docno)
-        </a>*@
-            <a href="@(disabled || !ho.id.HasValue
-    ? "#"
-    : Url.Action("InsertOrUpdate", "PacketTeaPurchaseEntry")
-      + "?id="
-      + HttpUtility.UrlEncode(
-          PacketTea.Utility.Cryptography.Encrypt(ho.id.Value.ToString())
-        ))"
-               onclick="return @(disabled || !ho.id.HasValue ? "false" : "true");">
-                @ho.docno
-            </a>
-        </td>
-      
 
-        <td>@DateHelper.DateFormatter(ho.docdt)</td>
+       <td>@DateHelper.DateFormatter(ho.docdt)</td>
 
-        <td>@ho.loca</td>
+       <td>@ho.loca</td>
 
-        <td>@ho.billno</td>
+       <td>@ho.billno</td>
 
-        <td>@DateHelper.DateFormatter(ho.billdt)</td>
+       <td>@DateHelper.DateFormatter(ho.billdt)</td>
 
-        <td>@DateHelper.DateFormatter(ho.prompT_DATE)</td>
+       <td>@DateHelper.DateFormatter(ho.prompT_DATE)</td>
 
-        <td>@ho.pcode</td>
+       <td>@ho.pcode</td>
 
-        <td>@ho.broK_CODE</td>
+       <td>@ho.broK_CODE</td>
 
-        <td>@ho.salE_NO</td>
+       <td>@ho.salE_NO</td>
 
-        <td>@ho.veH_NO</td>
+       <td>@ho.veH_NO</td>
 
-        <td>@ho.tpt</td>
+       <td>@ho.tpt</td>
 
-        <td>@ho.conS_NO</td>
+       <td>@ho.conS_NO</td>
 
-        <td>@DateHelper.DateFormatter(ho.conS_DT)</td>
+       <td>@DateHelper.DateFormatter(ho.conS_DT)</td>
 
-        <td>@ho.ewaybillno</td>
+       <td>@ho.ewaybillno</td>
 
-        <td>@ho.ewaybilldt</td>
+       <td>@ho.ewaybilldt</td>
 
-        <td>@ho.flavour</td>
+       <td>@ho.flavour</td>
 
 
 
-    </tr>
+   </tr>
 
     <tr class="child-row" style="display:none; background:#f9f9f9;">
         <td colspan="18">

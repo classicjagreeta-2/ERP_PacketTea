@@ -262,12 +262,16 @@
     <Compile Include="Models\FundFlow.cs" />
     <Compile Include="Models\Model_Common.cs" />
     <Compile Include="Models\Product.cs" />
+    <Compile Include="Models\PT\App_Start\BundleConfig.cs" />
+    <Compile Include="Models\PT\App_Start\FilterConfig.cs" />
+    <Compile Include="Models\PT\App_Start\RouteConfig.cs" />
     <Compile Include="Models\PT\FreeDetail.cs" />
     <Compile Include="Models\PT\ItemStock.cs" />
     <Compile Include="Models\PT\ITMAS.cs" />
     <Compile Include="Models\PT\M_BH21.cs" />
     <Compile Include="Models\PT\M_Broker.cs" />
     <Compile Include="Models\PT\M_GSTMAS.cs" />
+    <Compile Include="Models\PT\M_PMAST.cs" />
     <Compile Include="Models\PT\M_Transp.cs" />
     <Compile Include="Models\PT\PT_ALL_LIST.cs" />
     <Compile Include="Models\PT\SLMAS.cs" />

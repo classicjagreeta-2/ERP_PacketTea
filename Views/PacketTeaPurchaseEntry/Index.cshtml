@@ -43,7 +43,7 @@
 <body>
     <input type="hidden" id="currentPage" value="@ViewBag.Page" />
     <input type="hidden" id="isLoading" value="0" />
-    @*<input type="hidden" id="totalRows" value="@Model.TotalItemCount" />*@
+    <input type="hidden" id="totalRows" value="@Model.TotalItemCount" />
     <input type="hidden" id="pageSize" value="@ViewBag.PageSize" />
     <input type="hidden" id="hiddenUNIT" />
     <input type="hidden" id="hiddenGLOCA" />
@@ -94,21 +94,23 @@
         </div>
         <!-- action btns end -->
 
-        <div class="title-heading"> Packet Tea Purchase </div>
+        <div class="title-heading">
+            Packet Tea Purchase
 
-        <!-- Your existing search form - NO CHANGES to your current code -->
-        <!-- Just add id="searchIcon" to your search icon -->
+            <!-- Your existing search form - NO CHANGES to your current code -->
+            <!-- Just add id="searchIcon" to your search icon -->
 
-        <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
-            <div style="position: relative; width: 250px;">
-                <input type="text"
-                       name="searchString"
-                       value="@ViewBag.CurrentFilter"
-                       placeholder="Search"
-                       style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
-                <i class="fa fa-search"
-                   id="searchInput"
-                   style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333; cursor: pointer;"></i>
+            <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
+                <div style="position: relative; width: 250px;">
+                    <input type="text"
+                           name="searchString"
+                           value="@ViewBag.CurrentFilter"
+                           placeholder="Search"
+                           style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
+                    <i class="fa fa-search"
+                       id="searchInput"
+                       style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333; cursor: pointer;"></i>
+                </div>
             </div>
         </div>
         @using (Ajax.BeginForm("Index", "PacketTeaPurchaseEntry",
@@ -820,21 +822,57 @@ $(document).on('click', '.go-new', function (e) {
         }
     </script>
     <script>
-$(document).on('click', '#editBtn', function () {
+    $(document).on('click', '#editBtn', function () {
 
-    var $checked = $('.row-check:checked');
+        var $checked = $('.row-check:checked');
 
+        if ($checked.length === 0) {
+            alert('Please select a record first.');
+            return;
+        }
 
+        if ($checked.length > 1) {
+            alert('Please select only one record.');
+            return;
+        }
 
-    // ✅ Get encrypted ID
-    var id = $checked.val();
+        var $checkbox = $checked.first();
 
-    // ✅ Encode ONLY here
-    window.location.href =
-        '@Url.Action("Purchase_RequisitionSaveOrUpate", "Purchase_Requisition")'
-        + '?id=' + encodeURIComponent(id);
-});
+        var docno = $checkbox.attr('data-docno');
+        var unit = $checkbox.attr('data-unit');
+        var docdt = $checkbox.attr('data-docdt');
+
+        console.log("DOCNO:", docno);
+        console.log("UNIT:", unit);
+        console.log("DOCDT:", docdt);
+
+        if (!docno) {
+            alert('Document No not found.');
+            return;
+        }
+
+        if (!unit) {
+            alert('Unit not found.');
+            return;
+        }
+
+        if (!docdt) {
+            alert('Document Date not found.');
+            return;
+        }
+
+        var url =
+            '@Url.Action("InsertOrUpdate", "PacketTeaPurchaseEntry")'
+            + '?docno=' + encodeURIComponent(docno)
+            + '&unit=' + encodeURIComponent(unit)
+            + '&docdt=' + encodeURIComponent(docdt);
+
+        console.log("Final URL:", url);
+
+        window.location.href = url;
+    });
     </script>
+
     <script>
         $(document).on('change', '.row-check', function () {
             if ($(this).is(':checked')) {
