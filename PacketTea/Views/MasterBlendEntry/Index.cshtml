@@ -1,767 +1,360 @@
-﻿
-
-
 @using PacketTea.Utility
-@using PagedList.Mvc;
-@using PagedList;
-@model PacketTea.Models.PT.PT_ALL_LIST
+@model List<PacketTea.Models.PT.T_TEA_BLEND>
 
 @{
-    ViewBag.Title = "Index";
+    ViewBag.Title = "Master Blend Entry";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
+    var currentBlendType = (string)ViewBag.BlendType;
 }
 
 <!doctype html>
 <html lang="en">
-
 <head>
-
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
-    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <style>
-        .table.table-sm td, .table.table-sm th {
-            padding: 0.6rem;
+        :root {
+            --mbe-navy: #2c3958; --mbe-accent: #3a7bd5; --mbe-border: #dde2ea;
+            --mbe-bg: #f4f6fa; --mbe-text: #2b2f38; --mbe-muted: #6b7280;
         }
+        body { background: var(--mbe-bg); }
+        .general-container { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(20,30,60,.08); padding-bottom: 18px; overflow: hidden; }
 
-        tbody div {
-            overflow: unset !important;
-            height: auto !important;
-            max-height: none !important;
+        /* purchase-order.css's ".action-btns ul" / ".action-btns ul li a" rules
+           (white bar, black text) match more elements than the equivalents below,
+           so they win on specificity regardless of source order. Match that same
+           element chain here so overrides below actually take effect instead of
+           silently losing to the shared rules on some properties but not others. */
+        .action-btns, .action-btns ul { background: #fff; border: none; border-bottom: 1px solid var(--mbe-border); }
+        .action-btns ul { display: flex; align-items: center; margin: 0; padding: 6px 14px; list-style: none; }
+        .action-btns ul li { margin-right: 6px; border-right: none; }
+        .action-btns ul li a, .action-btns ul li button {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--mbe-text); background: transparent; border: none; cursor: pointer;
+            padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
+            text-decoration: none; transition: background .15s ease;
         }
+        .action-btns ul li a:hover, .action-btns ul li button:hover:not(:disabled) { background: var(--mbe-bg); color: var(--mbe-text); }
+        .action-btns ul li button:disabled { opacity: .4; cursor: not-allowed; }
+        #blendTypeFilter {
+            border: 1px solid var(--mbe-border); border-radius: 6px; padding: 7px 10px;
+            background: #fff; color: var(--mbe-text); font-size: 13px;
+        }
+        #blendTypeFilter option { color: var(--mbe-text); }
 
-        .btn-link {
-            font-weight: 500;
-            color: black;
-            border-radius: 0;
-        }
+        .title-heading { padding: 18px 20px 14px; font-size: 20px; font-weight: 700; color: var(--mbe-text); }
+
+        #searchInput { border: 1px solid var(--mbe-border); border-radius: 6px; }
+
+        .table-responsive { padding: 0 20px; }
+        table.main-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.main-table th, table.main-table td { border: 1px solid var(--mbe-border); padding: 8px 10px; }
+        table.main-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.main-table tbody tr:nth-child(even) { background: #f8f9fc; }
+        table.main-table tbody tr:hover { background: #eef3ff; }
+        .dataTables_info { padding: 10px 20px 0; color: var(--mbe-muted); font-size: 12.5px; }
+
+        /* Item-line sub-grid shown inside the "+" expand row -- styled like the
+           main list table (navy header, bordered cells) rather than the plain
+           label/value pairs it replaces, matching how other list screens
+           (e.g. Attendance Entry) show a row's child records. */
+        table.detail-sub-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table.detail-sub-table th, table.detail-sub-table td { border: 1px solid var(--mbe-border); padding: 6px 8px; }
+        table.detail-sub-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.detail-sub-table tbody tr:nth-child(even) { background: #fff; }
     </style>
-
-
-
 </head>
-
 <body>
-    @*<input type="hidden" id="currentPage" value="@ViewBag.Page" />
-        <input type="hidden" id="isLoading" value="0" />
-        <input type="hidden" id="totalRows" value="@Model.TotalItemCount" />
-        <input type="hidden" id="pageSize" value="@ViewBag.PageSize" />*@
-    <input type="hidden" id="hiddenUNIT" />
-    <input type="hidden" id="hiddenGLOCA" />
 
-
-    <!-- first screen start -->
     <div class="general-container">
-
-
         <div class="action-btns">
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
                 <li>
-                    <button type="button"
-                            class="IdaddNewRecord btn btn-link"
-                            disabled="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false))">
-                        <i class="fa fa-plus"></i> New
-                    </button>
+                    <select id="blendTypeFilter" class="form-control" style="width:170px;display:inline-block;">
+                        @foreach (var bt in blendTypes)
+                        {
+                            <option value="@bt.Key" selected="@(bt.Key == currentBlendType)">@bt.Value (@bt.Key)</option>
+                        }
+                    </select>
                 </li>
-
                 <li>
-                    <a href="javascript:void(0)" id="editBtn"
-                       style="@( !((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false)
-                        ? "pointer-events:none; opacity:0.5;"
-                        : "" )">
+                    <a href="javascript:void(0)" id="btnNew">
+                        <i class="fa fa-plus"></i> New
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="editBtn">
                         <i class="fa fa-pencil"></i> Edit
                     </a>
                 </li>
-
                 <li>
-                    <a href="javascript:void(0)"
-                       id="deleteBtn"
-                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Delete ?? false)
-                        ? "pointer-events:none; opacity:0.5;"
-                        : "")">
+                    <a href="javascript:void(0)" id="deleteBtn">
                         <i class="fa fa-trash-o"></i> Delete
                     </a>
                 </li>
-
-                <li><a href="#"><i class="fa fa-eye"></i> View</a></li>
-                <li><a href="#"><i class="fa fa-list-ul"></i> Lines</a></li>
                 <li style="margin-left:auto">
-                    <label class="btn btn-inverse pull-right" style="margin: 10px;">
-                        LIST
-                    </label>
+                    <label style="margin:0;color:var(--mbe-muted);font-size:12px;font-weight:700;letter-spacing:.05em;">LIST</label>
                 </li>
             </ul>
         </div>
-        <!-- action btns end -->
 
-        <div class="title-heading">  Blend Street   </div>
+        <div class="title-heading">Master Blend Entry</div>
 
-        <!-- Your existing search form - NO CHANGES to your current code -->
-        <!-- Just add id="searchIcon" to your search icon -->
-
-        <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
-            <div style="position: relative; width: 250px;">
-                <input type="text"
-                       name="searchString"
-                       @*value="@ViewBag.CurrentFilter"*@
-                       placeholder="Search"
-                       style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
-                <i class="fa fa-search"
-                   id="searchInput"
-                   style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333; cursor: pointer;"></i>
+        <div style="display:flex;justify-content:flex-end;padding:0 20px;margin-bottom:15px;">
+            <div style="position:relative;width:280px;">
+                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No / Blend No"
+                       style="width:100%;padding:8px 14px;box-sizing:border-box;" />
             </div>
         </div>
-        @using (Ajax.BeginForm("Index", "MasterBlendEntry",
-                new AjaxOptions
-                {
-                    HttpMethod = "POST",
-                    InsertionMode = InsertionMode.InsertAfter,
-                    UpdateTargetId = "prContainer",
-                    OnSuccess = "onLoadSuccess"
-                },
-                new { id = "loadMoreForm" }))
-        {
-            <input type="hidden" id="page" name="page" value="@ViewBag.Page" />
-            <input type="hidden" name="pageSize" value="@ViewBag.PageSize" />
-            <input type="hidden" name="searchString" value="@ViewBag.CurrentFilter" />
-            <input type="hidden" name="sortOrder" value="@ViewBag.CurrentSort" />
-            <input type="hidden" id="hiddenUNIT" />
-            <input type="hidden" id="hiddenDOCTYPE" />
 
-        }
-
-
-        <!-- Make sure your table has an ID -->
-        <table id="mainTable" class="table table-bordered">
-            <!-- your thead and tbody -->
-        </table>
-
-
-        <div class="table-responsive" id="tableScroll">
-            <table class="border main-table" id="poTable">
+        <div class="table-responsive">
+            <table class="border main-table" id="blendTable">
                 <thead>
                     <tr>
-                        <th><input type="checkbox" id="selectAll" class="checkbox-round" /></th>
-                        <th></th>
-                        <th>Doc No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Party <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Master Blend No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Final Blend No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Blend Details  <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Export Ref. No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-
-                        <th>Warehouse <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Allocation <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Blend Mark <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Blend Grade <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>No of Chest <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Net WT/Chest <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Gross WT/Chest <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Export Ref. No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Transporter <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Shipping Mark <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Closed <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                        <th style="width:26px;"></th>
+                        <th style="width:26px;"></th>
+                        <th>Doc No</th>
+                        <th>Date</th>
+                        <th>Party</th>
+                        <th>Blend No</th>
+                        <th>Blend Details</th>
+                        <th>Warehouse</th>
+                        <th>Allocation</th>
+                        <th>Blend Mark</th>
+                        <th>Blend Grade</th>
+                        <th>No of Chest</th>
+                        <th>Net WT/Chest</th>
+                        <th>Gross WT/Chest</th>
+                        <th>Closed</th>
                     </tr>
                 </thead>
-                <tbody id="prContainer">
-                    @*@Html.Partial("_PRList", Model)*@
+                <tbody>
+                    @if (Model != null && Model.Count > 0)
+                    {
+                        var rowIndex = 0;
+                        foreach (var row in Model)
+                        {
+                            rowIndex++;
+                            var detailId = "rowDetail" + rowIndex;
+                            <tr>
+                                <td style="text-align:center;">
+                                    <button type="button" class="row-expand-btn" data-target="@detailId" title="Show more details">+</button>
+                                </td>
+                                <td>
+                                    <input type="radio" name="rowSel" class="row-check"
+                                           value="@row.DOCNO"
+                                           data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")"
+                                           data-blendtype="@row.BLEND_TYPE" />
+                                </td>
+                                <td>@row.DOCNO</td>
+                                <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
+                                <td>@row.PartyName</td>
+                                <td>@row.BLEND_NO</td>
+                                <td>@row.BLEND_DESCN</td>
+                                <td>@row.WarehouseName</td>
+                                <td>@row.AllocationName</td>
+                                <td>@row.BlendMarkName</td>
+                                <td>@row.BlendGradeName</td>
+                                <td class="text-right">@row.BLEND_CHEST</td>
+                                <td class="text-right">@row.BLEND_CHEST_WT</td>
+                                <td class="text-right">@row.BLEND_CHEST_GROSSWT</td>
+                                <td>@(row.CLOSED == "Y" ? "Yes" : "No")</td>
+                            </tr>
+                            <!-- Header fields that don't fit the main grid -- shown on demand via the
+                                 "+" toggle instead of adding another half-dozen always-visible columns.
+                                 Pre-filled from the page's own data so the panel isn't empty on first
+                                 open, then re-fetched via GetRowDetail every time it's opened so it
+                                 reflects the latest saved value instead of what was on the page when
+                                 it was first loaded. -->
+                            <tr class="row-detail" id="@detailId" style="display:none;"
+                                data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
+                                <td colspan="15" style="background:#f8f9fc;padding:10px 12px;">
+                                    <!-- Plain inline text, not a flex/grid container -- a flex-wrap div here
+                                         made Chrome's own layout-debugging overlay (the little arrow/handle
+                                         badges it draws on every flex container) show up right on the page,
+                                         which is what made this look cluttered next to Attendance Entry's
+                                         plain master-row-then-sub-grid layout. -->
+                                    <div style="padding:0 2px 10px;font-size:12.5px;line-height:1.8;">
+                                        <b>Export Ref No:</b> <span class="detail-val" data-field="exprefNo">@row.EXPREF_NO</span>
+                                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                                        <b>Transporter:</b> <span class="detail-val" data-field="transporterName">@row.TransporterName</span>
+                                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                                        <b>Ship Mark:</b> <span class="detail-val" data-field="shipMark">@row.SHIP_MARK</span>
+                                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                                        <b>Notes:</b> <span class="detail-val" data-field="notes">@row.NOTES</span>
+                                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                                        <b>Special Instructions:</b> <span class="detail-val" data-field="spNotes">@row.SP_NOTES</span>
+                                    </div>
+                                    <div style="overflow-x:auto;">
+                                        <table class="detail-sub-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:34px;">Sl</th>
+                                                    <th>Mark/Garden</th>
+                                                    <th>Inv No</th>
+                                                    <th>Pack Date</th>
+                                                    <th>Grade</th>
+                                                    <th style="text-align:right;">Bag</th>
+                                                    <th style="text-align:right;">Qty</th>
+                                                    <th style="text-align:right;">Sam. Qty</th>
+                                                    <th style="text-align:right;">Rate</th>
+                                                    <th style="text-align:right;">Amount</th>
+                                                    <th>Warehouse</th>
+                                                    <th>DO No</th>
+                                                    <th>Transporter</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="detail-items-body">
+                                                <tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Loading...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="15" style="text-align:center;">No records found</td></tr>
+                    }
                 </tbody>
-
             </table>
-            <div id="loading" style="display:none; text-align:center; padding:20px;">
-                Loading...
-            </div>
         </div>
-        <div class="row">
-            <div class="col-xs-12 col-sm-12 col-md-5">
-                <div class="dataTables_info" id="dom-jqry_info" role="status" aria-live="polite">
-                    @*Showing <span id="shownCount">@Model.LastItemOnPage</span> of @Model.TotalItemCount*@
-                </div>
+        @{
+            int pageSize = (int)ViewBag.PageSize;
+            int rowCount = (int)ViewBag.RowCount;
+            int currentPage = (int)ViewBag.Page;
+            int pageCount = pageSize > 0 ? (int)Math.Ceiling(rowCount / (double)pageSize) : 1;
+        }
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;flex-wrap:wrap;gap:8px;">
+            <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
+                <span style="color:var(--mbe-muted);font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
+                <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
             </div>
         </div>
     </div>
-    <script src="~/libraries/assetspo/js/jquery-ui.js"></script>
-    <script src="~/libraries/assetspo/js/custom.js"></script>
 
-    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
-    @*<script>
-                let isLoading = false;
-                $("#tableScroll").on("scroll", function () {
-                    debugger;
-                    let element = $(this)[0];
-                    if (element.scrollTop + element.clientHeight >= element.scrollHeight - 10) {
+    <script>
+        // TEMPORARY diagnostic -- shows which Oracle schema (x-database header, see
+        // Services.cs) this session's API calls actually connect as, so it can be checked
+        // directly against the DB instead of guessing from Web.config's unused OracleDb
+        // connection string. Safe to remove once you've confirmed the schema name.
+        console.log('[MasterBlendEntry diag] x-database (Oracle schema) for this session: ' +
+            @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(SessionHelper.GetUser()?.getDbName ?? "(null/empty -- getDbName is not set for this session)")));
+        $(function () {
+            $('#blendTypeFilter').on('change', function () { reload(); });
 
-                        if (!isLoading) {
-                            isLoading = true;
-                            $("#loading").show();
-                            let page = parseInt($("#page").val());
-                         /*   alert(page);*/
-                            $("#page").val(page + 1);
+            var searchTimer;
+            $('#searchInput').on('input', function () {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(reload, 400);
+            });
 
-                            $("#loadMoreForm").submit();
-                        }
-                    }
-                });
-                function onLoadSuccess() {
+            // Changing the blend type or the search text always jumps back to page 1 (there's
+            // no reason to assume whatever page you were on still applies to a new filter) --
+            // paging itself calls reload(n) with the target page instead.
+            function reload(page) {
+                window.location.href = '@Url.Action("Index", "MasterBlendEntry")'
+                    + '?blendType=' + encodeURIComponent($('#blendTypeFilter').val())
+                    + '&searchString=' + encodeURIComponent($('#searchInput').val())
+                    + '&page=' + (page || 1);
+            }
 
-            let pageSize = parseInt("@Model.PageSize");
-            let page = parseInt($("#page").val());
+            $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
+            $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
 
-            let shown = page * pageSize;
+            // "+" toggle -- reveals the header fields that don't fit the main grid (Export Ref
+            // No, Transporter, Ship Mark, Notes, Special Instructions) for that row. Every open
+            // re-fetches them via GetRowDetail instead of trusting what was rendered at page
+            // load, so an edit someone else just saved shows up without a full page reload.
+            $('#blendTable').on('click', '.row-expand-btn', function () {
+                var $btn = $(this);
+                var $detail = $('#' + $btn.data('target'));
+                var opening = !$detail.is(':visible');
+                $detail.toggle(opening);
+                $btn.text(opening ? '-' : '+');
 
-            let total = parseInt("@Model.TotalItemCount");
-            if (shown > total) shown = total;
-
-            $("#shownCount").text(shown);
-
-            $("#loading").hide();
-            isLoading = false;
-        }
-
-
-
-            </script>
-            <script>
-                $(document).ready(function () {
-                    debugger;
-                    var $searchInput = $('input[name="searchString"]');
-                    var searchInput = $('#searchInput');
-                    var $tableBody = $('#prContainer');
-                    var searchTimeout;
-
-                    // Store the original table content (before any search)
-                    var originalContent = $tableBody.html();
-
-                    // If page loads with existing search term
-                    if ($searchInput.val() && $searchInput.val().length > 0) {
-                        searchInput.removeClass('fa-search').addClass('fa-times').css('cursor', 'pointer');
-                    }
-
-                    function performSearch(query) {
-                        debugger;
-
-                        if (!query || !query.trim()) {
-                            $("#page").val(1);
-                            $searchInput.val('');
-                            $('#loadMoreForm input[name="searchString"]').val('');
-                            isLoading = false;
-                            $("#loadMoreForm").submit();
+                if (opening) {
+                    var $body = $detail.find('.detail-items-body');
+                    $.get('@Url.Action("GetRowDetail", "MasterBlendEntry")', {
+                        docno: $detail.data('docno'),
+                        docdt: $detail.data('docdt'),
+                        blendType: $detail.data('blendtype')
+                    }).done(function (r) {
+                        if (!r || !r.success) { // leave the page-load values in place
+                            $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Unable to load item lines.</td></tr>');
                             return;
                         }
+                        $detail.find('[data-field="exprefNo"]').text(r.exprefNo || '');
+                        $detail.find('[data-field="transporterName"]').text(r.transporterName || '');
+                        $detail.find('[data-field="shipMark"]').text(r.shipMark || '');
+                        $detail.find('[data-field="notes"]').text(r.notes || '');
+                        $detail.find('[data-field="spNotes"]').text(r.spNotes || '');
 
-                        // Just clear, don't show loading message
-                        $tableBody.empty();
-
-                        // Update both search inputs
-                        $("#page").val(1);
-                        $searchInput.val(query);
-                        $('#loadMoreForm input[name="searchString"]').val(query);
-                        isLoading = false;
-                        $("#loadMoreForm").submit();
-                    }
-
-                    // Typing → debounced search
-                    $searchInput.on('input', function () {
-                        var value = $(this).val().trim();
-
-                        // Toggle X icon
-                        if (value) {
-                            searchInput.removeClass('fa-search').addClass('fa-times').css('cursor', 'pointer');
-                        } else {
-                            searchInput.removeClass('fa-times').addClass('fa-search').css('cursor', 'default');
+                        // Item lines (Mark/Inv/Grade/Qty/...), rendered the same way as
+                        // Attendance Entry's per-employee sub-grid instead of the plain
+                        // label/value block this panel used to be limited to.
+                        var items = r.details || [];
+                        if (items.length === 0) {
+                            $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">No item lines</td></tr>');
+                            return;
                         }
-
-                        clearTimeout(searchTimeout);
-                        searchTimeout = setTimeout(function () {
-                            performSearch(value);
-                        }, 500);
-                    });
-
-                    // Click on X → clear everything
-                    searchInput.on('click', function () {
-                        if ($(this).hasClass('fa-times')) {
-                            $searchInput.val('');
-                            $('#loadMoreForm input[name="searchString"]').val('');
-                            $("#page").val(1);
-                            searchInput.removeClass('fa-times').addClass('fa-search').css('cursor', 'default');
-                            isLoading = false;
-                            $("#loadMoreForm").submit();
-                        }
-                    });
-
-                    // Enter key → immediate search
-                    $searchInput.on('keypress', function (e) {
-                        if (e.which === 13) {
-                            e.preventDefault();
-                            clearTimeout(searchTimeout);
-                            performSearch($(this).val().trim());
-                        }
-                    });
-                });
-            </script>
-
-            <script>
-                //$(document).ready(function () {
-                //    // Accordion toggle
-                //    $('.accordion-header').click(function () {
-                //        // $('.accordion-header').not(this).removeClass('active').next('.accordion-body').slideUp();
-                //        $(this).toggleClass('active').next('.accordion-body').slideToggle();
-                //    });
-                //    $('.accordion-header').first().addClass('active').next('.accordion-body').show();
-
-
-                //});
-
-
-                $(document).ready(function () {
-                    $('.toggle-icon').on('click', function () {
-                        const $icon = $(this);
-                        const $mainRow = $icon.closest('tr');
-                        const $subTableRow = $mainRow.next('.sub-table-row');
-
-                        // Toggle visibility
-                        $subTableRow.toggle();
-
-                        // Toggle icon class
-                        if ($icon.hasClass('fa-plus')) {
-                            $icon.removeClass('fa-plus').addClass('fa-minus');
-                        } else {
-                            $icon.removeClass('fa-minus').addClass('fa-plus');
-                        }
-                    });
-                });
-            $(document).on("click", ".toggle-icon", function () {
-                debugger;
-            let icon = $(this);
-            let row = icon.closest("tr");
-            let childRow = row.next(".sub-table-row");
-            let tbody = childRow.find(".child-details-body");
-
-            let docno = icon.data("docno");
-            let doctype = icon.data("doctype");
-            let unit = icon.data("unit");
-            let docdt = icon.data("docdt");
-            let docyear = icon.data("docyear");
-           /* let itcd = icon.data("itcd");*/
-
-            // If already open → close it
-            if (childRow.is(":visible")) {
-                childRow.hide();
-                tbody.empty();
-                icon.removeClass("fa-minus").addClass("fa-plus");
-                return;
-            }
-
-            // Show loader
-            tbody.html(`
-                <tr>
-                    <td colspan="6" style="text-align:center;">
-                        <i class="fa fa-spinner fa-spin fa-2x"></i><br/>Loading...
-                    </td>
-                </tr>
-            `);
-
-            childRow.show();
-
-            // AJAX call
-            $.ajax({
-                url: "@Url.Action("GetDetailJson", "Purchase_Requisition")",
-                type: "GET",
-                data: {
-                    docno: docno,
-                    doctype: doctype,
-                    unit: unit,
-                    docdt: docdt,
-                    docyear: docyear,
-                   /* itcd: itcd*/
-                },
-                dataType: "json",
-                success: function (response) {
-                    tbody.empty();
-
-                    if (!response || response.length === 0) {
-                        tbody.html(`<tr><td colspan="6" style="text-align:center;">No records found</td></tr>`);
-                        return;
-                    }
-
-                    //response.forEach(function (item) {
-                    //    let html = `
-                    //        <tr>
-                    //            <td style="width:120px;">${item.ITCD}</td>
-                    //            <td>${item.ItemName}</td>
-                    //            <td>${item.ITEM_DESCN}</td>
-
-                    //            <td class="align-right">${Number(item.QUANTITY).toFixed(3)}</td>
-                    //            <td class="align-right">${Number(item.RATE).toFixed(2)}</td>
-                    //            <td class="align-right">${Number(item.AMT).toFixed(2)}</td>
-                    //        </tr>`;
-                    //    tbody.append(html);
-                    //});
-                    response.forEach(function (item) {
-                        let html = `
-                <tr>
-                    <td style="width:120px;">${item.ITCD}</td>
-                    <td>${item.ItemName}</td>
-                    <td>${item.UNIT_CD || ''}</td>
-                    <td class="align-right">${Number(item.QUANTITY).toFixed(3)}</td>
-                    <td class="align-right">${Number(item.RATE).toFixed(2)}</td>
-                    <td class="align-right">${Number(item.AMT).toFixed(2)}</td>
-                </tr>`;
-                        tbody.append(html);
-                    });
-
-                    icon.removeClass("fa-plus").addClass("fa-minus");
-                },
-                error: function (xhr) {
-                    tbody.html(`<tr><td colspan="6" style="color:red;">Error loading data!</td></tr>`);
-                    console.error("Error:", xhr);
-                }
-            });
-        });
-
-
-
-
-            </script>
-            <script>
-                function loadDocType(unitCode) {
-            console.log('📡 Loading DocTypes for UNIT:', unitCode);
-
-            // ✅ destroy safely
-            if ($('#ListingDocType').data('inputpicker')) {
-                $('#ListingDocType').inputpicker('destroy');
-            }
-
-            $('#ListingDocType').inputpicker({
-                url: '@Url.Action("GetDocType", "Purchase_Requisition")' + '?unit=' + unitCode,
-                fields: [
-                    { name: 'CODE', text: 'CODE' },
-                    { name: 'DESCN', text: 'DESCN' }
-                ],
-                fieldText: 'CODE',
-                fieldValue: 'CODE',
-                headShow: true,
-                autoOpen: true,
-                pagination: true,
-                pageField: 'p',
-                pageLimitField: 'limit',
-                pageLimit: 10,
-                pageCountField: 'count',
-                width: '140px',
-                urlDelay: 1
-            });
-
-            // ✅ prevent duplicate binding
-                    $('#ListingDocType').off('inputpicker.select');
-
-                    $('#ListingDocType').on('inputpicker.select', function (e, item) {
-                        if (item && item.CODE) {
-                            console.log('📌 Selected DOCTYPE (event):', item.CODE);
-                            $('#hiddenDOCTYPE').val(item.CODE);
-                        }
-                    });
-
-                    // ✅ BACKUP FIX (THIS WILL SOLVE YOUR ISSUE)
-                    $('#ListingDocType').on('change', function () {
-                        var val = $(this).val();
-                        console.log('📌 Selected DOCTYPE (change):', val);
-
-                        if (val) {
-                            $('#hiddenDOCTYPE').val(val);
-                        }
-                    });
-        }
-
-
-        // Build New Row
-        function buildNewRow() {
-            return `
-        <tr id="newUnitRow" class="new-entry-row">
-            <td class="text-center">
-                <i class="fa fa-pencil go-new"
-                   style="cursor:pointer;color:#black;"
-                   title="Go to New Entry"></i>
-            </td>
-            <td></td>
-
-            <!-- UNIT -->
-            <td>
-                <input type="text"
-                       id="ListingUnitCode"
-                       class="form-control"
-                       placeholder="Select Unit"
-                       autocomplete="off"
-                       style="width:140px;" />
-            </td>
-
-            <!-- DOCTYPE -->
-            <td>
-                <input type="text"
-                       id="ListingDocType"
-                       class="form-control"
-                       placeholder="Select DocType"
-                       autocomplete="off"
-                       style="width:140px;"
-                       disabled />
-            </td>
-
-            <td colspan="8"></td>
-        </tr>`;
-        }
-
-
-        // Add New Row
-        $(document).on('click', '.IdaddNewRecord', function () {
-            if ($('#newUnitRow').length) return;
-
-            $('#hiddenUNIT').val('');
-            $('#hiddenDOCTYPE').val('');
-
-            $('#prContainer').prepend(buildNewRow());
-            initUnitPicker();
-
-            setTimeout(() => {
-                $('#ListingUnitCode').focus();
-            }, 100);
-        });
-
-
-        // Unit Picker
-        function initUnitPicker() {
-
-            $('#ListingUnitCode').inputpicker({
-                url: '@Url.Action("GetUnit", "Purchase_Requisition")',
-                fields: [
-                    { name: 'code', text: 'CODE' },
-                    { name: 'descn', text: 'NAME' }
-                ],
-                fieldText: 'code',
-                fieldValue: 'code',
-                headShow: true,
-                autoOpen: true,
-                pagination: true,
-                pageField: 'p',
-                pageLimitField: 'limit',
-                pageLimit: 10,
-                pageCountField: 'count',
-                width: '140px',
-                urlDelay: 1
-            });
-
-            // select event
-            $('#ListingUnitCode').on('inputpicker.select', function (e, item) {
-                if (item && item.code) {
-                    saveUnitData(item.code);
-                }
-            });
-
-            // change fallback
-            $('#ListingUnitCode').on('change', function () {
-                var selectedCode = $(this).val();
-                if (selectedCode) {
-                    fetchUnitByCode(selectedCode);
-                }
-            });
-        }
-
-
-        // Fetch Unit
-        function fetchUnitByCode(code) {
-            $.ajax({
-                url: '@Url.Action("GetUnit", "Purchase_Requisition")',
-                data: { q: code, limit: 1, p: 1 },
-                method: 'GET',
-                success: function (response) {
-                    if (response.data && response.data.length > 0) {
-                        saveUnitData(response.data[0].code);
-                    }
-                }
-            });
-        }
-
-
-        // ✅ MAIN FIX HERE
-        function saveUnitData(code, gloca) {
-            console.log('💾 Saving unit data:', code);
-
-            $('#hiddenUNIT').val(code);
-
-            // enable doctype
-            $('#ListingDocType').prop('disabled', false);
-
-            // clear
-            $('#ListingDocType').val('');
-            $('#hiddenDOCTYPE').val('');
-
-            // load picker
-            loadDocType(code);
-
-            // 🔥 IMPORTANT: OPEN DROPDOWN
-            setTimeout(() => {
-                $('#ListingDocType').click();
-            }, 300);
-        }
-
-
-        // Go New
-        $(document).on('click', '.go-new', function (e) {
-            e.preventDefault();
-
-            var UNIT = $('#hiddenUNIT').val();
-            var DOCTYPE = $('#hiddenDOCTYPE').val();
-
-            if (!UNIT) {
-                alert("Please select Unit first");
-                return;
-            }
-
-            if (!DOCTYPE) {
-                alert("Please select DocType first");
-                return;
-            }
-
-            window.location.href =
-                '@Url.Action("Purchase_RequisitionSaveOrUpate", "Purchase_Requisition")'
-                + '?unit=' + encodeURIComponent(UNIT)
-                + '&doctype=' + encodeURIComponent(DOCTYPE);
-        });
-            </script>
-
-
-            <script>
-                        $(document).on('click', '#deleteBtn', function () {
-
-                            debugger;
-                    // ✅ get selected checkbox
-                    var $checked = $('.row-check:checked');
-
-                    if ($checked.length === 0) {
-                        $.confirm({
-                            title: "Delete",
-                            type: "orange",
-                            content: "<b>Please select one record to delete.</b>",
-                            buttons: { ok: { btnClass: "btn-primary" } }
+                        $body.empty();
+                        items.forEach(function (d, i) {
+                            var packDate = d.PACK_DATE ? new Date(d.PACK_DATE).toLocaleDateString('en-GB') : '';
+                            $('<tr>').append(
+                                '<td>' + (d.SLNO != null ? d.SLNO : (i + 1)) + '</td>',
+                                '<td>' + (d.MarkName || d.MARK || '') + '</td>',
+                                '<td>' + (d.INVNO || '') + '</td>',
+                                '<td>' + packDate + '</td>',
+                                '<td>' + (d.GradeName || d.GRADE || '') + '</td>',
+                                '<td style="text-align:right;">' + (d.BAG_CHEST || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.SAMPLE_QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.RATE || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.AMOUNT || 0) + '</td>',
+                                '<td>' + (d.WAREHOUSE || '') + '</td>',
+                                '<td>' + (d.DONO || '') + '</td>',
+                                '<td>' + (d.TransporterName || '') + '</td>'
+                            ).appendTo($body);
                         });
-                        return;
-                    }
-
-                    if ($checked.length > 1) {
-                        $.confirm({
-                            title: "Delete",
-                            type: "orange",
-                            content: "<b>Please select only ONE record.</b>",
-                            buttons: { ok: { btnClass: "btn-primary" } }
-                        });
-                        return;
-                    }
-
-                            //var id = $checked.data('id');       // 🔹 NORMAL ID
-                            /* var id = $checked.attr('data-id');*/
-                            var id = $checked.val();
-                            var docno = $checked.data('docno');   // 🔹 DISPLAY ONLY
-
-                    $.confirm({
-                        title: "Confirm Delete",
-                        type: "red",
-                        content: `<b>Are you sure you want to delete Purchase Requisition Data No <span style="color:#d9534f;">${docno}</span> ?</b>`,
-                        buttons: {
-                            yes: {
-                                text: "Yes, Delete",
-                                btnClass: "btn-danger",
-                                action: function () {
-
-                                    $('<form>', {
-                                        method: 'POST',
-                                        action: '@Url.Action("Delete", "Purchase_Requisition")'
-                                    })
-                                    .append($('<input>', {
-                                        type: 'hidden',
-                                        name: 'id',
-                                        value: id
-                                    }))
-                                    .appendTo('body')
-                                    .submit();
-                                }
-                            },
-                            no: {
-                                text: "Cancel",
-                                btnClass: "btn-primary"
-                            }
-                        }
+                    }).fail(function () {
+                        $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Unable to load item lines.</td></tr>');
                     });
-                });
-            </script>
-            <script>
-                function formatDotNetDate(dateString) {
-
-                    if (!dateString) return "";
-
-                    // extract milliseconds
-                    let timestamp = parseInt(dateString.replace(/[^0-9]/g, ''));
-
-                    let date = new Date(timestamp);
-
-                    let month = String(date.getMonth() + 1).padStart(2, '0');
-                    let year = date.getFullYear();
-
-                    return month + "-" + year;
                 }
-            </script>
-            <script>
-        $(document).on('click', '#editBtn', function () {
-
-            var $checked = $('.row-check:checked');
-
-
-
-            // ✅ Get encrypted ID
-            var id = $checked.val();
-
-            // ✅ Encode ONLY here
-            window.location.href =
-                '@Url.Action("Purchase_RequisitionSaveOrUpate", "Purchase_Requisition")'
-                + '?id=' + encodeURIComponent(id);
-        });
-            </script>
-            <script>
-                $(document).on('change', '.row-check', function () {
-                    if ($(this).is(':checked')) {
-                        $('.row-check').not(this).prop('checked', false);
-                    }
-                });
-            </script>*@
-
-    @*@if (TempData["ErrorMessage"] != null)
-        {
-            <script>
-            $(function () {
-                debugger
-                $.confirm({
-                    title: 'Warning',
-                    type: 'red',
-                    content: '@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(TempData["ErrorMessage"].ToString()))',
-                    buttons: {
-                        ok: {
-                            text: 'OK',
-                            btnClass: 'btn-danger'
-                        }
-                    }
-                });
-
             });
-            </script>*@
-    @*}*@
 
+            $('#btnNew').on('click', function () {
+                window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
+                    + '?blendType=' + encodeURIComponent($('#blendTypeFilter').val());
+            });
 
+            $('#editBtn').on('click', function () {
+                var $c = $('.row-check:checked');
+                if ($c.length === 0) { alert('Please select a record to edit.'); return; }
+                window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
+                    + '?docno=' + encodeURIComponent($c.val())
+                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
+                    + '&blendType=' + encodeURIComponent($c.data('blendtype'));
+            });
+
+            $('#deleteBtn').on('click', function () {
+                var $c = $('.row-check:checked');
+                if ($c.length === 0) { alert('Please select a record to delete.'); return; }
+                if (!confirm('Are you sure you want to delete Blend No against Doc No ' + $c.val() + ' ?')) return;
+
+                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "MasterBlendEntry")' })
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
+                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
+                    .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
+                    .appendTo('body').submit();
+            });
+        });
+    </script>
 </body>
-
 </html>
-
-
-
-
-
-

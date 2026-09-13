@@ -1,216 +1,332 @@
-﻿using PacketTea.Models;
+using Newtonsoft.Json;
+using PacketTea.Models;
 using PacketTea.Models.PT;
+using PacketTea.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
+using System.Web.Script.Serialization;
 using static PacketTea.Helpers;
 
 namespace Finance.Controllers.TEA
 {
+    // "Master Blend Entry" -- ported from the VB6 trn_blend_sheet.frm form
+    // (MDI menu item 19: Master Blend Sheet Entry, pBlend_Type without the
+    // "Y" suffix / APPROVED = 'N'). "Blending Against Master Sheet" and
+    // "Packing Entry From Blend Sheet" (menu items 20-21) are a later phase.
     public class MasterBlendEntryController : Controller
     {
+        // Six blend types the VB MDI menu exposed as separate menu entries/forms;
+        // collapsed here into one screen with a "Blend Type" dropdown.
+        public static readonly Dictionary<string, string> BlendTypes = new Dictionary<string, string>
+        {
+            { "PT", "Packet Tea" },
+            { "TT", "Tea Trading" },
+            { "WT", "Web Tea" },
+            { "BT", "Bagicha Tea" },
+            { "ST", "Sale Tea" },
+            { "TB", "Birla Tea" }
+        };
+
+        // SessionHelper.GetUser().CurentUnit is never assigned anywhere in this app (searched
+        // the whole solution -- ModuleController's company/location/FY selection sets Loca,
+        // CurentLocation, CurentCompany, DocYear, etc., but no CurentUnit), so CurrentUnit
+        // below is always blank. T_TEA_BLEND.UNIT is NOT NULL, so an unguarded save left it
+        // NULL and Oracle rejected the insert with "ORA-01400: cannot insert NULL into ...
+        // UNIT". The VB6 form this screen replaces exposed each Blend Type as its own menu
+        // item, each hard-wired to one specific unit; this mirrors that exact mapping, as
+        // observed with zero exceptions across all 308 existing rows in FACT_JSTIL2027
+        // (M_UNIT: GORA="Packet Tea Division", BGCH="Bagicha Tea Division",
+        // TTSI="TT South India", JSTI="Head Office"). This is a stopgap for the current
+        // company/location -- the real fix is wiring CurentUnit into the session during
+        // company/location selection so a different company's units resolve correctly too.
+        private static readonly Dictionary<string, string> BlendTypeUnit = new Dictionary<string, string>
+        {
+            { "PT", "GORA" },
+            { "TT", "JSTI" },
+            { "WT", "JSTI" },
+            { "BT", "BGCH" },
+            { "ST", "TTSI" },
+            { "TB", "JSTI" },
+        };
+
+        private string CurrentUnit => SessionHelper.GetUser()?.CurentUnit ?? "";
+        private string CurrentLoca => SessionHelper.GetUser()?.Loca ?? "";
+        private string UnitForBlendType(string blendType) =>
+            !string.IsNullOrEmpty(CurrentUnit) ? CurrentUnit :
+            (blendType != null && BlendTypeUnit.TryGetValue(blendType, out var u) ? u : "");
+
         // GET: MasterBlendEntry
-        public async Task<ActionResult> Index(string sortOrder, string currentFilter, string searchString, int? page = 1, int pageSize = 15)
+        public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15)
         {
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            // "MasterBlendEntry" isn't a provisioned permission key yet (this is a new
+            // screen); every other TEA controller in this app shares the
+            // "PacketTeaPurchaseEntry" permission bucket, so match that convention
+            // rather than always resolving to a missing entry and disabling New.
+            ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
+            ViewBag.CurrentFilter = searchString;
+            ViewBag.PageSize = pageSize;
+            ViewBag.Page = page ?? 1;
+            ViewBag.BlendType = blendType;
+            ViewBag.BlendTypes = BlendTypes;
+
+            var response = await Services.GetAsync<PageModel<T_TEA_BLEND>>(
+                $"/api/TeaBlend/GetByPage?blendType={blendType}&unit={CurrentUnit}&search={searchString}&page={page}&pageSize={pageSize}");
+
+            var list = response?.Data?.value?.results ?? new List<T_TEA_BLEND>();
+            ViewBag.RowCount = response?.Data?.value?.rowCount ?? 0;
+
+            if (!response?.IsSuccessStatusCode ?? false)
             {
-                var sdsd = (List<AEDV>)Session["User_AEDV"];
-                ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
-                ViewBag.CurrentSort = sortOrder;
-                ViewBag.NameSortParm = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
-                ViewBag.DateSortParm = sortOrder == "Date" ? "date_desc" : "Date";
-                ViewBag.CurrentFilter = searchString;
-                ViewBag.PageSize = pageSize;
-                int pageNumber = (page ?? 1);
-
-                ViewBag.Page = pageNumber;
-
-                // Fetch PO Head data
-                string SelectedfinancialYear = Session["SelectedfinancialYear"].ToString();
-
-
-                // Split at '-'
-                string fy = Session["SelectedfinancialYear"].ToString();
-
-                // Split at hyphen
-                var parts = fy.Split('-');
-
-                // Remove all non-digits and get the year
-                string startDigits = new string(parts[0].Where(char.IsDigit).ToArray());
-                string endDigits = new string(parts[1].Where(char.IsDigit).ToArray());
-
-                // Take the last 4 digits as year0
-                int startYear = int.Parse(startDigits.Substring(startDigits.Length - 4));
-                int endYear = int.Parse(endDigits.Substring(endDigits.Length - 4));
-
-
-                string startdate = startYear.ToString();
-                string enddate = endYear.ToString();
-
-                // ✅ Add these - FY runs April 1 to March 31
-
-
-
-                var hoResponse = await Services.GetAsync<PageModel<PT_ALL_LIST>>($"/api/HO_T_AWR/GetByPage?page={page}&pageSize={pageSize}&search={searchString}");
-
-
-                //var hoList = hoResponse.Data?.value?.results?.ToList()
-                //             ?? new List<HO_SALES_LIST>();
-
-                //var pagedList = new StaticPagedList<HO_SALES_LIST>(
-                //    hoList, pageNumber, pageSize, hoResponse.Data.value.rowCount
-                //);
-
-
-                if (Request.IsAjaxRequest())
-                {
-                    //return PartialView("_HOSALES_LIST", pagedList);
-                }
-                return View();
+                TempData["toastrError"] = !string.IsNullOrEmpty(response?.Message)
+                    ? response.Message
+                    : $"Unable to load Master Blend list (API returned {response?.StatusCode}). " +
+                      "Check ClassicERPCoreAPI is running the latest build and the T_TEA_BLEND tables exist.";
             }
+
+            return View(list);
         }
-        public async Task<ActionResult> InsertOrUpdate(string id = "", string unit = "", string doctype = "")
-        {
-            // ===============================
-            // 🔥 FINANCIAL YEAR SETUP (FIX)
-            // ===============================
-            string fy = Session["SelectedfinancialYear"]?.ToString();
 
-            if (!string.IsNullOrEmpty(fy))
+        // GET: MasterBlendEntry/InsertOrUpdate
+        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "")
+        {
+            ViewBag.BlendTypes = BlendTypes;
+
+            // Financial-year bounds for the Doc Date picker + the "yy-yy" short
+            // years the VB form baked into the DO No prefix (loca/type/yy-yy/nnnn).
+            string fy = Session["SelectedfinancialYear"]?.ToString();
+            if (!string.IsNullOrEmpty(fy) && fy.Contains("-"))
             {
                 var parts = fy.Split('-');
-
                 string startDigits = new string(parts[0].Where(char.IsDigit).ToArray());
                 string endDigits = new string(parts[1].Where(char.IsDigit).ToArray());
-
-                int startYear = int.Parse(startDigits.Substring(startDigits.Length - 4));
-                int endYear = int.Parse(endDigits.Substring(endDigits.Length - 4));
-
-                DateTime tempStart, tempEnd;
-
-                int startDay = 1, startMonth = 4;
-                int endDay = 31, endMonth = 3;
-
-                if (DateTime.TryParse(parts[0], out tempStart))
+                if (startDigits.Length >= 4 && endDigits.Length >= 4)
                 {
-                    startDay = tempStart.Day;
-                    startMonth = tempStart.Month;
+                    ViewBag.FyShortFrom = startDigits.Substring(startDigits.Length - 2);
+                    ViewBag.FyShortTo = endDigits.Substring(endDigits.Length - 2);
+                    ViewBag.FyStart = new DateTime(int.Parse(startDigits.Substring(startDigits.Length - 4)), 4, 1).ToString("yyyy-MM-dd");
+                    ViewBag.FyEnd = new DateTime(int.Parse(endDigits.Substring(endDigits.Length - 4)), 3, 31).ToString("yyyy-MM-dd");
                 }
-
-                if (DateTime.TryParse(parts[1], out tempEnd))
-                {
-                    endDay = tempEnd.Day;
-                    endMonth = tempEnd.Month;
-                }
-
-                DateTime startdate = new DateTime(startYear, startMonth, startDay);
-                DateTime enddate = new DateTime(endYear, endMonth, endDay);
-
-                ViewBag.StartDate = startdate.ToString("dd-MM-yyyy");
-                ViewBag.EndDate = enddate.ToString("dd-MM-yyyy");
             }
 
+            if (string.IsNullOrEmpty(docno))
+            {
+                // ⭐ New entry
+                var effectiveBlendType = string.IsNullOrEmpty(blendType) ? "PT" : blendType;
+                var model = new TEA_BLEND_DATA
+                {
+                    T_TEA_BLEND = new T_TEA_BLEND
+                    {
+                        LOCA = CurrentLoca,
+                        GLOCA = CurrentLoca,
+                        UNIT = UnitForBlendType(effectiveBlendType),
+                        BLEND_TYPE = effectiveBlendType,
+                        DOCDT = DateTime.Today,
+                        APPROVED = "N"
+                    },
+                    T_TEA_BLEND_DET = new List<T_TEA_BLEND_DET>()
+                };
+                ViewBag.IsEdit = false;
+                return View(model);
+            }
 
-            //if (string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(doctype))
-            //{
-            //    return View(new Trn_Po_Table
-            //    {
-            //        TRN_PO_HEAD = new TRN_PO_HEAD
-            //        {
-            //            UNIT = unit,
-            //            DOCTYPE = doctype
-            //        },
-            //        TRN_PO_DETAIL = new List<TRN_PO_DETAIL>()
-            //    });
-            //}
+            // ⭐ Edit mode
+            var response = await Services.GetAsync<dynamic>(
+                $"/api/TeaBlend/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}");
 
-            //// ===============================
-            //// ⭐ PURE NEW ENTRY
-            //// ===============================
-            //if (string.IsNullOrEmpty(id))
-            //{
-            //    return View(new Trn_Po_Table
-            //    {
-            //        TRN_PO_HEAD = new TRN_PO_HEAD(),
-            //        TRN_PO_DETAIL = new List<TRN_PO_DETAIL>()
-            //    });
-            //}
+            if (!response.IsSuccessStatusCode || response.Data == null)
+            {
+                TempData["toastrError"] = response.Message ?? "Record not found.";
+                return RedirectToAction("Index", new { blendType });
+            }
 
-            //// ===============================
-            //// ⭐ EDIT MODE
-            //// ===============================
-            //var sss = Utility.Cryptography.Decrypt(id);
-            //id = sss;
+            var json = JsonConvert.SerializeObject(response.Data);
+            var wrapper = JsonConvert.DeserializeObject<GetByDocNoResult>(json);
 
-            //// LOAD HEAD
-            //var headResponse = await Services.GetAsync<TRN_PO_HEAD>(
-            //    $"/api/Inv_TrnPo/GetByID2?id={id}"
-            //);
+            var editModel = new TEA_BLEND_DATA
+            {
+                T_TEA_BLEND = wrapper.head,
+                T_TEA_BLEND_DET = wrapper.details ?? new List<T_TEA_BLEND_DET>()
+            };
+            ViewBag.IsEdit = true;
+            return View(editModel);
+        }
 
-            ////if (!headResponse.IsSuccessStatusCode)
-            ////{
-            ////    TempData["toastrError"] =
-            ////        headResponse.Message ?? "Unable to load PO data.";
+        private class GetByDocNoResult
+        {
+            public T_TEA_BLEND head { get; set; }
+            public List<T_TEA_BLEND_DET> details { get; set; }
+        }
 
-            ////    return RedirectToAction("Login", "Auth");
-            ////}
-            //if (!headResponse.IsSuccessStatusCode)
-            //{
-            //    string message = headResponse.Message;
+        // POST: MasterBlendEntry/Save  (AJAX, body = TEA_BLEND_DATA as JSON)
+        [HttpPost]
+        public async Task<JsonResult> Save(TEA_BLEND_DATA model)
+        {
+            if (model?.T_TEA_BLEND != null)
+            {
+                model.T_TEA_BLEND.LOCA = string.IsNullOrEmpty(model.T_TEA_BLEND.LOCA) ? CurrentLoca : model.T_TEA_BLEND.LOCA;
+                model.T_TEA_BLEND.GLOCA = string.IsNullOrEmpty(model.T_TEA_BLEND.GLOCA) ? CurrentLoca : model.T_TEA_BLEND.GLOCA;
+                model.T_TEA_BLEND.UNIT = string.IsNullOrEmpty(model.T_TEA_BLEND.UNIT)
+                    ? UnitForBlendType(model.T_TEA_BLEND.BLEND_TYPE)
+                    : model.T_TEA_BLEND.UNIT;
+            }
 
-            //    if (!string.IsNullOrEmpty(message))
-            //    {
-            //        message = message.Replace("### Message :-", "").Trim();
+            var response = await Services.PostAsync<dynamic>("/api/TeaBlend/SaveOrUpdate", model);
+            return Json(new
+            {
+                success = response.IsSuccessStatusCode,
+                message = response.IsSuccessStatusCode ? "Saved successfully." : (response.Message ?? "Save failed."),
+                data = response.Data
+            });
+        }
 
-            //        int index = message.IndexOf("### InnerException :-");
-            //        if (index >= 0)
-            //        {
-            //            message = message.Substring(0, index).Trim();
-            //        }
-            //    }
+        // POST: MasterBlendEntry/Delete
+        [HttpPost]
+        public async Task<ActionResult> Delete(string docno, string docdt, string blendType)
+        {
+            var response = await Services.PostAsync<dynamic>(
+                $"/api/TeaBlend/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}", new { });
 
-            //    TempData["ErrorMessage"] = message;
+            TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
+                response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");
 
-            //    if (!headResponse.IsLocked)
-            //    {
-            //        return RedirectToAction("Index", "PurchaseOrder");
-            //    }
-            //}
+            return RedirectToAction("Index", new { blendType });
+        }
 
-            //var docNo = headResponse.Data?.DOCNO;
+        // GET: MasterBlendEntry/GetRowDetail (AJAX, fired by the Index list's "+"
+        // toggle on every expand -- see ClassicERPCoreAPI's TeaBlendController
+        // .GetRowDetail for why this doesn't reuse GetByDocNo).
+        [HttpGet]
+        public async Task<ActionResult> GetRowDetail(string docno = "", string docdt = "", string blendType = "")
+        {
+            var r = await Services.GetAsync<dynamic>(
+                $"/api/TeaBlend/GetRowDetail?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}");
+            if (!r.IsSuccessStatusCode || r.Data == null)
+                return JsonExact(new { success = false, message = r.Message ?? "Record not found." });
 
-            //var pr = GetAEDVPermission();
-            //if (!pr.Edit)
-            //{
-            //    TempData["toastrWarning"] = $"{docNo} Edit Not Allowed.";
-            //    return RedirectToAction("Index", "PurchaseOrder");
-            //}
+            // r.Data is a JObject (Services.GetAsync<dynamic> deserializes with
+            // Newtonsoft) -- merge the success flag into it and send it straight
+            // through JsonExact rather than round-tripping via MVC5's Json(),
+            // for the same reason the lookup passthroughs below do (see the
+            // NOTE above JsonExact).
+            var obj = (Newtonsoft.Json.Linq.JObject)r.Data;
+            obj["success"] = true;
 
-            //TRN_PO_HEAD head = headResponse?.Data ?? new TRN_PO_HEAD();
+            // GetRowDetail only carries the header fields that don't fit the main
+            // grid -- it deliberately doesn't reuse GetByDocNo (see the note above
+            // this action). The "+" expand also wants the item lines (Mark, Inv No,
+            // Grade, Qty, ...) as a sub-grid, so fetch those the same way
+            // InsertOrUpdate's edit mode does and merge them in under "details".
+            // This only runs for the one row being expanded, not the whole list.
+            var detResp = await Services.GetAsync<dynamic>(
+                $"/api/TeaBlend/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}");
+            List<T_TEA_BLEND_DET> details = null;
+            if (detResp.IsSuccessStatusCode && detResp.Data != null)
+            {
+                var detJson = JsonConvert.SerializeObject(detResp.Data);
+                details = JsonConvert.DeserializeObject<GetByDocNoResult>(detJson)?.details;
+            }
+            obj["details"] = Newtonsoft.Json.Linq.JArray.FromObject(details ?? new List<T_TEA_BLEND_DET>());
 
+            return JsonExact(obj);
+        }
 
-            //// LOAD DETAILS
-            //List<TRN_PO_DETAIL> details = new List<TRN_PO_DETAIL>();
+        // =====================================================================
+        // AJAX lookup passthroughs (Services.cs carries the auth headers that
+        // the browser can't attach directly, so every picker call is proxied
+        // through this controller).
+        //
+        // NOTE: Services.GetAsync<dynamic> deserializes the API's JSON with
+        // Newtonsoft, which for an array/object body hands back a JArray/JObject.
+        // MVC5's own Json(...) helper serializes with the *old*
+        // System.Web.Script.Serialization.JavaScriptSerializer, which doesn't
+        // know what a JArray/JObject is -- it reflects over their internal CLR
+        // shape (the enumerator yields KeyValuePair<string, JToken>) instead of
+        // their actual JSON content, so every field the picker JS reads
+        // (row.CODE, row.NAME, ...) comes back undefined and every lookup
+        // (Party/Warehouse/Allocation/Blend Grade/Blend Mark/Transporter/...)
+        // renders with blank rows even though the row count is right. Route
+        // through Newtonsoft (which already parsed the payload correctly) both
+        // ways instead of handing it to the built-in serializer.
+        // =====================================================================
+        private ActionResult JsonExact(object data) =>
+            Content(JsonConvert.SerializeObject(data), "application/json");
 
-            //if (!string.IsNullOrEmpty(head.DOCNO))
-            //{
-            //    var detailResponse = await Services.GetAsync<List<TRN_PO_DETAIL>>(
-            //        $"/api/Inv_TrnPo/GetByDocno?docno={head.DOCNO}&doctype={head.DOCTYPE}&unit={head.UNIT}&docdt={head.DOCDT}&docyear={head.DOC_YEAR}"
-            //    );
+        [HttpGet]
+        public async Task<ActionResult> GetParty(string search = "")
+        {
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetParty?search={search}&pageSize=50");
+            return JsonExact(r.Data);
+        }
 
-            //    details = detailResponse?.Data ?? new List<TRN_PO_DETAIL>();
-            //}
+        [HttpGet]
+        public async Task<ActionResult> GetWarehouse(string search = "")
+        {
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetWarehouse?search={search}&pageSize=50");
+            return JsonExact(r.Data);
+        }
 
-            // VIEW MODEL
-            //var editModel = new Trn_Po_Table
-            //{
-            //    TRN_PO_HEAD = head,
-            //    TRN_PO_DETAIL = details
-            //};
+        [HttpGet]
+        public async Task<ActionResult> GetAllocation(string search = "")
+        {
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={search}&pageSize=50");
+            return JsonExact(r.Data);
+        }
 
-            return View();
+        [HttpGet]
+        public async Task<ActionResult> GetBlendGrade(string search = "")
+        {
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={search}&pageSize=50");
+            return JsonExact(r.Data);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> GetMark(string search = "")
+        {
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={search}&pageSize=50");
+            return JsonExact(r.Data);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> GetGarden(string search = "")
+        {
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetGarden?search={search}&pageSize=50");
+            return JsonExact(r.Data);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> GetCategory(string search = "")
+        {
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetCategory?search={search}&pageSize=50");
+            return JsonExact(r.Data);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> GetTransporter(string search = "")
+        {
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetTransporter?search={search}&pageSize=50");
+            return JsonExact(r.Data);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> GetAvailableStock(string blendType, string garden = "", string mark = "", string category = "")
+        {
+            var r = await Services.GetAsync<dynamic>(
+                $"/api/TeaBlend/GetAvailableStock?blendType={blendType}&garden={garden}&mark={mark}&category={category}");
+            return JsonExact(r.Data);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> GenerateDoNo(string blendType, string fyShortFrom, string fyShortTo, string[] whCodes)
+        {
+            var qs = string.Join("&", (whCodes ?? new string[0]).Select(w => "whCodes=" + Uri.EscapeDataString(w)));
+            var r = await Services.GetAsync<dynamic>(
+                $"/api/TeaBlend/GenerateDoNo?blendType={blendType}&unit={CurrentUnit}&fyShortFrom={fyShortFrom}&fyShortTo={fyShortTo}&{qs}");
+            return JsonExact(r.Data);
         }
     }
 }
