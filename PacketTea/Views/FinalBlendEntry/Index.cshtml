@@ -1,0 +1,331 @@
+@using PacketTea.Utility
+@model List<PacketTea.Models.PT.T_TEA_BLEND>
+
+@{
+    ViewBag.Title = "Final Blend Entry";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
+    var currentBlendType = (string)ViewBag.BlendType;
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <style>
+        /* Same look as Master Blend Entry's list -- see that view for the rationale
+           behind overriding purchase-order.css's ".action-btns ul" rules here. */
+        :root {
+            --mbe-navy: #2c3958; --mbe-accent: #3a7bd5; --mbe-border: #dde2ea;
+            --mbe-bg: #f4f6fa; --mbe-text: #2b2f38; --mbe-muted: #6b7280;
+        }
+        body { background: var(--mbe-bg); }
+        .general-container { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(20,30,60,.08); padding-bottom: 18px; overflow: hidden; }
+
+        .action-btns, .action-btns ul { background: #fff; border: none; border-bottom: 1px solid var(--mbe-border); }
+        .action-btns ul { display: flex; align-items: center; margin: 0; padding: 6px 14px; list-style: none; }
+        .action-btns ul li { margin-right: 6px; border-right: none; }
+        .action-btns ul li a, .action-btns ul li button {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--mbe-text); background: transparent; border: none; cursor: pointer;
+            padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
+            text-decoration: none; transition: background .15s ease;
+        }
+        .action-btns ul li a:hover, .action-btns ul li button:hover:not(:disabled) { background: var(--mbe-bg); color: var(--mbe-text); }
+        .action-btns ul li button:disabled { opacity: .4; cursor: not-allowed; }
+        #blendTypeFilter {
+            border: 1px solid var(--mbe-border); border-radius: 6px; padding: 7px 10px;
+            background: #fff; color: var(--mbe-text); font-size: 13px;
+        }
+        #blendTypeFilter option { color: var(--mbe-text); }
+
+        .title-heading { padding: 18px 20px 14px; font-size: 20px; font-weight: 700; color: var(--mbe-text); }
+
+        #searchInput { border: 1px solid var(--mbe-border); border-radius: 6px; }
+
+        .table-responsive { padding: 0 20px; overflow-x: auto; }
+        table.main-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.main-table th, table.main-table td { border: 1px solid var(--mbe-border); padding: 8px 10px; }
+        table.main-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.main-table tbody tr:nth-child(even) { background: #f8f9fc; }
+        table.main-table tbody tr:hover { background: #eef3ff; }
+        .dataTables_info { padding: 10px 20px 0; color: var(--mbe-muted); font-size: 12.5px; }
+
+        table.detail-sub-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table.detail-sub-table th, table.detail-sub-table td { border: 1px solid var(--mbe-border); padding: 6px 8px; }
+        table.detail-sub-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.detail-sub-table tbody tr:nth-child(even) { background: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="general-container">
+        <div class="action-btns">
+            <ul>
+                <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                <li>
+                    <select id="blendTypeFilter" class="form-control" style="width:170px;display:inline-block;">
+                        @foreach (var bt in blendTypes)
+                        {
+                            <option value="@bt.Key" selected="@(bt.Key == currentBlendType)">@bt.Value (@bt.Key)</option>
+                        }
+                    </select>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="btnNew">
+                        <i class="fa fa-plus"></i> New
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="editBtn">
+                        <i class="fa fa-pencil"></i> Edit
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="deleteBtn">
+                        <i class="fa fa-trash-o"></i> Delete
+                    </a>
+                </li>
+                <li style="margin-left:auto">
+                    <label style="margin:0;color:var(--mbe-muted);font-size:12px;font-weight:700;letter-spacing:.05em;">LIST</label>
+                </li>
+            </ul>
+        </div>
+
+        <div class="title-heading">Final Blend Entry</div>
+
+        <div style="display:flex;justify-content:flex-end;padding:0 20px;margin-bottom:15px;">
+            <div style="position:relative;width:280px;">
+                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No / Final Blend No"
+                       style="width:100%;padding:8px 14px;box-sizing:border-box;" />
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="border main-table" id="blendTable">
+                <thead>
+                    <tr>
+                        <th style="width:26px;"></th>
+                        <th style="width:26px;"></th>
+                        <th>Doc No</th>
+                        <th>Date</th>
+                        <th>Master Blend No</th>
+                        <th>Master Blend Date</th>
+                        <th>Final Blend No</th>
+                        <th>Party</th>
+                        <th>Blend Details</th>
+                        <th>Warehouse</th>
+                        <th>Allocation</th>
+                        <th>Blend Mark</th>
+                        <th>Blend Grade</th>
+                        <th>No of Chest</th>
+                        <th>Net WT/Chest</th>
+                        <th>Gross WT/Chest</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Count > 0)
+                    {
+                        var rowIndex = 0;
+                        foreach (var row in Model)
+                        {
+                            rowIndex++;
+                            var detailId = "rowDetail" + rowIndex;
+                            <tr>
+                                <td style="text-align:center;">
+                                    <button type="button" class="row-expand-btn" data-target="@detailId" title="Show more details">+</button>
+                                </td>
+                                <td>
+                                    <input type="radio" name="rowSel" class="row-check"
+                                           value="@row.DOCNO"
+                                           data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")"
+                                           data-blendtype="@row.BLEND_TYPE" />
+                                </td>
+                                <td>@row.DOCNO</td>
+                                <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
+                                <td>@row.MasterBlendNo</td>
+                                <td>@(string.IsNullOrEmpty(row.MasterBlendDate) ? "" : DateTime.Parse(row.MasterBlendDate).ToString("dd/MM/yyyy"))</td>
+                                <td>@row.BLEND_NO</td>
+                                <td>@row.PartyName</td>
+                                <td>@row.BLEND_DESCN</td>
+                                <td>@row.WarehouseName</td>
+                                <td>@row.AllocationName</td>
+                                <td>@row.BlendMarkName</td>
+                                <td>@row.BlendGradeName</td>
+                                <td class="text-right">@row.BLEND_CHEST</td>
+                                <td class="text-right">@row.BLEND_CHEST_WT</td>
+                                <td class="text-right">@row.BLEND_CHEST_GROSSWT</td>
+                            </tr>
+                            <tr class="row-detail" id="@detailId" style="display:none;"
+                                data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
+                                <td colspan="16" style="background:#f8f9fc;padding:10px 12px;">
+                                    <div style="padding:0 2px 10px;font-size:12.5px;line-height:1.8;">
+                                        <b>Master Blend No:</b> <span class="detail-val" data-field="masterBlendNo">@row.MasterBlendNo</span>
+                                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                                        <b>Export Ref No:</b> <span class="detail-val" data-field="exprefNo">@row.EXPREF_NO</span>
+                                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                                        <b>Transporter:</b> <span class="detail-val" data-field="transporterName">@row.TransporterName</span>
+                                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                                        <b>Ship Mark:</b> <span class="detail-val" data-field="shipMark">@row.SHIP_MARK</span>
+                                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                                        <b>Notes:</b> <span class="detail-val" data-field="notes">@row.NOTES</span>
+                                        &nbsp;&nbsp;|&nbsp;&nbsp;
+                                        <b>Special Instructions:</b> <span class="detail-val" data-field="spNotes">@row.SP_NOTES</span>
+                                    </div>
+                                    <div style="overflow-x:auto;">
+                                        <table class="detail-sub-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:34px;">Sl</th>
+                                                    <th>Mark/Garden</th>
+                                                    <th>Inv No</th>
+                                                    <th>Pack Date</th>
+                                                    <th>Grade</th>
+                                                    <th style="text-align:right;">Bag</th>
+                                                    <th style="text-align:right;">Qty</th>
+                                                    <th style="text-align:right;">Sam. Qty</th>
+                                                    <th style="text-align:right;">Rate</th>
+                                                    <th style="text-align:right;">Amount</th>
+                                                    <th>Warehouse</th>
+                                                    <th>DO No</th>
+                                                    <th>Transporter</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="detail-items-body">
+                                                <tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Loading...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="16" style="text-align:center;">No records found</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @{
+            int pageSize = (int)ViewBag.PageSize;
+            int rowCount = (int)ViewBag.RowCount;
+            int currentPage = (int)ViewBag.Page;
+            int pageCount = pageSize > 0 ? (int)Math.Ceiling(rowCount / (double)pageSize) : 1;
+        }
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;flex-wrap:wrap;gap:8px;">
+            <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
+                <span style="color:var(--mbe-muted);font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
+                <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(function () {
+            $('#blendTypeFilter').on('change', function () { reload(); });
+
+            var searchTimer;
+            $('#searchInput').on('input', function () {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(reload, 400);
+            });
+
+            function reload(page) {
+                window.location.href = '@Url.Action("Index", "FinalBlendEntry")'
+                    + '?blendType=' + encodeURIComponent($('#blendTypeFilter').val())
+                    + '&searchString=' + encodeURIComponent($('#searchInput').val())
+                    + '&page=' + (page || 1);
+            }
+
+            $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
+            $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
+
+            $('#blendTable').on('click', '.row-expand-btn', function () {
+                var $btn = $(this);
+                var $detail = $('#' + $btn.data('target'));
+                var opening = !$detail.is(':visible');
+                $detail.toggle(opening);
+                $btn.text(opening ? '-' : '+');
+
+                if (opening) {
+                    var $body = $detail.find('.detail-items-body');
+                    $.get('@Url.Action("GetRowDetail", "FinalBlendEntry")', {
+                        docno: $detail.data('docno'),
+                        docdt: $detail.data('docdt'),
+                        blendType: $detail.data('blendtype')
+                    }).done(function (r) {
+                        if (!r || !r.success) {
+                            $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Unable to load item lines.</td></tr>');
+                            return;
+                        }
+                        $detail.find('[data-field="masterBlendNo"]').text(r.masterBlendNo || '');
+                        $detail.find('[data-field="exprefNo"]').text(r.exprefNo || '');
+                        $detail.find('[data-field="transporterName"]').text(r.transporterName || '');
+                        $detail.find('[data-field="shipMark"]').text(r.shipMark || '');
+                        $detail.find('[data-field="notes"]').text(r.notes || '');
+                        $detail.find('[data-field="spNotes"]').text(r.spNotes || '');
+
+                        var items = r.details || [];
+                        if (items.length === 0) {
+                            $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">No item lines</td></tr>');
+                            return;
+                        }
+                        $body.empty();
+                        items.forEach(function (d, i) {
+                            var packDate = d.PACK_DATE ? new Date(d.PACK_DATE).toLocaleDateString('en-GB') : '';
+                            $('<tr>').append(
+                                '<td>' + (d.SLNO != null ? d.SLNO : (i + 1)) + '</td>',
+                                '<td>' + (d.MarkName || d.MARK || '') + '</td>',
+                                '<td>' + (d.INVNO || '') + '</td>',
+                                '<td>' + packDate + '</td>',
+                                '<td>' + (d.GradeName || d.GRADE || '') + '</td>',
+                                '<td style="text-align:right;">' + (d.BAG_CHEST || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.SAMPLE_QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.RATE || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.AMOUNT || 0) + '</td>',
+                                '<td>' + (d.WAREHOUSE || '') + '</td>',
+                                '<td>' + (d.DONO || '') + '</td>',
+                                '<td>' + (d.TransporterName || '') + '</td>'
+                            ).appendTo($body);
+                        });
+                    }).fail(function () {
+                        $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Unable to load item lines.</td></tr>');
+                    });
+                }
+            });
+
+            $('#btnNew').on('click', function () {
+                window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
+                    + '?blendType=' + encodeURIComponent($('#blendTypeFilter').val());
+            });
+
+            $('#editBtn').on('click', function () {
+                var $c = $('.row-check:checked');
+                if ($c.length === 0) { alert('Please select a record to edit.'); return; }
+                window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
+                    + '?docno=' + encodeURIComponent($c.val())
+                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
+                    + '&blendType=' + encodeURIComponent($c.data('blendtype'));
+            });
+
+            $('#deleteBtn').on('click', function () {
+                var $c = $('.row-check:checked');
+                if ($c.length === 0) { alert('Please select a record to delete.'); return; }
+                if (!confirm('Are you sure you want to delete Final Blend No against Doc No ' + $c.val() + ' ?')) return;
+
+                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "FinalBlendEntry")' })
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
+                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
+                    .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
+                    .appendTo('body').submit();
+            });
+        });
+    </script>
+</body>
+</html>

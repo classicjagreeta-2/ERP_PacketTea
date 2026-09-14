@@ -46,5 +46,14 @@ namespace PacketTea.Models.PT
         public string BlendMarkName { get; set; }
         public string BlendGradeName { get; set; }
         public string TransporterName { get; set; }
+
+        // Final Blend Entry only: the Master Blend (R_DOCNO/R_DOCDT) this row was
+        // raised against, resolved to its own business-friendly Blend No/Date/Qty
+        // (FinalBlendController.GetByPage/GetByDocNo). Always blank for a plain
+        // Master Blend Entry row.
+        public string MasterBlendNo { get; set; }
+        public string MasterBlendDate { get; set; }
+        public decimal? MasterBlendQty { get; set; }
+        public decimal? RemainingQty { get; set; }
     }
 }
