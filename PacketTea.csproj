@@ -232,9 +232,6 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="App_Start\BundleConfig.cs" />
-    <Compile Include="App_Start\FilterConfig.cs" />
-    <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Controllers\DefaultController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\AuthController.cs" />
@@ -5315,6 +5312,7 @@
     <Content Include="Views\PurchaseContractEntry\Index.cshtml" />
     <Content Include="Views\PurchaseContractEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\PacketTeaPurchaseEntry\_TeaPurchase_LIST.cshtml" />
+    <Content Include="Views\PacketTeaPurchaseEntry\_Product_Details.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

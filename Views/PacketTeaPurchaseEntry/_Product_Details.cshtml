@@ -61,14 +61,14 @@
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].MARK"
                            value="@det.MARK"
-                           class="form-control"
+                           class="form-control mark-code"
                             />
                 </td>
                 <td style="width:100px;">
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].MARK"
                            value="@det.MARK"
-                           class="form-control"
+                           class="form-control mark-desc"
                            readonly 
                            style="width:100px;"/>
                 </td>
@@ -78,14 +78,14 @@
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].GRADE"
                            value="@det.GRADE"
-                           class="form-control"
+                           class="form-control  grade-code"
                             />
                 </td>
                 <td style="width:100px;">
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].GRADE"
                            value="@det.GRADE"
-                           class="form-control"
+                           class="form-control grade-desc"
                            readonly 
                            style="width:100px;"/>
                 </td>
@@ -270,12 +270,12 @@
 
 
                 <!-- Total Amt -->
-                <td>
+                <td style="width:100px;">
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].TOT_AMT"
                            value="@(det.TOT_AMT?.ToString("0.00") ?? "0.00")"
                            class="form-control text-right"
-                           readonly />
+                           readonly style="width:100px;"/>
                 </td>
 
 
