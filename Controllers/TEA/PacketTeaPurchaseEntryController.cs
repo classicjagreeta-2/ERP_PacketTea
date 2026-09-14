@@ -93,6 +93,26 @@ namespace PacketTea.Controllers.TEA
                 count = resp?.Data.rowCount ?? 0
             }, JsonRequestBehavior.AllowGet);
         }
+        //public async Task<JsonResult> GetMark(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        //{
+        //    if (string.IsNullOrEmpty(q))
+        //    {
+        //        q = value;
+        //    }
+        //    var resp = await Services.GetAsync<PageModel<M_>>($"/api/Bl_M_Mark/GetByPage?search={q}&page={p}&pageSize={limit}");
+        //    var data = resp?.Data?.value;
+        //    return Json(new { data = data.results ?? new List<M_MARK>(), count = data.rowCount }, JsonRequestBehavior.AllowGet);
+        //}
+        public async Task<JsonResult> GetGrade(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        {
+            if (string.IsNullOrEmpty(q))
+            {
+                q = value;
+            }
+            var resp = await Services.GetAsync<PageModel<M_GRADE>>($"/api/Bl_M_Mark/GetByPage?search={q}&page={p}&pageSize={limit}");
+            var data = resp?.Data?.value;
+            return Json(new { data = data.results ?? new List<M_GRADE>(), count = data.rowCount }, JsonRequestBehavior.AllowGet);
+        }
 
         public async Task<JsonResult> GetBroker( string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {

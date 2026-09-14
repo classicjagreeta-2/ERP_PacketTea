@@ -267,6 +267,7 @@
     <Compile Include="Models\PT\ITMAS.cs" />
     <Compile Include="Models\PT\M_BH21.cs" />
     <Compile Include="Models\PT\M_Broker.cs" />
+    <Compile Include="Models\PT\M_GRADE.cs" />
     <Compile Include="Models\PT\M_GSTMAS.cs" />
     <Compile Include="Models\PT\M_PMAST.cs" />
     <Compile Include="Models\PT\M_Transp.cs" />
