@@ -241,6 +241,7 @@
     <Compile Include="Controllers\TEA\BlendEntryController.cs" />
     <Compile Include="Controllers\TEA\FinalBlendEntryController.cs" />
     <Compile Include="Controllers\TEA\MasterBlendEntryController.cs" />
+    <Compile Include="Controllers\TEA\PacketTeaInvoiceController.cs" />
     <Compile Include="Controllers\TEA\PackingController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaPurchaseEntryController.cs" />
     <Compile Include="Controllers\MenuController.cs" />
@@ -5301,6 +5302,12 @@
     <Content Include="Views\BlendEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\PurchaseContractEntry\Index.cshtml" />
     <Content Include="Views\PurchaseContractEntry\InsertOrUpdate.cshtml" />
+    <Content Include="Views\PacketTeaInvoice\Index.cshtml" />
+    <Content Include="Views\PacketTeaInvoice\InsertOrUpdate.cshtml" />
+    <Content Include="Views\PaymentAdvice\InsertOrUpdate.cshtml" />
+    <Content Include="Views\PaymentAdvice\PaymentAdvice.cshtml" />
+    <Content Include="Views\TransferMemo\Index.cshtml" />
+    <Content Include="Views\TransferMemo\_VoucherView.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
