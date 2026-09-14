@@ -46,6 +46,15 @@ namespace Finance.Controllers.TEA
             !string.IsNullOrEmpty(CurrentUnit) ? CurrentUnit :
             (blendType != null && BlendTypeUnit.TryGetValue(blendType, out var u) ? u : "");
 
+        // User.UnitList for the PacketTea module (see JwtMiddleware.cs) -- backs the list
+        // page's "New" inline row Unit picker, same as MasterBlendEntryController (reuses
+        // the same generic, module-scoped API endpoint rather than duplicating it).
+        private async Task<List<UnitOption>> GetUnitsForUserAsync()
+        {
+            var response = await Services.GetAsync<List<UnitOption>>("/api/TeaBlend/GetUnitsForUser");
+            return (response.IsSuccessStatusCode ? response.Data : null) ?? new List<UnitOption>();
+        }
+
         // GET: FinalBlendEntry
         public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15)
         {
@@ -56,6 +65,7 @@ namespace Finance.Controllers.TEA
             ViewBag.Page = page ?? 1;
             ViewBag.BlendType = blendType;
             ViewBag.BlendTypes = BlendTypes;
+            ViewBag.UnitList = await GetUnitsForUserAsync();
 
             var response = await Services.GetAsync<PageModel<T_TEA_BLEND>>(
                 $"/api/FinalBlend/GetByPage?blendType={blendType}&unit={CurrentUnit}&search={searchString}&page={page}&pageSize={pageSize}");
@@ -74,9 +84,17 @@ namespace Finance.Controllers.TEA
         }
 
         // GET: FinalBlendEntry/InsertOrUpdate
-        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "")
+        // `unit` is only ever populated when this was opened from the list page's "New"
+        // inline row -- Unit + Blend Type were already chosen there, so the header repeats
+        // them read-only instead of leaving Unit unset and Blend Type re-editable (same
+        // pattern as MasterBlendEntryController.InsertOrUpdate).
+        // `view` is set when opened via the list page's "View" action -- same fetch as
+        // Edit, but the whole form renders read-only.
+        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "", bool view = false)
         {
             ViewBag.BlendTypes = BlendTypes;
+            ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
+            ViewBag.IsView = view;
 
             string fy = Session["SelectedfinancialYear"]?.ToString();
             if (!string.IsNullOrEmpty(fy) && fy.Contains("-"))
@@ -104,7 +122,9 @@ namespace Finance.Controllers.TEA
                     {
                         LOCA = CurrentLoca,
                         GLOCA = CurrentLoca,
-                        UNIT = UnitForBlendType(effectiveBlendType),
+                        // Honor the Unit explicitly chosen on the list page's "New" row over
+                        // the BlendTypeUnit stopgap guess (see UnitForBlendType's comment).
+                        UNIT = !string.IsNullOrEmpty(unit) ? unit : UnitForBlendType(effectiveBlendType),
                         BLEND_TYPE = effectiveBlendType,
                         DOCDT = DateTime.Today,
                         APPROVED = "Y"

@@ -5,6 +5,13 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     bool isEdit = ViewBag.IsEdit ?? false;
+    // True only when this window was opened from the list page's "New" inline row
+    // (item 2) -- Unit + Packet Type were already chosen there, so both repeat here
+    // read-only instead of Blend Type staying editable and Unit staying invisible.
+    bool lockedFromList = ViewBag.LockedFromList ?? false;
+    // Opened via the list page's "View" action (spec: add a View button to the list
+    // toolbar) -- same record fetch as Edit, but the whole form renders read-only.
+    bool isView = ViewBag.IsView ?? false;
     var head = Model.T_TEA_BLEND;
     string approved = (head.APPROVED ?? "").Trim().ToUpper();
     string approvedText = approved == "Y" ? "Approved" : approved == "R" ? "Rejected" : "Pending";
@@ -23,6 +30,12 @@
            comes from the shared stylesheet so this page matches the other InsertOrUpdate
            screens (Purchase Order Entry etc.) instead of a one-off look. */
         input[readonly] { background-color: #f3f4f7; color: #555; }
+        /* purchase-order.css hard-codes .accordion-container to a fixed 350px scroll
+           area, sized for the multi-row Header/Lines accordions -- the standalone
+           Unit/Packet Type/Blend Type strip above Header is a single row, so left at
+           350px it renders one short row followed by a huge block of empty space
+           before "Header" begins. Let this one container size to its own content. */
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         .disp-pair { display: flex; gap: 0; }
         #gridTable th, #gridTable td { white-space: nowrap; }
         #gridTable td input { min-width: 90px; }
@@ -33,6 +46,16 @@
            CSS/JS distorted the row when these lived inside a flex wrapper div in a <td>. */
         .grid-pick-btn { width: 20px; height: 21px; padding: 0; margin-left: 2px; vertical-align: middle; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; font-size: 11px; line-height: 1; }
         #gridTable td input.f-invno, #gridTable td input.f-transcode { vertical-align: middle; width: 68px; min-width: 0; }
+        /* Every numeric field, grid and header alike, right-aligned. Amount/Rate are also
+           forced to 2 decimal places -- see round2().toFixed(2) in renderGrid(). Number
+           inputs already right-align their content in most browsers, but that's
+           incidental -- pin it explicitly so it doesn't silently depend on that. */
+        #gridTable td input.f-rate, #gridTable td input.f-amount, #gridTable td input.f-qty,
+        #gridTable td input.f-bag, #gridTable td input.f-sampleqty,
+        input[type="number"] { text-align: right; }
+        /* Inv No is populated only via the "Select Data" toolbar link now (item 5) -- no
+           free typing, no button, and the cell itself no longer opens the picker either. */
+        #gridTable td input.f-invno[readonly] { background-color: #f3f4f7; color: #555; cursor: default; }
         .popup-box.picker-box { width: 420px; display: none; }
         .popup-box.picker-box.wide { width: 700px; max-width: 90vw; }
         .popup-box .picker-body { max-height: 36vh; overflow-y: auto; margin-top: 8px; }
@@ -76,7 +99,7 @@
                         <li><button type="button" id="btnDoPrint" disabled title="Available once at least one line has a DO No"><i class="fa fa-print"></i> DO Print</button></li>
                         <li style="margin-left:auto">
                             <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
-                                Status : <span id="statusText">@(isEdit ? "Edit" : "Add")</span>
+                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
                             </label>
                         </li>
                     </ul>
@@ -94,6 +117,48 @@
                 </div>
             </div>
 
+            <!-- Unit / Packet Type / Blend Type -- its own section above Header per the spec
+                 ("Unit name, Packet Type and Blend type will be in a separate section above
+                 header"), not just the Header accordion's first row, and always visible
+                 (not collapsible away with the rest of Header). Packet Type and Blend Type
+                 are the same underlying value (see MasterBlendEntryController's BlendTypes
+                 dict / the list page's "New" row Packet Type picker) shown twice under their
+                 two names; Unit is otherwise never user-facing (UNIT is derived server-side --
+                 see UnitForBlendType's comment), it's shown here purely for confirmation. Both
+                 lock read-only once Unit + Packet Type were chosen on the list page
+                 (lockedFromList) same as Blend Type already does in Edit mode. -->
+            <div class="accordion-container compact-accordion">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Unit / Packet Type / Blend Type</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Unit</label>
+                                <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Packet Type <span>(*)</span></label>
+                                <select id="PACKET_TYPE_disp" disabled>
+                                    @foreach (var bt in blendTypes)
+                                    {
+                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-col-20">
+                                <label>Blend Type <span>(*)</span></label>
+                                <select id="BLEND_TYPE" @((isEdit || lockedFromList) ? "disabled" : "")>
+                                    @foreach (var bt in blendTypes)
+                                    {
+                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="accordion-container">
 
                 <!-- Header -->
@@ -102,15 +167,6 @@
                     <div class="accordion-body">
 
                         <div class="form-row">
-                            <div class="form-col-20">
-                                <label>Blend Type <span>(*)</span></label>
-                                <select id="BLEND_TYPE" @(isEdit ? "disabled" : "")>
-                                    @foreach (var bt in blendTypes)
-                                    {
-                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
-                                    }
-                                </select>
-                            </div>
                             <div class="form-col-20">
                                 <label>Doc No</label>
                                 <input type="text" id="DOCNO" value="@head.DOCNO" readonly placeholder="(auto)" />
@@ -370,6 +426,11 @@
     $('#pickerOverlay, #genericPicker, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
+    // Packet Type is a read-only echo of Blend Type (same underlying value -- see the
+    // header markup's comment); keep it in sync on the one path where Blend Type is
+    // still editable (a brand-new entry started directly on this screen, not via the
+    // list page's "New" row).
+    $('#BLEND_TYPE').on('change', function () { $('#PACKET_TYPE_disp').val($(this).val()); });
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_TEA_BLEND_DET));
     var rowSeq = 0;
     // TAG isn't a persisted column (see T_TEA_BLEND_DET) -- VB derived it purely
@@ -415,16 +476,19 @@
             tr.append('<td><input type="text" class="f-mark" value="' + (r.MarkName || r.MARK || '') + '" /></td>');
             // Inv No DOES have a real legacy lookup (datagrid1_ButtonClick's pINVNO case +
             // the F1 shortcut in datagrid1_KeyDown), both just reopening "Select Data".
-            tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" placeholder="Type or F1" />' +
-                '<button type="button" class="grid-pick-btn f-invno-btn" title="Select Data (F1)">&hellip;</button></td>');
+            // Item 5: no free-typed lookup here any more -- readonly, filled only by
+            // picking a row in "Select Data" (searchable via its Garden/Mark/Category
+            // filters, see loadStock()). No lookup button in the column either -- clicking
+            // the cell itself (or F1) opens "Select Data", same as the click handler below.
+            tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" placeholder="Via Select Data" readonly /></td>');
             tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" /></td>');
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" /></td>');
             tr.append('<td><input type="text" class="f-category" value="' + (r.CategoryDescn || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-sampleqty" value="' + (r.SAMPLE_QTY || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + (r.RATE || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + (r.AMOUNT || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMOUNT).toFixed(2) + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-whloca" value="' + (r.WH_LOCA || '') + '" /></td>');
             tr.append('<td><input type="date" class="f-awrdate" value="' + (r.AWR_DATE ? r.AWR_DATE.substring(0, 10) : '') + '" /></td>');
             tr.append('<td><input type="text" class="f-awrno" value="' + (r.AWR_NO || '') + '" /></td>');
@@ -442,7 +506,7 @@
         });
         $('#ftBag').text(round2(totBag));
         $('#ftQty').text(round2(totQty));
-        $('#ftAmt').text(round2(totAmt));
+        $('#ftAmt').text(round2(totAmt).toFixed(2));
         updateDoPrintButton();
     }
 
@@ -487,7 +551,7 @@
             r.QTY = num($tr.find('.f-qty').val());
         }
         r.AMOUNT = round2(r.QTY * r.RATE);
-        $tr.find('.f-amount').val(r.AMOUNT);
+        $tr.find('.f-amount').val(r.AMOUNT.toFixed(2));
 
         // Tag carry-forward: same warehouse code as a previously tagged row ->
         // reuse its DO No/DO Date/Transporter (VB datagrid1_MouseUp behaviour).
@@ -502,6 +566,13 @@
         }
 
         renderTotalsOnly();
+    });
+
+    // Rate: snap the displayed value to 2 decimal places once the user leaves the field
+    // (item 3) -- the live `input`/`change` handler above already keeps r.RATE/r.AMOUNT
+    // numerically correct on every keystroke; this only tidies up what's shown.
+    $('#gridBody').on('blur', '.f-rate', function () {
+        $(this).val(round2($(this).val()).toFixed(2));
     });
 
     // Trans Code lookup on blur
@@ -519,35 +590,24 @@
     });
 
     // =========================================================
-    // Inv No lookup -- the ONE grid column (besides Trans Code) that genuinely has a lookup
-    // in trn_blend_sheet.frm:
+    // Inv No -- the ONE grid column (besides Trans Code) that genuinely has a lookup in
+    // trn_blend_sheet.frm:
     //   datagrid1_ButtonClick  Case GridFCons.pINVNO : Call Command4_Click   ' opens Select Data
     //   datagrid1_KeyDown      KeyCode = vbKeyF1 ... Case GridFCons.pINVNO : Call Command4_Click
     //   DATAGRID1_BeforeColUpdate  Case GridFCons.pINVNO : rspack.Find "invno='...'" -- rejects
     //                              a typed value that isn't in the available-stock recordset
     //                              ("Enter valid Invoice Code")
-    // Mirrored here: a button (and F1) reopen the same "Select Data" popup already wired to
-    // the toolbar, and a typed value is checked against GetAvailableStock on blur. Unlike VB's
-    // hard MsgBox+cancel, an unresolved code is flagged (red border + tooltip) rather than
-    // reverted -- forcing a revert on blur fights the browser's own focus handling.
+    // Item 5: unlike VB (and unlike this screen's own earlier revision), the cell no longer
+    // accepts a hand-typed value at all -- it's readonly, filled only by picking rows via
+    // the "Select Data" toolbar link, so a value here is always a real, resolved Inv No.
+    // No lookup button in the column, and the column itself no longer opens the picker
+    // either (clicking/F1 on the cell used to reopen it -- removed): "Select Data" (the
+    // toolbar link above the grid) is the only way in.
     // =========================================================
     function openStockPicker() {
         $('#pickerOverlay, #stockPicker').fadeIn(120);
         loadStock();
     }
-
-    $('#gridBody').on('click', '.f-invno-btn', openStockPicker);
-    $('#gridBody').on('keydown', '.f-invno', function (e) {
-        if (e.key === 'F1' || e.keyCode === 112) { e.preventDefault(); openStockPicker(); }
-    });
-    $('#gridBody').on('blur', '.f-invno', function () {
-        var $input = $(this), code = $input.val();
-        if (!code) { $input.css('border-color', '').removeAttr('title'); return; }
-        $.getJSON('@Url.Action("GetAvailableStock", "MasterBlendEntry")', { blendType: $('#BLEND_TYPE').val() }, function (data) {
-            var found = (data || []).some(function (x) { return (x.invno || '').toUpperCase() === code.toUpperCase(); });
-            $input.css('border-color', found ? '' : '#c0392b').attr('title', found ? '' : 'Enter valid Invoice Code');
-        });
-    });
 
     // =========================================================
     // Trans Code lookup button -- datagrid1_ButtonClick's pTransCode case
@@ -569,7 +629,7 @@
         rows.forEach(function (r) { totBag += num(r.BAG_CHEST); totQty += num(r.QTY); totAmt += num(r.AMOUNT); });
         $('#ftBag').text(round2(totBag));
         $('#ftQty').text(round2(totQty));
-        $('#ftAmt').text(round2(totAmt));
+        $('#ftAmt').text(round2(totAmt).toFixed(2));
     }
 
     $('#btnAddRow').on('click', function () {
@@ -669,6 +729,17 @@
     function closeStockPicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
     $('#btnStockFilter').on('click', loadStock);
 
+    // Item 5: these three filters are now Select Data's only search surface (Inv No's
+    // own free-typed lookup is gone -- see the grid's f-invno cell), so they filter live
+    // as you type (debounced), not only when "Refresh" is clicked. The API side already
+    // matches these case-insensitively and as a partial/contains match, not just an
+    // exact code (see GetAvailableStock).
+    var stockFilterTimer;
+    $('#stockGardenFilter, #stockMarkFilter, #stockCategoryFilter').on('input', function () {
+        clearTimeout(stockFilterTimer);
+        stockFilterTimer = setTimeout(loadStock, 350);
+    });
+
     function loadStock() {
         var blendType = $('#BLEND_TYPE').val();
         $.getJSON('@Url.Action("GetAvailableStock", "MasterBlendEntry")', {
@@ -678,10 +749,10 @@
             category: $('#stockCategoryFilter').val()
         }, function (data) {
             data = data || [];
-            var html = '<table><thead><tr><th></th><th>Inv No</th><th>Garden/Mark</th><th>Grade</th><th>Pack Date</th><th>Bag</th><th>Available Qty</th><th>Rate</th></tr></thead><tbody>';
+            var html = '<table><thead><tr><th></th><th>Inv No</th><th>Garden/Mark</th><th>Grade</th><th>Pack Date</th><th>Bag</th><th>Available Qty</th><th style="text-align:right;">Rate</th></tr></thead><tbody>';
             data.forEach(function (r, i) {
                 html += '<tr data-i="' + i + '"><td><input type="checkbox" class="stockChk" /></td><td>' + (r.invno || '') + '</td><td>' + (r.markDescn || '') + '</td>' +
-                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td>' + r.bagChest + '</td><td>' + r.available + '</td><td>' + r.rate + '</td></tr>';
+                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td>' + r.bagChest + '</td><td>' + r.available + '</td><td style="text-align:right;">' + round2(r.rate).toFixed(2) + '</td></tr>';
             });
             html += '</tbody></table>';
             $('#stockBody').html(html);
@@ -886,6 +957,20 @@
     });
 
     renderGrid();
+
+    // =========================================================
+    // View mode (spec: list page "View" action) -- same data as Edit, but nothing on
+    // the form is editable. Runs once, after the initial renderGrid() above has built
+    // every grid row (nothing adds more afterwards in view mode -- Select Data/Add Row/
+    // Remove Selected/Generate DO No are all locked out below too), so a single blanket
+    // disable here covers the header fields and the whole grid.
+    // =========================================================
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
+    if (IS_VIEW) {
+        $('.accordion-container :input').prop('disabled', true);
+        $('#btnSave, #btnDoPrint, #btnSelectStock, #btnAddRow, #btnRemoveRows, #btnGenDoNo')
+            .addClass('is-disabled').prop('disabled', true);
+    }
 </script>
 </body>
 </html>

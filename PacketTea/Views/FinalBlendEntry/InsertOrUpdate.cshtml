@@ -5,6 +5,12 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     bool isEdit = ViewBag.IsEdit ?? false;
+    // True only when this window was opened from the list page's "New" inline row --
+    // Unit + Packet Type were already chosen there (same as Master Blend Entry).
+    bool lockedFromList = ViewBag.LockedFromList ?? false;
+    // Opened via the list page's "View" action -- same record fetch as Edit, but the
+    // whole form renders read-only (see IS_VIEW near the bottom of this file's script).
+    bool isView = ViewBag.IsView ?? false;
     var head = Model.T_TEA_BLEND;
 }
 
@@ -20,10 +26,18 @@
            for why these live here instead of purchase-order.css. */
         input[readonly] { background-color: #f3f4f7; color: #555; }
         .disp-pair { display: flex; gap: 0; }
+        /* purchase-order.css hard-codes .accordion-container to a fixed 350px scroll
+           area -- see Master Blend Entry's InsertOrUpdate for the full rationale. Let
+           the standalone Unit/Packet Type/Blend Type strip above Header size to its
+           own (single-row) content instead. */
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         #gridTable th, #gridTable td { white-space: nowrap; }
         #gridTable td input { min-width: 90px; }
         .grid-pick-btn { width: 20px; height: 21px; padding: 0; margin-left: 2px; vertical-align: middle; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; font-size: 11px; line-height: 1; }
         #gridTable td input.f-invno, #gridTable td input.f-transcode { vertical-align: middle; width: 68px; min-width: 0; }
+        /* Every numeric field, grid and header alike, right-aligned -- same as Master
+           Blend Entry's InsertOrUpdate. */
+        input[type="number"] { text-align: right; }
         .popup-box.picker-box { width: 420px; display: none; }
         .popup-box.picker-box.wide { width: 700px; max-width: 90vw; }
         .popup-box .picker-body { max-height: 36vh; overflow-y: auto; margin-top: 8px; }
@@ -68,7 +82,7 @@
                         <li><button type="button" id="btnDoPrint" disabled title="Available once at least one line has a DO No"><i class="fa fa-print"></i> DO Print</button></li>
                         <li style="margin-left:auto">
                             <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
-                                Status : <span id="statusText">@(isEdit ? "Edit" : "Add")</span>
+                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
                             </label>
                         </li>
                     </ul>
@@ -83,6 +97,45 @@
                 </div>
             </div>
 
+            <!-- Unit / Packet Type / Blend Type -- its own section above Header, same as
+                 Master Blend Entry's InsertOrUpdate (see that view's comment for the full
+                 rationale). Packet Type and Blend Type are the same underlying value shown
+                 twice under their two names; Unit is otherwise never user-facing (UNIT is
+                 derived server-side -- see UnitForBlendType's comment). Both lock read-only
+                 once Unit + Packet Type were chosen on the list page (lockedFromList), same
+                 as Blend Type already does in Edit mode. -->
+            <div class="accordion-container compact-accordion">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Unit / Packet Type / Blend Type</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Unit</label>
+                                <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Packet Type <span>(*)</span></label>
+                                <select id="PACKET_TYPE_disp" disabled>
+                                    @foreach (var bt in blendTypes)
+                                    {
+                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="form-col-20">
+                                <label>Blend Type <span>(*)</span></label>
+                                <select id="BLEND_TYPE" @((isEdit || lockedFromList) ? "disabled" : "")>
+                                    @foreach (var bt in blendTypes)
+                                    {
+                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="accordion-container">
 
                 <!-- Header -->
@@ -91,15 +144,6 @@
                     <div class="accordion-body">
 
                         <div class="form-row">
-                            <div class="form-col-20">
-                                <label>Blend Type <span>(*)</span></label>
-                                <select id="BLEND_TYPE" @(isEdit ? "disabled" : "")>
-                                    @foreach (var bt in blendTypes)
-                                    {
-                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
-                                    }
-                                </select>
-                            </div>
                             <div class="form-col-20">
                                 <label>Doc No</label>
                                 <input type="text" id="DOCNO" value="@head.DOCNO" readonly placeholder="(auto)" />
@@ -350,6 +394,10 @@
     $('#pickerOverlay, #genericPicker, #masterPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
+    // Packet Type is a read-only echo of Blend Type -- keep it in sync on the one path
+    // where Blend Type is still editable (a brand-new entry started directly on this
+    // screen, not via the list page's "New" row). Same as Master Blend Entry.
+    $('#BLEND_TYPE').on('change', function () { $('#PACKET_TYPE_disp').val($(this).val()); });
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_TEA_BLEND_DET));
     var rowSeq = 0;
     rows.forEach(function (r) {
@@ -841,6 +889,18 @@
     });
 
     renderGrid();
+
+    // =========================================================
+    // View mode (spec: list page "View" action) -- same as Master Blend Entry's own
+    // InsertOrUpdate: runs once, after the initial renderGrid() above has built every
+    // grid row, and disables the header fields plus the whole grid in one go.
+    // =========================================================
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
+    if (IS_VIEW) {
+        $('.accordion-container :input').prop('disabled', true);
+        $('#btnSave, #btnDoPrint, #btnRemoveRows, #btnGenDoNo')
+            .addClass('is-disabled').prop('disabled', true);
+    }
 </script>
 </body>
 </html>

@@ -5,7 +5,7 @@
     ViewBag.Title = "Final Blend Entry";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
-    var currentBlendType = (string)ViewBag.BlendType;
+    var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
 }
 
 <!doctype html>
@@ -35,18 +35,15 @@
         }
         .action-btns ul li a:hover, .action-btns ul li button:hover:not(:disabled) { background: var(--mbe-bg); color: var(--mbe-text); }
         .action-btns ul li button:disabled { opacity: .4; cursor: not-allowed; }
-        #blendTypeFilter {
-            border: 1px solid var(--mbe-border); border-radius: 6px; padding: 7px 10px;
-            background: #fff; color: var(--mbe-text); font-size: 13px;
-        }
-        #blendTypeFilter option { color: var(--mbe-text); }
 
         .title-heading { padding: 18px 20px 14px; font-size: 20px; font-weight: 700; color: var(--mbe-text); }
 
         #searchInput { border: 1px solid var(--mbe-border); border-radius: 6px; }
 
         .table-responsive { padding: 0 20px; overflow-x: auto; }
-        table.main-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        /* Match Purchase Order's own list font exactly -- see Master Blend Entry's Index
+           for the full rationale. */
+        table.main-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: Arial, Helvetica, sans-serif; }
         table.main-table th, table.main-table td { border: 1px solid var(--mbe-border); padding: 8px 10px; }
         table.main-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
         table.main-table tbody tr:nth-child(even) { background: #f8f9fc; }
@@ -57,6 +54,15 @@
         table.detail-sub-table th, table.detail-sub-table td { border: 1px solid var(--mbe-border); padding: 6px 8px; }
         table.detail-sub-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
         table.detail-sub-table tbody tr:nth-child(even) { background: #fff; }
+
+        /* "New" inline row -- mirrors ERP_Inventory's Purchase_Requisition list New-row
+           pattern (and Master Blend Entry's own copy of it): pick Unit + Packet Type here
+           first, then the pencil icon (enabled only once both are picked) opens the root
+           Final Blend Entry window with both locked in. */
+        tr.new-entry-row td { background: #eef3ff; vertical-align: middle; }
+        tr.new-entry-row select { border: 1px solid var(--mbe-border); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; }
+        tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
+        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: var(--mbe-accent); }
     </style>
 </head>
 <body>
@@ -66,14 +72,6 @@
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
                 <li>
-                    <select id="blendTypeFilter" class="form-control" style="width:170px;display:inline-block;">
-                        @foreach (var bt in blendTypes)
-                        {
-                            <option value="@bt.Key" selected="@(bt.Key == currentBlendType)">@bt.Value (@bt.Key)</option>
-                        }
-                    </select>
-                </li>
-                <li>
                     <a href="javascript:void(0)" id="btnNew">
                         <i class="fa fa-plus"></i> New
                     </a>
@@ -81,6 +79,11 @@
                 <li>
                     <a href="javascript:void(0)" id="editBtn">
                         <i class="fa fa-pencil"></i> Edit
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="viewBtn">
+                        <i class="fa fa-eye"></i> View
                     </a>
                 </li>
                 <li>
@@ -134,20 +137,22 @@
                             rowIndex++;
                             var detailId = "rowDetail" + rowIndex;
                             <tr>
-                                <td style="text-align:center;">
-                                    <button type="button" class="row-expand-btn" data-target="@detailId" title="Show more details">+</button>
-                                </td>
                                 <td>
-                                    <input type="radio" name="rowSel" class="row-check"
+                                    <input type="checkbox" class="row-check"
                                            value="@row.DOCNO"
                                            data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")"
                                            data-blendtype="@row.BLEND_TYPE" />
+                                </td>
+                                <td style="text-align:center;">
+                                    <button type="button" class="row-expand-btn" data-target="@detailId" title="Show more details">+</button>
                                 </td>
                                 <td>@row.DOCNO</td>
                                 <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
                                 <td>@row.MasterBlendNo</td>
                                 <td>@(string.IsNullOrEmpty(row.MasterBlendDate) ? "" : DateTime.Parse(row.MasterBlendDate).ToString("dd/MM/yyyy"))</td>
-                                <td>@row.BLEND_NO</td>
+                                <td>
+                                    <a href="@Url.Action("InsertOrUpdate", "FinalBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
+                                </td>
                                 <td>@row.PartyName</td>
                                 <td>@row.BLEND_DESCN</td>
                                 <td>@row.WarehouseName</td>
@@ -161,19 +166,11 @@
                             <tr class="row-detail" id="@detailId" style="display:none;"
                                 data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
                                 <td colspan="16" style="background:#f8f9fc;padding:10px 12px;">
-                                    <div style="padding:0 2px 10px;font-size:12.5px;line-height:1.8;">
-                                        <b>Master Blend No:</b> <span class="detail-val" data-field="masterBlendNo">@row.MasterBlendNo</span>
-                                        &nbsp;&nbsp;|&nbsp;&nbsp;
-                                        <b>Export Ref No:</b> <span class="detail-val" data-field="exprefNo">@row.EXPREF_NO</span>
-                                        &nbsp;&nbsp;|&nbsp;&nbsp;
-                                        <b>Transporter:</b> <span class="detail-val" data-field="transporterName">@row.TransporterName</span>
-                                        &nbsp;&nbsp;|&nbsp;&nbsp;
-                                        <b>Ship Mark:</b> <span class="detail-val" data-field="shipMark">@row.SHIP_MARK</span>
-                                        &nbsp;&nbsp;|&nbsp;&nbsp;
-                                        <b>Notes:</b> <span class="detail-val" data-field="notes">@row.NOTES</span>
-                                        &nbsp;&nbsp;|&nbsp;&nbsp;
-                                        <b>Special Instructions:</b> <span class="detail-val" data-field="spNotes">@row.SP_NOTES</span>
-                                    </div>
+                                    <!-- Just the item-lines sub-grid -- matches Attendance Entry's own
+                                         "+" expand (straight to the detail table, no label/value summary
+                                         line above it), and Master Blend No/Export Ref No/Transporter/
+                                         Ship Mark/Notes/Special Instructions aren't shown here any more
+                                         (Master Blend No is already its own column on the main row). -->
                                     <div style="overflow-x:auto;">
                                         <table class="detail-sub-table">
                                             <thead>
@@ -227,18 +224,18 @@
 
     <script>
         $(function () {
-            $('#blendTypeFilter').on('change', function () { reload(); });
-
             var searchTimer;
             $('#searchInput').on('input', function () {
                 clearTimeout(searchTimer);
                 searchTimer = setTimeout(reload, 400);
             });
 
+            // The Packet Type filter dropdown that used to sit here is gone -- Packet Type
+            // is now only picked in the "New" inline row, so the list shows every blend
+            // type (still scoped to CurrentUnit) instead of one type at a time.
             function reload(page) {
                 window.location.href = '@Url.Action("Index", "FinalBlendEntry")'
-                    + '?blendType=' + encodeURIComponent($('#blendTypeFilter').val())
-                    + '&searchString=' + encodeURIComponent($('#searchInput').val())
+                    + '?searchString=' + encodeURIComponent($('#searchInput').val())
                     + '&page=' + (page || 1);
             }
 
@@ -263,13 +260,6 @@
                             $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Unable to load item lines.</td></tr>');
                             return;
                         }
-                        $detail.find('[data-field="masterBlendNo"]').text(r.masterBlendNo || '');
-                        $detail.find('[data-field="exprefNo"]').text(r.exprefNo || '');
-                        $detail.find('[data-field="transporterName"]').text(r.transporterName || '');
-                        $detail.find('[data-field="shipMark"]').text(r.shipMark || '');
-                        $detail.find('[data-field="notes"]').text(r.notes || '');
-                        $detail.find('[data-field="spNotes"]').text(r.spNotes || '');
-
                         var items = r.details || [];
                         if (items.length === 0) {
                             $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">No item lines</td></tr>');
@@ -300,23 +290,79 @@
                 }
             });
 
+            // "New" inline row -- see the CSS comment above for the rationale; identical
+            // pattern to Master Blend Entry's own list page.
+            var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
+            var PACKET_TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(blendTypes));
+
+            function buildNewRow() {
+                var unitOpts = '<option value="">Select Unit</option>' +
+                    UNIT_LIST.map(function (u) { return '<option value="' + u.CODE + '">' + u.CODE + ' - ' + (u.NAME || '') + '</option>'; }).join('');
+                var typeOpts = '<option value="">Select Packet Type</option>' +
+                    Object.keys(PACKET_TYPES).map(function (k) { return '<option value="' + k + '">' + PACKET_TYPES[k] + ' (' + k + ')</option>'; }).join('');
+                return '<tr id="newUnitRow" class="new-entry-row">' +
+                    '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Final Blend Entry"></i></td>' +
+                    '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
+                    '<td colspan="2"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
+                    '<td colspan="10"></td>' +
+                    '</tr>';
+            }
+
+            function refreshGoNewState() {
+                var ready = !!$('#newRowUnit').val() && !!$('#newRowPacketType').val();
+                $('.go-new').toggleClass('is-ready', ready);
+            }
+
             $('#btnNew').on('click', function () {
-                window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
-                    + '?blendType=' + encodeURIComponent($('#blendTypeFilter').val());
+                if ($('#newUnitRow').length) return;
+                $('#blendTable tbody').prepend(buildNewRow());
+                refreshGoNewState();
             });
 
-            $('#editBtn').on('click', function () {
+            $('#blendTable').on('change', '#newRowUnit, #newRowPacketType', refreshGoNewState);
+
+            $('#blendTable').on('click', '.go-new', function () {
+                var unit = $('#newRowUnit').val(), packetType = $('#newRowPacketType').val();
+                if (!unit) { alert('Please select Unit first'); return; }
+                if (!packetType) { alert('Please select Packet Type first'); return; }
+                window.open('@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
+                    + '?unit=' + encodeURIComponent(unit)
+                    + '&blendType=' + encodeURIComponent(packetType), '_blank');
+            });
+
+            // Row selection is now checkboxes (not a radio group, see the row-check markup
+            // above) so more than one can be ticked at once -- Edit/View/Delete all still
+            // only make sense against exactly one row, so guard the same way Master Blend
+            // Entry's list page does.
+            function getSingleChecked(action) {
                 var $c = $('.row-check:checked');
-                if ($c.length === 0) { alert('Please select a record to edit.'); return; }
+                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
+                return $c;
+            }
+
+            $('#editBtn').on('click', function () {
+                var $c = getSingleChecked('edit');
+                if (!$c) return;
                 window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
                     + '?docno=' + encodeURIComponent($c.val())
                     + '&docdt=' + encodeURIComponent($c.data('docdt'))
                     + '&blendType=' + encodeURIComponent($c.data('blendtype'));
             });
 
+            $('#viewBtn').on('click', function () {
+                var $c = getSingleChecked('view');
+                if (!$c) return;
+                window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
+                    + '?docno=' + encodeURIComponent($c.val())
+                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
+                    + '&blendType=' + encodeURIComponent($c.data('blendtype'))
+                    + '&view=true';
+            });
+
             $('#deleteBtn').on('click', function () {
-                var $c = $('.row-check:checked');
-                if ($c.length === 0) { alert('Please select a record to delete.'); return; }
+                var $c = getSingleChecked('delete');
+                if (!$c) return;
                 if (!confirm('Are you sure you want to delete Final Blend No against Doc No ' + $c.val() + ' ?')) return;
 
                 $('<form>', { method: 'POST', action: '@Url.Action("Delete", "FinalBlendEntry")' })

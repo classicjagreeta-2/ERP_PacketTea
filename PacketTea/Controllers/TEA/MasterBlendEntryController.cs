@@ -59,6 +59,30 @@ namespace Finance.Controllers.TEA
             !string.IsNullOrEmpty(CurrentUnit) ? CurrentUnit :
             (blendType != null && BlendTypeUnit.TryGetValue(blendType, out var u) ? u : "");
 
+        // Blend Type codes (M_SALETYPE.CODE, TRN_TYPE='P') the current user has rights to,
+        // per FACT_JSTIL2027.M_UNIT_USER_RIGHT -- item 1 of the "Master Blend Entry list
+        // form" spec. Falls back to the full BlendTypes list on any API failure (schema
+        // not reachable, etc.) rather than locking every user out of the screen; an empty
+        // -but-successful- response (user genuinely has zero rights rows) does filter down
+        // to nothing, which is the point of the restriction.
+        private async Task<Dictionary<string, string>> GetAllowedBlendTypesAsync()
+        {
+            var response = await Services.GetAsync<List<string>>("/api/TeaBlend/GetAllowedBlendTypes");
+            if (!response.IsSuccessStatusCode || response.Data == null)
+                return BlendTypes;
+
+            return BlendTypes.Where(bt => response.Data.Contains(bt.Key))
+                              .ToDictionary(bt => bt.Key, bt => bt.Value);
+        }
+
+        // User.UnitList for the PacketTea module (see JwtMiddleware.cs) -- backs the
+        // list page's "New" inline row Unit picker (item 2 of the spec).
+        private async Task<List<UnitOption>> GetUnitsForUserAsync()
+        {
+            var response = await Services.GetAsync<List<UnitOption>>("/api/TeaBlend/GetUnitsForUser");
+            return (response.IsSuccessStatusCode ? response.Data : null) ?? new List<UnitOption>();
+        }
+
         // GET: MasterBlendEntry
         public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15)
         {
@@ -72,7 +96,8 @@ namespace Finance.Controllers.TEA
             ViewBag.PageSize = pageSize;
             ViewBag.Page = page ?? 1;
             ViewBag.BlendType = blendType;
-            ViewBag.BlendTypes = BlendTypes;
+            ViewBag.BlendTypes = await GetAllowedBlendTypesAsync();
+            ViewBag.UnitList = await GetUnitsForUserAsync();
 
             var response = await Services.GetAsync<PageModel<T_TEA_BLEND>>(
                 $"/api/TeaBlend/GetByPage?blendType={blendType}&unit={CurrentUnit}&search={searchString}&page={page}&pageSize={pageSize}");
@@ -92,9 +117,16 @@ namespace Finance.Controllers.TEA
         }
 
         // GET: MasterBlendEntry/InsertOrUpdate
-        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "")
+        // `unit` is only ever populated when this was opened from the list page's "New"
+        // inline row (item 2) -- Unit + Blend Type were already chosen there, so the header
+        // repeats them read-only instead of leaving Unit unset and Blend Type re-editable.
+        // `view` is set when opened via the list page's "View" action -- same fetch as
+        // Edit, but the whole form renders read-only (see InsertOrUpdate.cshtml's IS_VIEW).
+        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "", bool view = false)
         {
             ViewBag.BlendTypes = BlendTypes;
+            ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
+            ViewBag.IsView = view;
 
             // Financial-year bounds for the Doc Date picker + the "yy-yy" short
             // years the VB form baked into the DO No prefix (loca/type/yy-yy/nnnn).
@@ -123,7 +155,10 @@ namespace Finance.Controllers.TEA
                     {
                         LOCA = CurrentLoca,
                         GLOCA = CurrentLoca,
-                        UNIT = UnitForBlendType(effectiveBlendType),
+                        // Honor the Unit explicitly chosen on the list page's "New" row over
+                        // the BlendTypeUnit stopgap guess -- see UnitForBlendType's own comment
+                        // for why that guess exists at all.
+                        UNIT = !string.IsNullOrEmpty(unit) ? unit : UnitForBlendType(effectiveBlendType),
                         BLEND_TYPE = effectiveBlendType,
                         DOCDT = DateTime.Today,
                         APPROVED = "N"
