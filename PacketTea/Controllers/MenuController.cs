@@ -47,7 +47,24 @@ namespace PacketTea.Controllers
                     //var expiresTime = (TimeSpan)Session["expiresTime"];
                     var currentTime = DateTime.Now.TimeOfDay;
                     //var dd = (currentTime - expiresTime).Minutes;
-                    Session["MenuList"] = response.Data["manuDetails"];
+
+                    // The shared Menu API (ClassicERPCoreAPI.Controllers.User.MenuController.GetAllByModule)
+                    // builds sidebar hrefs as root-relative ("/Controller/Action?...") and only prepends the
+                    // app's own path segment when its own global config flag (SubDomain == "true") is set,
+                    // which it currently isn't. Since this app is deployed as a virtual application
+                    // (e.g. "/PT", not the site root), those un-prefixed links resolve to the site root
+                    // instead of back into this app. Fix them up here, for this app only, rather than
+                    // touching the shared API (which every other module also depends on).
+                    var menuHtml = Convert.ToString(response.Data["manuDetails"]);
+                    var appPath = Request.ApplicationPath?.TrimEnd('/');
+                    if (!string.IsNullOrEmpty(appPath))
+                    {
+                        menuHtml = System.Text.RegularExpressions.Regex.Replace(
+                            menuHtml,
+                            "href='/(?!" + System.Text.RegularExpressions.Regex.Escape(appPath.TrimStart('/')) + "/)",
+                            "href='" + appPath + "/");
+                    }
+                    Session["MenuList"] = menuHtml;
                     var User_AEDV = response.Data["usracS_AEDV"];
                     var AEDVJson = (JsonConvert.SerializeObject(User_AEDV));
                     var _AEDV = JsonConvert.DeserializeObject<List<AEDV>>(AEDVJson);
