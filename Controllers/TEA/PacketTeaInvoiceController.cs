@@ -111,7 +111,7 @@ namespace PacketTea.Controllers.PacketTea
         //}
         public async Task<JsonResult> GetUnit(string q = "", int limit = 10, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var resp = await Services.GetAsync<List<UNIT>>("/api/MasterUnit/GetAll");
+            var resp = await Services.FinanceGetAsync<List<UNIT>>("/api/MasterUnit/GetAll");
             var all = resp?.Data ?? new List<UNIT>();
 
             // 🔍 Search filter
@@ -267,7 +267,7 @@ namespace PacketTea.Controllers.PacketTea
                 {
                     i.BLNO = string.Empty;
                 }
-                var response = await Services.PostAsync<UNBLDATA>($"/api/Invoice/SaveOrUpdateAll?Stdt1={startYear}&Stdt2={finalYear}", model);
+                var response = await Services.FinancePostAsync<UNBLDATA>($"/api/Invoice/SaveOrUpdateAll?Stdt1={startYear}&Stdt2={finalYear}", model);
                 var json = JsonSerializer.Serialize(model);
                 if (response.IsSuccessStatusCode)
                 {
