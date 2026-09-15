@@ -3,8 +3,7 @@
 @using PacketTea.Utility
 @using PagedList.Mvc;
 @using PagedList;
-@model PacketTea.Models.PT.PT_ALL_LIST
-
+@model IPagedList<PacketTea.Models.PT.TeaPurchase_LISTING>
 @{
     ViewBag.Title = "Index";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -42,10 +41,10 @@
 </head>
 
 <body>
-    @*<input type="hidden" id="currentPage" value="@ViewBag.Page" />
+    <input type="hidden" id="currentPage" value="@ViewBag.Page" />
     <input type="hidden" id="isLoading" value="0" />
     <input type="hidden" id="totalRows" value="@Model.TotalItemCount" />
-    <input type="hidden" id="pageSize" value="@ViewBag.PageSize" />*@
+    <input type="hidden" id="pageSize" value="@ViewBag.PageSize" />
     <input type="hidden" id="hiddenUNIT" />
     <input type="hidden" id="hiddenGLOCA" />
 
@@ -95,21 +94,23 @@
         </div>
         <!-- action btns end -->
 
-        <div class="title-heading"> Packet Tea Purchase </div>
+        <div class="title-heading">
+            Packet Tea Purchase
 
-        <!-- Your existing search form - NO CHANGES to your current code -->
-        <!-- Just add id="searchIcon" to your search icon -->
+            <!-- Your existing search form - NO CHANGES to your current code -->
+            <!-- Just add id="searchIcon" to your search icon -->
 
-        <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
-            <div style="position: relative; width: 250px;">
-                <input type="text"
-                       name="searchString"
-                       @*value="@ViewBag.CurrentFilter"*@
-                       placeholder="Search"
-                       style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
-                <i class="fa fa-search"
-                   id="searchInput"
-                   style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333; cursor: pointer;"></i>
+            <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
+                <div style="position: relative; width: 250px;">
+                    <input type="text"
+                           name="searchString"
+                           value="@ViewBag.CurrentFilter"
+                           placeholder="Search"
+                           style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
+                    <i class="fa fa-search"
+                       id="searchInput"
+                       style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333; cursor: pointer;"></i>
+                </div>
             </div>
         </div>
         @using (Ajax.BeginForm("Index", "PacketTeaPurchaseEntry",
@@ -164,7 +165,7 @@
                     </tr>
                 </thead>
                 <tbody id="prContainer">
-                    @*@Html.Partial("_PRList", Model)*@
+                    @Html.Partial("_TeaPurchase_LIST", Model)
                 </tbody>
 
             </table>
@@ -175,7 +176,7 @@
         <div class="row">
             <div class="col-xs-12 col-sm-12 col-md-5">
                 <div class="dataTables_info" id="dom-jqry_info" role="status" aria-live="polite">
-                    @*Showing <span id="shownCount">@Model.LastItemOnPage</span> of @Model.TotalItemCount*@
+                    Showing <span id="shownCount">@Model.LastItemOnPage</span> of @Model.TotalItemCount
                 </div>
             </div>
         </div>
@@ -184,7 +185,7 @@
     <script src="~/libraries/assetspo/js/custom.js"></script>
 
     <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
-    @*<script>
+    <script>
         let isLoading = false;
         $("#tableScroll").on("scroll", function () {
             debugger;
@@ -312,7 +313,7 @@
 
         //});
 
-
+        debugger;
         $(document).ready(function () {
             $('.toggle-icon').on('click', function () {
                 const $icon = $(this);
@@ -330,18 +331,20 @@
                 }
             });
         });
-    $(document).on("click", ".toggle-icon", function () {
-        debugger;
+        //$(document).on("click", ".toggle-icon", function () {
+        $(document).on("click", ".toggle-details", function () {
+      
     let icon = $(this);
     let row = icon.closest("tr");
-    let childRow = row.next(".sub-table-row");
+            //let childRow = row.next(".sub-table-row");
+            var childRow = row.next(".child-row");
     let tbody = childRow.find(".child-details-body");
 
     let docno = icon.data("docno");
-    let doctype = icon.data("doctype");
+   /* let doctype = icon.data("doctype");*/
     let unit = icon.data("unit");
     let docdt = icon.data("docdt");
-    let docyear = icon.data("docyear");
+   /* let docyear = icon.data("docyear");*/
    /* let itcd = icon.data("itcd");*/
 
     // If already open → close it
@@ -355,7 +358,7 @@
     // Show loader
     tbody.html(`
         <tr>
-            <td colspan="6" style="text-align:center;">
+            <td colspan="25" style="text-align:center;">
                 <i class="fa fa-spinner fa-spin fa-2x"></i><br/>Loading...
             </td>
         </tr>
@@ -365,55 +368,166 @@
 
     // AJAX call
     $.ajax({
-        url: "@Url.Action("GetDetailJson", "Purchase_Requisition")",
+        url: "@Url.Action("GetDetailJson", "PacketTeaPurchaseEntry")",
         type: "GET",
         data: {
             docno: docno,
-            doctype: doctype,
+           /* doctype: doctype,*/
             unit: unit,
             docdt: docdt,
-            docyear: docyear,
-           /* itcd: itcd*/
+           /* docyear: docyear,*/
+
         },
         dataType: "json",
         success: function (response) {
+
             tbody.empty();
 
             if (!response || response.length === 0) {
-                tbody.html(`<tr><td colspan="6" style="text-align:center;">No records found</td></tr>`);
+                tbody.html(`
+            <tr>
+                <td colspan="25" style="text-align:center;">
+                    No records found
+                </td>
+            </tr>
+        `);
                 return;
             }
 
-            //response.forEach(function (item) {
-            //    let html = `
-            //        <tr>
-            //            <td style="width:120px;">${item.ITCD}</td>
-            //            <td>${item.ItemName}</td>
-            //            <td>${item.ITEM_DESCN}</td>
-
-            //            <td class="align-right">${Number(item.QUANTITY).toFixed(3)}</td>
-            //            <td class="align-right">${Number(item.RATE).toFixed(2)}</td>
-            //            <td class="align-right">${Number(item.AMT).toFixed(2)}</td>
-            //        </tr>`;
-            //    tbody.append(html);
-            //});
             response.forEach(function (item) {
+
                 let html = `
-        <tr>
-            <td style="width:120px;">${item.ITCD}</td>
-            <td>${item.ItemName}</td>
-            <td>${item.UNIT_CD || ''}</td>
-            <td class="align-right">${Number(item.QUANTITY).toFixed(3)}</td>
-            <td class="align-right">${Number(item.RATE).toFixed(2)}</td>
-            <td class="align-right">${Number(item.AMT).toFixed(2)}</td>
-        </tr>`;
+            <tr>
+
+                <!-- Inv No -->
+                <td>${item.INVNO || ''}</td>
+
+                <!-- Mark Code -->
+                <td>${item.MARK || ''}</td>
+
+                <!-- Mark -->
+                <td>${item.MARK || ''}</td>
+
+                <!-- Grade Code -->
+                <td>${item.GRADE_TYPE || ''}</td>
+
+                <!-- Grade -->
+                <td>${item.GRADE || ''}</td>
+
+                <!-- Category -->
+                <td>${item.CAT || ''}</td>
+
+                <!-- Bags -->
+                <td class="align-right">
+                    ${Number(item.BAG_CHEST || 0).toFixed(3)}
+                </td>
+
+                <!-- Net Wt -->
+                <td class="align-right">
+                    ${Number(item.QTY || 0).toFixed(3)}
+                </td>
+
+                <!-- Gross Wt -->
+                <td class="align-right">
+                    ${Number(item.GROSS || 0).toFixed(3)}
+                </td>
+
+                <!-- Total Net Wt -->
+                <td class="align-right">
+                    ${Number(item.QTY || 0).toFixed(3)}
+                </td>
+
+                <!-- Size Code -->
+                <td>${item.SZ_CODE || ''}</td>
+
+                <!-- Size -->
+                <td>${item.SUBCAT || ''}</td>
+
+                <!-- Rate -->
+                <td class="align-right">
+                    ${Number(item.RATE || 0).toFixed(2)}
+                </td>
+
+                <!-- Amount -->
+                <td class="align-right">
+                    ${Number(item.AMOUNT || 0).toFixed(2)}
+                </td>
+
+                <!-- Disc % -->
+                <td class="align-right">
+                    ${Number(item.DISC_PER || 0).toFixed(2)}
+                </td>
+
+                <!-- Disc Value -->
+                <td class="align-right">
+                    ${Number(item.DISCOUNT || 0).toFixed(2)}
+                </td>
+
+                <!-- Taxable Amt -->
+                <td class="align-right">
+                    ${(
+                        Number(item.AMOUNT || 0) -
+                        Number(item.DISCOUNT || 0)
+                    ).toFixed(2)}
+                </td>
+
+                <!-- CGST % -->
+                <td class="align-right">
+                    ${Number(item.CGST_RT || 0).toFixed(2)}
+                </td>
+
+                <!-- CGST Amt -->
+                <td class="align-right">
+                    ${Number(item.CGST_AMT || 0).toFixed(2)}
+                </td>
+
+                <!-- SGST % -->
+                <td class="align-right">
+                    ${Number(item.SGST_RT || 0).toFixed(2)}
+                </td>
+
+                <!-- SGST Amt -->
+                <td class="align-right">
+                    ${Number(item.SGST_AMT || 0).toFixed(2)}
+                </td>
+
+                <!-- IGST % -->
+                <td class="align-right">
+                    ${Number(item.IGST_RT || 0).toFixed(2)}
+                </td>
+
+                <!-- IGST Amt -->
+                <td class="align-right">
+                    ${Number(item.IGST_AMT || 0).toFixed(2)}
+                </td>
+
+                <!-- Total Amt -->
+                <td class="align-right">
+                    ${Number(item.TOT_AMT || 0).toFixed(2)}
+                </td>
+
+                <!-- WH Code -->
+                <td>${item.WAREHOUSE || ''}</td>
+
+            </tr>
+        `;
+
                 tbody.append(html);
             });
 
             icon.removeClass("fa-plus").addClass("fa-minus");
         },
+
         error: function (xhr) {
-            tbody.html(`<tr><td colspan="6" style="color:red;">Error loading data!</td></tr>`);
+
+            tbody.html(`
+        <tr>
+            <td colspan="25" style="color:red;text-align:center;">
+                Error loading data!
+            </td>
+        </tr>
+    `);
+
             console.error("Error:", xhr);
         }
     });
@@ -708,30 +822,66 @@ $(document).on('click', '.go-new', function (e) {
         }
     </script>
     <script>
-$(document).on('click', '#editBtn', function () {
+    $(document).on('click', '#editBtn', function () {
 
-    var $checked = $('.row-check:checked');
+        var $checked = $('.row-check:checked');
 
+        if ($checked.length === 0) {
+            alert('Please select a record first.');
+            return;
+        }
 
+        if ($checked.length > 1) {
+            alert('Please select only one record.');
+            return;
+        }
 
-    // ✅ Get encrypted ID
-    var id = $checked.val();
+        var $checkbox = $checked.first();
 
-    // ✅ Encode ONLY here
-    window.location.href =
-        '@Url.Action("Purchase_RequisitionSaveOrUpate", "Purchase_Requisition")'
-        + '?id=' + encodeURIComponent(id);
-});
+        var docno = $checkbox.attr('data-docno');
+        var unit = $checkbox.attr('data-unit');
+        var docdt = $checkbox.attr('data-docdt');
+
+        console.log("DOCNO:", docno);
+        console.log("UNIT:", unit);
+        console.log("DOCDT:", docdt);
+
+        if (!docno) {
+            alert('Document No not found.');
+            return;
+        }
+
+        if (!unit) {
+            alert('Unit not found.');
+            return;
+        }
+
+        if (!docdt) {
+            alert('Document Date not found.');
+            return;
+        }
+
+        var url =
+            '@Url.Action("InsertOrUpdate", "PacketTeaPurchaseEntry")'
+            + '?docno=' + encodeURIComponent(docno)
+            + '&unit=' + encodeURIComponent(unit)
+            + '&docdt=' + encodeURIComponent(docdt);
+
+        console.log("Final URL:", url);
+
+        window.location.href = url;
+    });
     </script>
+
     <script>
         $(document).on('change', '.row-check', function () {
             if ($(this).is(':checked')) {
                 $('.row-check').not(this).prop('checked', false);
             }
         });
-    </script>*@
+    </script>
 
-    @*@if (TempData["ErrorMessage"] != null)
+    @if (TempData["ErrorMessage"] != null)
     {
         <script>
         $(function () {
@@ -749,8 +899,8 @@ $(document).on('click', '#editBtn', function () {
             });
 
         });
-        </script>*@
-    @*}*@
+        </script>
+    }
 
 
 </body>

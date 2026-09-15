@@ -307,9 +307,6 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="App_Start\BundleConfig.cs" />
-    <Compile Include="App_Start\FilterConfig.cs" />
-    <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Controllers\DefaultController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\AuthController.cs" />
@@ -340,13 +337,35 @@
     <Compile Include="Models\FundFlow.cs" />
     <Compile Include="Models\Model_Common.cs" />
     <Compile Include="Models\Product.cs" />
+    <Compile Include="Models\PT\App_Start\BundleConfig.cs" />
+    <Compile Include="Models\PT\App_Start\FilterConfig.cs" />
+    <Compile Include="Models\PT\App_Start\RouteConfig.cs" />
     <Compile Include="Models\PT\BLEND_PACKING_DATA.cs" />
+    <Compile Include="Models\PT\FreeDetail.cs" />
+    <Compile Include="Models\PT\ItemStock.cs" />
+    <Compile Include="Models\PT\ITMAS.cs" />
+    <Compile Include="Models\PT\M_BH21.cs" />
+    <Compile Include="Models\PT\M_Broker.cs" />
+    <Compile Include="Models\PT\M_GRADE.cs" />
+    <Compile Include="Models\PT\M_GSTMAS.cs" />
+    <Compile Include="Models\PT\M_MARK.cs" />
+    <Compile Include="Models\PT\M_PMAST.cs" />
+    <Compile Include="Models\PT\M_Transp.cs" />
     <Compile Include="Models\PT\PT_ALL_LIST.cs" />
+    <Compile Include="Models\PT\SLMAS.cs" />
+    <Compile Include="Models\PT\TeaPurchase_LISTING.cs" />
     <Compile Include="Models\PT\T_BLEND_PACKING.cs" />
     <Compile Include="Models\PT\T_TEA_BLEND.cs" />
     <Compile Include="Models\PT\T_TEA_BLEND_DET.cs" />
     <Compile Include="Models\PT\TEA_BLEND_DATA.cs" />
+    <Compile Include="Models\PT\T_TEA_PURCHASE.cs" />
+    <Compile Include="Models\PT\UNBL.cs" />
+    <Compile Include="Models\PT\UNBLPLT.cs" />
+    <Compile Include="Models\PT\UNBL_HED.cs" />
+    <Compile Include="Models\PT\UNIT.cs" />
     <Compile Include="Models\PT\UnitOption.cs" />
+    <Compile Include="Models\PT\VEHMAS.cs" />
+    <Compile Include="Models\PT\VTYPE.cs" />
     <Compile Include="Models\Report\REP_HOURLY_GLEAF.cs" />
     <Compile Include="Models\Report\VoucherPrintResponse.cs" />
     <Compile Include="Models\Report\VOU_PRINT.cs" />
@@ -5307,13 +5326,6 @@
     <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
     <Content Include="Scripts\notify.min.js" />
     <Content Include="Views\Shared\_Layout.cshtml" />
-    <Content Include="Web.config" />
-    <Content Include="Web.Debug.config">
-      <DependentUpon>Web.config</DependentUpon>
-    </Content>
-    <Content Include="Web.Release.config">
-      <DependentUpon>Web.config</DependentUpon>
-    </Content>
     <Content Include="Views\Web.config" />
     <Content Include="Views\_ViewStart.cshtml" />
     <Content Include="Views\Shared\Error.cshtml" />
@@ -5364,6 +5376,17 @@
     <Content Include="Scripts\bootstrap.esm.js.map" />
     <Content Include="Scripts\bootstrap.bundle.min.js.map" />
     <Content Include="Scripts\bootstrap.bundle.js.map" />
+    <Content Include="Views\PacketTeaPurchaseEntry\_TeaPurchase_LIST.cshtml" />
+    <Content Include="Views\PacketTeaPurchaseEntry\_Product_Details.cshtml" />
+    <Content Include="Views\PacketTeaInvoice\_PT_Detail_Table.cshtml" />
+    <Content Include="Views\PacketTeaInvoice\_PT_List.cshtml" />
+    <Content Include="Web.config" />
+    <None Include="Web.Debug.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </None>
+    <None Include="Web.Release.config">
+      <DependentUpon>Web.config</DependentUpon>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
