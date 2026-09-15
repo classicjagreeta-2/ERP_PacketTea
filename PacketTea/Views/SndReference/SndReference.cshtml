@@ -1,0 +1,861 @@
+﻿@model PagedList.StaticPagedList<PacketTea.Models.Master.M_REF_JAG>
+@*@model PacketTea.Models.Master.M_REF_JAG*@
+@using PagedList.Mvc;
+@using PagedList;
+
+@{
+    ViewBag.Title = "SndReferenceMaster";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        .row.content {
+            height: 1475px;
+            margin: 20px;
+        }
+
+        .sidenav {
+            background-color: #ffff;
+            height: 590%;
+        }
+
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+            padding: 10px 15px;
+        }
+
+            .card-header a {
+                background-color: white;
+                margin: 0 5px;
+                text-decoration: none;
+            }
+
+                .card-header a:hover {
+                    text-decoration: underline;
+                }
+            /* Flex properties for card header */
+            .card-header.d-flex {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+
+        .accordion-toggle .arrow {
+            display: inline-block;
+            margin-left: 8px;
+            transition: transform 0.3s ease;
+            border: solid black;
+            border-width: 0 2px 2px 0;
+            padding: 4px;
+            transform: rotate(45deg);
+        }
+
+        .accordion-toggle[aria-expanded="true"] .arrow {
+            transform: rotate(-135deg);
+        }
+
+        .container {
+            width: 1180px;
+            margin-top: auto;
+        }
+
+        #accordion .panel {
+            border-radius: 0;
+            border: 0;
+            margin-top: 0px;
+        }
+
+        #accordion a {
+            display: block;
+            padding: 10px 15px;
+            text-decoration: none;
+        }
+
+        #accordion .panel-heading a.collapsed:hover,
+        #accordion .panel-heading a.collapsed:focus {
+            color: black;
+            transition: all 0.2s ease-in;
+        }
+
+            #accordion .panel-heading a.collapsed:hover::before,
+            #accordion .panel-heading a.collapsed:focus::before {
+                color: white;
+            }
+
+        #accordion .panel-heading {
+            padding: 0;
+            border-radius: 0px;
+            text-align: center;
+            background-color: #e7dfdf
+        }
+
+            #accordion .panel-heading a:not(.collapsed) {
+                color: black;
+                transition: all 0.2s ease-in;
+                font-weight: bold;
+            }
+
+            #accordion .panel-heading .accordion-toggle::before {
+                text-align: center;
+                color: white;
+                font-weight: lighter;
+                transform: rotate(0deg);
+                transition: all 0.2s ease-in;
+            }
+
+            #accordion .panel-heading .accordion-toggle.collapsed::before {
+                color: #444;
+                transform: rotate(-135deg);
+                transition: all 0.2s ease-in;
+            }
+
+        .page-title {
+            font-size: 408px;
+            font-weight: bold;
+            padding: 5px;
+        }
+
+        .pagination {
+            display: inline-block;
+            padding-left: 0;
+            margin: 0px 0;
+            border-radius: 4px;
+        }
+
+        .container-fluid {
+            width: 106%;
+            margin-right: 15px;
+            margin-left: -26px;
+            padding-right: 17px;
+            padding-left: 5px;
+        }
+
+        .row.content {
+            height: 100px;
+            margin: 20px;
+        }
+
+        .table th {
+            background-color: #dbdbdb;
+            color: #000000;
+        }
+
+        .select2-container--default .select2-selection--single {
+            height: 31px;
+            padding: 4px;
+        }
+
+            .select2-container--default .select2-selection--single .select2-selection__rendered {
+                color: #444;
+                background-color: #ffffff;
+                line-height: 5px !important;
+            }
+
+        .table td .form-control, .table td select {
+            width: min-content;
+            height: auto;
+            padding: .2rem;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #444;
+        }
+        /* Limit dropdown width */
+        .select2-dropdown {
+            /*width: max-content;*/
+            min-width: max-content; /* allow flexibility */
+            max-width: max-content; /* set maximum width */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 9999 !important;
+        }
+
+        /* Limit individual item width inside the dropdown */
+        .select2-results__option {
+            max-width: max-content;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* For the selected item (in the select box itself) */
+        .select2-selection__rendered {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .selected-reference {
+            background-color: #e0e0e0; /* light grey */
+        }
+
+    </style>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg border w-100" style="background-color: white; ">
+        <div class="col-12">
+            <div class="container-fluid p-0">
+                <div class="btn-toolbar w-100 d-flex justify-content-between" role="toolbar" aria-label="Toolbar with button groups">
+                    <div class="btn-toolbar w-100 " role="toolbar" aria-label="Toolbar with button groups">
+                        <div class="btn-group mr-2" role="group" aria-label="First group">
+                            <button type="button" class="btn btn-outline-dark" id="btnPrev"><i class="fa fa-arrow-left"></i>Back</button>
+                            <button type="button" class="btn btn-outline-dark" id="btnNew"><i class="fa fa-plus"></i> New</button>
+                            @*<button type="button" class="btn btn-outline-dark"  id="btnEdit">Edit</button>*@
+                            <button type="button" id="btnEdit" class="btn btn-outline-dark">
+                                <i class="fa fa-pencil"></i> Edit
+                            </button>
+
+                            <button type="button" class="btn btn-outline-dark" id="btnDelete"> <i class="fa fa-trash-o"></i>Delete</button>
+                        </div>
+                        <div class="btn-group ms-auto" role="group" aria-label="Second group">
+                            <button type="button" class="btn btn-outline-dark" id="btnSave"> <i class="fa fa-save"></i>Save</button>
+                            <button type="button" class="btn btn-outline-dark" id="btnCancel"><i class="fa fa-close"></i>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid ">
+        <div class="row content">
+            <div class="col-sm-3 sidenav hidden-xs">
+                <input type="hidden" id="id" name="id" value="" />
+                <div>
+                    @using (Html.BeginForm("SndReference", "SndReference", FormMethod.Get))
+                    {
+                        <div class="input-group mb-2">
+                            @Html.TextBox("SearchString", ViewBag.CurrentFilter as string, new { @class = "form-control", @placeholder = "Search.." })
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-outline-secondary"><i class="fa fa-search"></i></button>
+                            </div>
+                        </div>
+                    }
+                    <div id="referenceList" class="datashow" style="margin:10px; max-height: 500px; overflow-y: auto; border: 1px solid #ddd; padding: 5px;">
+                        @foreach (var item in Model)
+                        {
+                            <p class="reference-item" data-code="@item.CD">@item.CD - @item.NAM </p>
+                        }
+                    </div>
+                    <div id="loading" style="display:none;text-align:center;padding:5px;">
+                        <i class="fa fa-spinner fa-spin"></i> Loading...
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12 col-sm-12 col-md-7">
+                        <div class="dataTables_paginate paging_simple_numbers" id="dom-jqry_paginate">
+                            @*@Html.PagedListPager(Model, page => Url.Action("SndReference", new { page = page }), PagedListRenderOptions.Minimal)*@
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-9">
+                <div class="col-12 text-left">
+                    <span class="justify-content-left" style="padding:5px; font-size:24px;"><b>Reference Master</b></span>
+                </div>
+
+                <div class="datashow" style="margin:10px; max-height: 540px; overflow-y: auto; border: 1px solid #ddd; padding: 5px;">
+                    <div class="card col-12 col-md-12">
+                        <div class="card-block accordion-block col-12">
+                            <div id="accordion" class="panel-group">
+
+                                <!-- General -->
+                                <div class="panel">
+                                    <div class="panel-heading" style="background-color: #ededed">
+                                        <h4 class="panel-title">
+                                            <a href="#panelBodyOne" class="accordion-toggle d-flex justify-content-between align-items-center" data-toggle="collapse" aria-expanded="true">
+                                                General <span class="arrow"></span>
+                                            </a>
+                                        </h4>
+                                    </div>
+                                    <div id="panelBodyOne" class="panel-collapse in collapse show">
+                                        <div class="panel-body">
+                                            <div class="row">
+                                                <div class="card container align-items-center col-10 col-sm-12">
+                                                    @Html.Partial("SndReferencePartial")
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Account Master Link Details -->
+                                <div class="pane overflow-scroll">
+                                    <div class="panel-heading" style="background-color: #ededed">
+                                        <input type="hidden" id="id" name="id" value="" />
+                                        <h4 class="panel-title">
+                                            <a href="#panelBodyTwo" class="accordion-toggle d-flex justify-content-between align-items-center" data-toggle="collapse" aria-expanded="true">
+                                                Account Master Link Details <span class="arrow"></span>
+                                            </a>
+                                        </h4>
+                                    </div>
+                                    <div id="panelBodyTwo" class="panel-collapse collapse">
+                                        <div class="panel-body">
+                                            <div class="row">
+                                                <div class="card col-12">
+                                                    <div class="left mb-2">
+                                                        <button type="button" class="btn btn-outline-dark addaccount"><i class="fa fa-plus"></i> New</button>
+                                                        <button type="button" class="btn btn-outline-dark deleteaccount"><i class="fa fa-trash"></i> Delete</button>
+                                                    </div>
+
+                                                    <div style="overflow-x:auto; width:min-content;">
+                                                        <table id="accounttablelink" class="table table-striped table-bordered nowrap" style="min-width:max-content;">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th><input type="checkbox" id="selectAllAccounts" /></th>
+                                                                    <th>A code</th>
+                                                                    <th>Sub code</th>
+                                                                    <th>Description</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr class="account-row">
+                                                                    <td><input type="checkbox" class="account-checkbox" /></td>
+                                                                    <td>
+                                                                        <!-- API-backed Select2 -->
+                                                                        <select class="form-control accode-dropdown" style="width: max-content;"></select>
+                                                                    </td>
+                                                                    <td><input type="text" class="form-control subcode-input" readonly /></td>
+                                                                    <td><input type="text" class="form-control desc-input" readonly /></td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+
+                                                        <!-- template -->
+                                                        <script type="text/template" id="accountRowTemplate">
+                                                            <tr class="account-row">
+                                                                <td><input type="checkbox" class="account-checkbox" /></td>
+                                                                <td><select class="form-control accode-dropdown" style="width:100%"></select></td>
+                                                                <td><input type="text" class="form-control subcode-input" readonly /></td>
+                                                                <td><input type="text" class="form-control desc-input" readonly /></td>
+                                                            </tr>
+                                                        </script>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Unit Link Details -->
+                                <div class="pane overflow-scroll">
+                                    <div class="panel-heading" style="background-color: #ededed">
+                                        <input type="hidden" id="id" name="id" value="" />
+                                        <h4 class="panel-title">
+                                            <a href="#panelBodyThree" class="accordion-toggle d-flex justify-content-between align-items-center" data-toggle="collapse" aria-expanded="true">
+                                                Unit Link Details <span class="arrow"></span>
+                                            </a>
+                                        </h4>
+                                    </div>
+                                    <div id="panelBodyThree" class="panel-collapse collapse">
+                                        <div class="panel-body">
+                                            <div class="row">
+                                                <div class="card col-12">
+                                                    <div class="left mb-2">
+                                                        <button type="button" class="btn btn-outline-dark addunit"><i class="fa fa-plus"></i> New</button>
+                                                        <button type="button" class="btn btn-outline-dark deleteunit"><i class="fa fa-trash"></i> Delete</button>
+                                                    </div>
+
+                                                    <div style="overflow-x:auto; width:min-content;">
+                                                        <table id="unitTableLink" class="table table-striped table-bordered nowrap" style="min-width: min-content;">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th><input type="checkbox" id="selectAllUnits" /></th>
+                                                                    <th>Unit</th>
+                                                                    <th>Description</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr class="unit-row">
+                                                                    <td><input type="checkbox" class="unit-checkbox2" /></td>
+                                                                    <td>
+                                                                        <!-- API-backed Select2 -->
+                                                                        <select class="form-control unit-dropdown" style="width:100%"></select>
+                                                                    </td>
+                                                                    <td><input type="text" class="form-control unit-desc-input" readonly /></td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+
+                                                        <!-- template -->
+                                                        <script type="text/template" id="unitRowTemplate">
+                                                            <tr class="unit-row">
+                                                                <td><input type="checkbox" class="unit-checkbox2" /></td>
+                                                                <td><select class="form-control unit-dropdown" style="width:100%"></select></td>
+                                                                <td><input type="text" class="form-control unit-desc-input" readonly /></td>
+                                                            </tr>
+                                                        </script>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div> <!-- /accordion -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#FFCODE').select2({
+                placeholder: "-- Select --",
+                width: 'resolve',
+                dropdownAutoWidth: true,
+                templateResult: function (data) {
+                    if (!data.id) return data.text;
+                    return $('<span>').attr('title', data.text).text(data.text);
+                },
+                templateSelection: function (data) {
+                    return $('<span>').attr('title', data.text).text(data.text);
+                }
+            });
+        });
+    </script>
+    <script>
+    $(document).ready(function () {
+        $("#btnPrev").off("click").on("click", function (e) {
+            e.preventDefault(); // stop form submission if inside a form
+
+            // ✅ If there is a previous page in browser history
+            if (document.referrer && document.referrer !== window.location.href) {
+                window.history.back();
+            }
+            // ✅ Otherwise, go to the Index page directly
+            else {
+                window.location.href = '@Url.Action("SndReference", "SndReference")';
+            }
+        });
+    });
+    </script>
+    <script>
+    $(function () {
+        // ----- Toastr -----
+        toastr.options = { closeButton:true, timeOut:0, extendedTimeOut:0, positionClass:"toast-top-center", preventDuplicates:true, showMethod:"fadeIn", hideMethod:"fadeOut" };
+        // 🟢 Clear Toastr on click anywhere
+        $(document).on("click", function (e) {
+            // if click is NOT inside the toastr container
+            if (!$(e.target).closest(".toast").length) {
+                toastr.clear();
+            }
+        });
+
+
+        // ----- Helpers: enable/disable -----
+        function toggleActionButtons(enable){ $("#btnSave,#btnEdit,#btnDelete").prop("disabled", !enable); }
+        function toggleTableControls(enable) {
+
+
+            $("#nam,#adds,#addss,#FFCODE,#ENTDT_NEW,#ENTDT").prop("readonly", !enable).prop("disabled", !enable);
+            $("#accounttablelink input, #accounttablelink select").prop("disabled", !enable);
+            $("#unitTableLink input, #unitTableLink select").prop("disabled", !enable);
+            $(".addaccount,.deleteaccount,.addunit,.deleteunit").prop("disabled", !enable);
+        }
+        toggleActionButtons(false); toggleTableControls(false);
+
+        // ----- Select2 initializers -----
+        function initAccodeDropdown($sel){
+            $sel.select2({
+                width:'resolve', placeholder:"-- Select Accode --", minimumInputLength:0,
+                ajax:{
+                    url:'@Url.Action("GetAccodeDropdown","SndReference")', dataType:'json', delay:200,
+                    data:function(params){ return { searchTerm: params.term||"", page: params.page||1, pageSize:20 }; },
+                    processResults:function(data, params){
+                        params.page = params.page || 1;
+                        if(data && data.error){ console.error("GetAccodeDropdown:", data.message); return {results:[], pagination:{more:false}}; }
+                        return { results: (data.items||[]), pagination:{ more: data.hasMore===true } };
+                    }, cache:true
+                },
+                templateResult:function(i){ return i.text || i.id; },
+                templateSelection:function(i){ return i.id || i.text || ""; }
+            }).on('select2:select', function(e){
+                var d = e.params.data || {}, $tr = $(this).closest('tr');
+                $tr.find('.subcode-input').val(d.subcode || '');
+                $tr.find('.desc-input').val(d.description || '');
+            });
+        }
+
+        function initUnitDropdown($sel){
+            $sel.select2({
+                width:'resolve', placeholder:"-- Select Unit --", minimumInputLength:0,
+                ajax:{
+                    url:'@Url.Action("GetUnitDropdown","SndReference")', dataType:'json', delay:200,
+                    data:function(params){ return { searchTerm: params.term||"", page: params.page||1, pageSize:20 }; },
+                    processResults:function(data, params){
+                        params.page = params.page || 1;
+                        if(data && data.error){ console.error("GetUnitDropdown:", data.message); return {results:[], pagination:{more:false}}; }
+                        return { results: (data.items||[]), pagination:{ more: data.hasMore===true } };
+                    }, cache:true
+                },
+                templateResult:function(i){ return i.text || i.id; },
+                templateSelection:function(i){ return i.id || i.text || ""; }
+            }).on('select2:select', function(e){
+                var d = e.params.data || {};
+                $(this).closest('tr').find('.unit-desc-input').val(d.name || '');
+            });
+        }
+
+        // ----- Row add helpers (use your existing templates/IDs/classes) -----
+        function addAccountRow(preset){
+            var $row = $($.trim($('#accountRowTemplate').html()));
+            $('#accounttablelink tbody').append($row);
+            var $dd = $row.find('.accode-dropdown'); initAccodeDropdown($dd);
+            if(preset){
+                var opt = new Option(preset.text || preset.id, preset.id, true, true);
+                $dd.append(opt).trigger('change');
+                $row.find('.subcode-input').val(preset.subcode || '');
+                $row.find('.desc-input').val(preset.description || '');
+            }
+        }
+        function addUnitRow(preset){
+            var $row = $($.trim($('#unitRowTemplate').html()));
+            $('#unitTableLink tbody').append($row);
+            var $dd = $row.find('.unit-dropdown'); initUnitDropdown($dd);
+            if(preset){
+                var opt = new Option(preset.text || preset.id, preset.id, true, true);
+                $dd.append(opt).trigger('change');
+                $row.find('.unit-desc-input').val(preset.name || '');
+            }
+        }
+
+
+        initAccodeDropdown($('#accounttablelink .accode-dropdown').first());
+        initUnitDropdown($('#unitTableLink .unit-dropdown').first());
+
+
+        /* $("#btnPrev").click(function () { toastr.info("Previous clicked"); });*/
+        // ✅ Script (should be inside $(document).ready or after the button in DOM)
+        //$("#btnPrev").on("click", function (e) {
+        //    e.preventDefault();  // stop form submission
+        //    window.history.back();
+        //});
+
+
+
+
+
+        $("#btnNew").click(function () {
+            $("#cdError").text("");
+            // Reset for new entry
+            $("#id").val(0);
+            $("#cd")
+                .val("")
+                .prop("disabled", false)              // ✅ Enable CD field
+                .prop("readonly", false)
+                //.css("background-color", "");         // Remove grey background
+
+            $("#nam,#adds,#addss,#FFCODE,#ENTDT_NEW,#ENTDT")
+                .val("")
+                .prop("readonly", false)
+                .prop("disabled", false);
+
+            $('#FFCODE').val(null).trigger('change');
+
+            // Clear tables
+            $('#accounttablelink tbody').empty();
+            $('#unitTableLink tbody').empty();
+            addAccountRow();
+            addUnitRow();
+
+            toggleTableControls(true);
+            toggleActionButtons(true);
+        });
+
+
+
+        $("#btnEdit").click(function () {
+            debugger;
+            $("#cdError").text("");
+            $("#cd")
+                .prop("disabled", true)
+                .prop("readonly", true);// ✅ Disable CD field (cannot click or focus)
+                //.css("background-color", "#f0f0f0");  // Light grey visual cue
+
+            $("#nam,#adds,#addss,#FFCODE,#ENTDT_NEW,#ENTDT")
+                .prop("readonly", false)
+                .prop("disabled", false);
+
+            toggleTableControls(true);
+            toggleActionButtons(true);
+        });
+
+
+        //$("#btnDelete").click(function(){ if(confirm("Are you sure you want to delete this record?")){ toastr.error("Record deleted"); }});
+
+        $("#btnSave").off("click").on("click", function () {
+            debugger;
+
+            let isValid = true;
+            const CD = $("#cd").val()?.trim();
+
+            if (!CD) {
+                $("#cdError").text("Code is required.");
+                isValid = false;
+            }
+
+            if (!isValid) return false;
+
+            var hdr = {
+                ID: parseInt($("#id").val()) || 0,
+                CD: $("#cd").val(),
+                NAM: $("#nam").val(),
+                ADDS: $("#adds").val(),
+                ADDSS: $("#addss").val(),
+                FFCODE: $("#FFCODE").val() || "",
+                TAG: $("#tag").val() || "",
+                DTAG: $("#dtag").val() || "",
+                UNIT: $("#unit").val() || "",
+                OS_USER: $("#os_user").val() || "",
+                GRP_CODE: $("#grp_code").val() || "",
+                USER_NEW: $("#user_new").val() || "",
+                COMP_NAME: $("#comp_name").val() || "",
+                MACHINE_NO: $("#machine_no").val() || "",
+                TERMINAL_ID: $("#terminal_id").val() || "",
+                USER_NAME_NEW: $("#user_name_new").val() || "",
+                ENTDT: $("#ENTDT").val() || "",
+                ENTDT_NEW: $("#ENTDT_NEW").val() || ""
+            };
+
+            // Collect account details (no duplicate check)
+            var dtl = [];
+            $("#accounttablelink tbody tr").each(function (i, row) {
+                var accode = $(row).find(".accode-dropdown").val();
+                if (accode) {
+                    dtl.push({
+                        ID: $(row).find(".account-hidden-id").val() || 0,
+                        CD: hdr.CD,
+                        SRLNO: i + 1,
+                        ACCODE: accode,
+                        SUBCODE: $(row).find(".subcode-input").val() || "",
+                        ACNAME: $(row).find(".desc-input").val() || ""
+                    });
+                }
+            });
+
+            // Collect unit details (no duplicate check)
+            var udtl = [];
+            $("#unitTableLink tbody tr").each(function (i, row) {
+                var unitcode = $(row).find(".unit-dropdown").val();
+                if (unitcode) {
+                    udtl.push({
+                        ID: $(row).find(".unit-hidden-id").val() || 0,
+                        CODE: hdr.CD,
+                        UNIT_CODE: unitcode,
+                        NAME: $(row).find(".unit-desc-input").val() || ""
+                    });
+                }
+            });
+
+            // Combine all data
+            var MasterRefJag = {
+                hdr: hdr,
+                dtl: dtl,
+                udtl: udtl
+            };
+
+            console.log("Payload sending:", MasterRefJag);
+
+            // Save via AJAX
+            $.ajax({
+                url: "/SndReference/AddOrUpdate",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(MasterRefJag),
+                success: function (res) {
+                    console.log("Response:", res);
+
+                    if (res.success) {
+                        if (hdr.ID == 0) {
+                            toastr.success(hdr.CD +"Data saved successfully!");
+                        } else {
+                            toastr.success(hdr.CD +"Data updated successfully!");
+                        }
+                    } else {
+                        toastr.error(res.message || "Error saving data!");
+                    }
+                },
+                error: function (xhr) {
+                    console.error("Error:", xhr.responseText);
+                    toastr.error("Unexpected error occurred!");
+                }
+            });
+        });
+
+
+
+
+        $("#btnCancel").click(function(e){ e.preventDefault(); $(".text-danger").remove(); location.reload(); });
+
+        // ----- Account table buttons / checkboxes -----
+        $(document).on("click",".addaccount", function(){ addAccountRow(); });
+        $(document).on("click",".deleteaccount", function(){
+            $("#accounttablelink tbody").find("input.account-checkbox:checked").closest("tr").remove();
+            $("#selectAllAccounts").prop("checked", false);
+        });
+
+
+        $("#selectAllAccounts").on("change", function(){ $("#accounttablelink tbody .account-checkbox").prop("checked", this.checked); });
+        $("#accounttablelink tbody").on("change",".account-checkbox", function(){
+            var t=$("#accounttablelink tbody .account-checkbox").length, c=$("#accounttablelink tbody .account-checkbox:checked").length;
+            $("#selectAllAccounts").prop("checked", t>0 && t===c);
+        });
+
+        // ----- Unit table buttons / checkboxes -----
+        $(document).on("click",".addunit", function(){ addUnitRow(); });
+        $(document).on("click", ".deleteunit", function () {
+
+
+            $("#unitTableLink tbody").find("input.unit-checkbox2:checked").closest("tr").remove();
+            $("#selectAllUnits").prop("checked", false);
+        });
+
+        $("#selectAllUnits").on("change", function(){ $("#unitTableLink tbody .unit-checkbox2").prop("checked", this.checked); });
+        $("#unitTableLink tbody").on("change",".unit-checkbox2", function(){
+            var t=$("#unitTableLink tbody .unit-checkbox2").length, c=$("#unitTableLink tbody .unit-checkbox2:checked").length;
+            $("#selectAllUnits").prop("checked", t>0 && t===c);
+        });
+
+
+        // ----- Reference list: load details → rebuild rows with API-backed selects -----
+        $("#referenceList").on("click", ".reference-item", function () {
+            $("#cdError").text("");
+    debugger;
+    $(".reference-item").removeClass("selected-reference");
+
+    $(this).addClass("selected-reference");
+    var CODE = $(this).data("code");
+
+    $.ajax({
+        url: '@Url.Action("GetDetails", "SndReference")',
+        data: { cd: CODE }
+    }).done(function (dta) {
+
+        var res = dta.Data || dta.data || dta;
+
+        if (!res || !res.hdr) {
+            toastr.warning("No data found for selected code.");
+            return;
+        }
+
+        var hdr = res.hdr,
+            dtl = res.dtl || [],
+            udtl = res.udtl || [];
+
+
+        $("#id").val(hdr.id || hdr.ID || "");
+        $("#cd").val(hdr.cd || hdr.CD || "").prop("readonly", true) .prop("disabled", true)
+        $("#nam").val(hdr.nam || hdr.NAM || "");
+        $("#adds").val(hdr.adds || hdr.ADDS || "");
+        $("#addss").val(hdr.addss || hdr.ADDSS || "");
+        $("#FFCODE").val(hdr.FFCODE || "").trigger("change");
+
+
+        function formatDate(dateStr) {
+            if (!dateStr) return "";
+
+            const match = /\/Date\((\d+)\)\//.exec(dateStr);
+            if (match) {
+                const ticks = parseInt(match[1], 10);
+                const d = new Date(ticks);
+                return `${d.getFullYear()}-${("0" + (d.getMonth() + 1)).slice(-2)}-${("0" + d.getDate()).slice(-2)}`;
+            }
+
+            const d = new Date(dateStr);
+            if (isNaN(d)) return "";
+            return `${d.getFullYear()}-${("0" + (d.getMonth() + 1)).slice(-2)}-${("0" + d.getDate()).slice(-2)}`;
+        }
+
+        if (hdr.ENTDT) $("#ENTDT").val(formatDate(hdr.ENTDT));
+        if (hdr.ENTDT_NEW) $("#ENTDT_NEW").val(formatDate(hdr.ENTDT_NEW));
+
+
+        $("#accounttablelink tbody").empty();
+        $("#unitTableLink tbody").empty();
+
+
+        dtl.forEach(function (item) {
+            addAccountRow({
+                id: item.ACCODE || "",
+                text: item.ACCODE || "",
+                subcode: item.SUBCODE || "",
+                description: item.ACNAME || item.ACNAME || "" // 🩵 fixed field reference
+            });
+        });
+
+
+        udtl.forEach(function (item) {
+            addUnitRow({
+                id: item.UNIT_CODE || item.uniT_CODE || item.unit || "",
+                text: item.UNIT_CODE || item.uniT_CODE || item.unit || "",
+                name: item.NAME || item.name || ""
+            });
+        });
+
+        toggleTableControls(false);
+        toggleActionButtons(true);
+    }).fail(function () {
+        toastr.error("Error loading details.");
+    });
+});
+
+
+
+        var currentPageNumber = 1, searchQuery = "", isLoading = false;
+        function GetMoreContent(currentPage, query) {
+            $("#loading").show();
+            $.ajax({
+                type: "GET",
+                url: "@Url.Action("GetList", "SndReference")",
+                dataType: "json",
+                data: { page: currentPage, pageSize: 15, searchString: query }
+            }).done(function (dataL) {
+                if (Array.isArray(dataL) && dataL.length > 0) {
+                    dataL.forEach(function (item) {
+                        $('<p class="reference-item" data-code="' + item.CD + '">' + item.CD + ' - ' + item.NAM + '</p>').appendTo("#referenceList");
+                    });
+                    isLoading = false;
+                } else if (currentPage === 1) {
+                    $("#referenceList").html("<p>No results found</p>");
+                } else {
+                    $("#referenceList").append("<p>No more results</p>");
+                }
+            }).fail(function () {
+                $("#referenceList").append("<p>Error loading data</p>");
+                isLoading = false;
+            }).always(function(){ $("#loading").hide(); });
+        }
+        GetMoreContent(currentPageNumber, searchQuery);
+
+        $("#SearchString").on("keyup change", function () {
+            searchQuery = $(this).val(); currentPageNumber = 1;
+            $("#referenceList").empty(); GetMoreContent(currentPageNumber, searchQuery);
+        });
+        $("#referenceList").on("scroll", function () {
+            var $this = $(this), height = this.scrollHeight - $this.height(), scroll = $this.scrollTop();
+            if (scroll >= height - 50 && !isLoading) { isLoading = true; currentPageNumber += 1; GetMoreContent(currentPageNumber, searchQuery); }
+        });
+    });
+
+
+
+
+    </script>
+</body>
+</html>

@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/PacketTea/Web.config
+/PacketTea/PacketTea.csproj
+/PacketTea/PacketTea.csproj.user

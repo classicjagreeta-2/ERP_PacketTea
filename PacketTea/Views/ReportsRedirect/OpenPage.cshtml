@@ -1,0 +1,28 @@
+﻿
+@{
+    //ViewBag.Title = "OpenPage";
+}
+
+<style>
+    .iframe-container {
+        position: relative;
+        width: 100%;
+        height: 90vh;
+    }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+</style>
+<div class="iframe-container">
+    <iframe src="@ViewBag.Url"></iframe>
+</div>
+@*<iframe src="/ReportsRedirect/Proxy?url=/con_fin_03140000f/menu_fin_03140000f&data=@HttpUtility.UrlEncode(@ViewBag.encryptedData)"
+        width="100%"
+        height="700px"
+        style="border:none;">
+</iframe>*@
+
+

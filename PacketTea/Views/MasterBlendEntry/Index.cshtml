@@ -1,0 +1,412 @@
+@using PacketTea.Utility
+@model List<PacketTea.Models.PT.T_TEA_BLEND>
+
+@{
+    ViewBag.Title = "Master Blend Entry";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
+    var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <style>
+        :root {
+            --mbe-navy: #2c3958; --mbe-accent: #3a7bd5; --mbe-border: #dde2ea;
+            --mbe-bg: #f4f6fa; --mbe-text: #2b2f38; --mbe-muted: #6b7280;
+        }
+        body { background: var(--mbe-bg); }
+        .general-container { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(20,30,60,.08); padding-bottom: 18px; overflow: hidden; }
+
+        /* purchase-order.css's ".action-btns ul" / ".action-btns ul li a" rules
+           (white bar, black text) match more elements than the equivalents below,
+           so they win on specificity regardless of source order. Match that same
+           element chain here so overrides below actually take effect instead of
+           silently losing to the shared rules on some properties but not others. */
+        .action-btns, .action-btns ul { background: #fff; border: none; border-bottom: 1px solid var(--mbe-border); }
+        .action-btns ul { display: flex; align-items: center; margin: 0; padding: 6px 14px; list-style: none; }
+        .action-btns ul li { margin-right: 6px; border-right: none; }
+        .action-btns ul li a, .action-btns ul li button {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--mbe-text); background: transparent; border: none; cursor: pointer;
+            padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
+            text-decoration: none; transition: background .15s ease;
+        }
+        .action-btns ul li a:hover, .action-btns ul li button:hover:not(:disabled) { background: var(--mbe-bg); color: var(--mbe-text); }
+        .action-btns ul li button:disabled { opacity: .4; cursor: not-allowed; }
+        .title-heading { padding: 18px 20px 14px; font-size: 20px; font-weight: 700; color: var(--mbe-text); }
+
+        #searchInput { border: 1px solid var(--mbe-border); border-radius: 6px; }
+
+        .table-responsive { padding: 0 20px; }
+        /* Match Purchase Order's own list font exactly (purchase-order.css's shared
+           html,body rule sets Arial/12px, but this page's own font-size:13px below used
+           to win on equal specificity -- pin both explicitly instead of relying on that
+           cascade order). */
+        table.main-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: Arial, Helvetica, sans-serif; }
+        table.main-table th, table.main-table td { border: 1px solid var(--mbe-border); padding: 8px 10px; }
+        table.main-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.main-table tbody tr:nth-child(even) { background: #f8f9fc; }
+        table.main-table tbody tr:hover { background: #eef3ff; }
+        .dataTables_info { padding: 10px 20px 0; color: var(--mbe-muted); font-size: 12.5px; }
+
+        /* Item-line sub-grid shown inside the "+" expand row -- styled like the
+           main list table (navy header, bordered cells) rather than the plain
+           label/value pairs it replaces, matching how other list screens
+           (e.g. Attendance Entry) show a row's child records. */
+        table.detail-sub-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table.detail-sub-table th, table.detail-sub-table td { border: 1px solid var(--mbe-border); padding: 6px 8px; }
+        table.detail-sub-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.detail-sub-table tbody tr:nth-child(even) { background: #fff; }
+
+        /* "New" inline row (item 2) -- mirrors ERP_Inventory's Purchase_Requisition list
+           New-row pattern: pick Unit + Packet Type here first, then the pencil icon
+           (enabled only once both are picked) opens the root Master Blend Entry window
+           with both locked in. */
+        tr.new-entry-row td { background: #eef3ff; vertical-align: middle; }
+        tr.new-entry-row select { border: 1px solid var(--mbe-border); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; }
+        tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
+        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: var(--mbe-accent); }
+    </style>
+</head>
+<body>
+
+    <div class="general-container">
+        <div class="action-btns">
+            <ul>
+                <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                <li>
+                    <a href="javascript:void(0)" id="btnNew">
+                        <i class="fa fa-plus"></i> New
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="editBtn">
+                        <i class="fa fa-pencil"></i> Edit
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="viewBtn">
+                        <i class="fa fa-eye"></i> View
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="deleteBtn">
+                        <i class="fa fa-trash-o"></i> Delete
+                    </a>
+                </li>
+                <li style="margin-left:auto">
+                    <label style="margin:0;color:var(--mbe-muted);font-size:12px;font-weight:700;letter-spacing:.05em;">LIST</label>
+                </li>
+            </ul>
+        </div>
+
+        <div class="title-heading">Master Blend Entry</div>
+
+        <div style="display:flex;justify-content:flex-end;padding:0 20px;margin-bottom:15px;">
+            <div style="position:relative;width:280px;">
+                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No / Blend No"
+                       style="width:100%;padding:8px 14px;box-sizing:border-box;" />
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="border main-table" id="blendTable">
+                <thead>
+                    <tr>
+                        <th style="width:26px;"></th>
+                        <th style="width:26px;"></th>
+                        <th>Doc No</th>
+                        <th>Date</th>
+                        <th>Party</th>
+                        <th>Blend No</th>
+                        <th>Blend Details</th>
+                        <th>Warehouse</th>
+                        <th>Allocation</th>
+                        <th>Blend Mark</th>
+                        <th>Blend Grade</th>
+                        <th>No of Chest</th>
+                        <th>Net WT/Chest</th>
+                        <th>Gross WT/Chest</th>
+                        <th>Closed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Count > 0)
+                    {
+                        var rowIndex = 0;
+                        foreach (var row in Model)
+                        {
+                            rowIndex++;
+                            var detailId = "rowDetail" + rowIndex;
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="row-check"
+                                           value="@row.DOCNO"
+                                           data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")"
+                                           data-blendtype="@row.BLEND_TYPE" />
+                                </td>
+                                <td style="text-align:center;">
+                                    <button type="button" class="row-expand-btn" data-target="@detailId" title="Show more details">+</button>
+                                </td>
+                                <td>@row.DOCNO</td>
+                                <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
+                                <td>@row.PartyName</td>
+                                <td>
+                                    <a href="@Url.Action("InsertOrUpdate", "MasterBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
+                                </td>
+                                <td>@row.BLEND_DESCN</td>
+                                <td>@row.WarehouseName</td>
+                                <td>@row.AllocationName</td>
+                                <td>@row.BlendMarkName</td>
+                                <td>@row.BlendGradeName</td>
+                                <td class="text-right">@row.BLEND_CHEST</td>
+                                <td class="text-right">@row.BLEND_CHEST_WT</td>
+                                <td class="text-right">@row.BLEND_CHEST_GROSSWT</td>
+                                <td>@(row.CLOSED == "Y" ? "Yes" : "No")</td>
+                            </tr>
+                            <!-- Header fields that don't fit the main grid -- shown on demand via the
+                                 "+" toggle instead of adding another half-dozen always-visible columns.
+                                 Pre-filled from the page's own data so the panel isn't empty on first
+                                 open, then re-fetched via GetRowDetail every time it's opened so it
+                                 reflects the latest saved value instead of what was on the page when
+                                 it was first loaded. -->
+                            <tr class="row-detail" id="@detailId" style="display:none;"
+                                data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
+                                <td colspan="15" style="background:#f8f9fc;padding:10px 12px;">
+                                    <!-- Just the item-lines sub-grid -- matches Attendance Entry's own
+                                         "+" expand (straight to the detail table, no label/value summary
+                                         line above it) instead of also showing Export Ref No/Transporter/
+                                         Ship Mark/Notes/Special Instructions first. -->
+                                    <div style="overflow-x:auto;">
+                                        <table class="detail-sub-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:34px;">Sl</th>
+                                                    <th>Mark/Garden</th>
+                                                    <th>Inv No</th>
+                                                    <th>Pack Date</th>
+                                                    <th>Grade</th>
+                                                    <th style="text-align:right;">Bag</th>
+                                                    <th style="text-align:right;">Qty</th>
+                                                    <th style="text-align:right;">Sam. Qty</th>
+                                                    <th style="text-align:right;">Rate</th>
+                                                    <th style="text-align:right;">Amount</th>
+                                                    <th>Warehouse</th>
+                                                    <th>DO No</th>
+                                                    <th>Transporter</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="detail-items-body">
+                                                <tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Loading...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="15" style="text-align:center;">No records found</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @{
+            int pageSize = (int)ViewBag.PageSize;
+            int rowCount = (int)ViewBag.RowCount;
+            int currentPage = (int)ViewBag.Page;
+            int pageCount = pageSize > 0 ? (int)Math.Ceiling(rowCount / (double)pageSize) : 1;
+        }
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;flex-wrap:wrap;gap:8px;">
+            <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
+                <span style="color:var(--mbe-muted);font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
+                <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // TEMPORARY diagnostic -- shows which Oracle schema (x-database header, see
+        // Services.cs) this session's API calls actually connect as, so it can be checked
+        // directly against the DB instead of guessing from Web.config's unused OracleDb
+        // connection string. Safe to remove once you've confirmed the schema name.
+        console.log('[MasterBlendEntry diag] x-database (Oracle schema) for this session: ' +
+            @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(SessionHelper.GetUser()?.getDbName ?? "(null/empty -- getDbName is not set for this session)")));
+        $(function () {
+            var searchTimer;
+            $('#searchInput').on('input', function () {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(reload, 400);
+            });
+
+            // The Packet Type filter dropdown that used to sit here is gone -- Packet Type is
+            // now only picked in the "New" inline row (item 2), so the list itself shows every
+            // blend type the user has rights to (still scoped to CurrentUnit -- see
+            // MasterBlendEntryController.Index) instead of one type at a time. Changing the
+            // search text always jumps back to page 1; paging itself calls reload(n) with the
+            // target page instead.
+            function reload(page) {
+                window.location.href = '@Url.Action("Index", "MasterBlendEntry")'
+                    + '?searchString=' + encodeURIComponent($('#searchInput').val())
+                    + '&page=' + (page || 1);
+            }
+
+            $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
+            $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
+
+            // "+" toggle -- reveals the header fields that don't fit the main grid (Export Ref
+            // No, Transporter, Ship Mark, Notes, Special Instructions) for that row. Every open
+            // re-fetches them via GetRowDetail instead of trusting what was rendered at page
+            // load, so an edit someone else just saved shows up without a full page reload.
+            $('#blendTable').on('click', '.row-expand-btn', function () {
+                var $btn = $(this);
+                var $detail = $('#' + $btn.data('target'));
+                var opening = !$detail.is(':visible');
+                $detail.toggle(opening);
+                $btn.text(opening ? '-' : '+');
+
+                if (opening) {
+                    var $body = $detail.find('.detail-items-body');
+                    $.get('@Url.Action("GetRowDetail", "MasterBlendEntry")', {
+                        docno: $detail.data('docno'),
+                        docdt: $detail.data('docdt'),
+                        blendType: $detail.data('blendtype')
+                    }).done(function (r) {
+                        if (!r || !r.success) { // leave the page-load values in place
+                            $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Unable to load item lines.</td></tr>');
+                            return;
+                        }
+                        // Item lines (Mark/Inv/Grade/Qty/...), rendered the same way as
+                        // Attendance Entry's per-employee sub-grid instead of the plain
+                        // label/value block this panel used to be limited to.
+                        var items = r.details || [];
+                        if (items.length === 0) {
+                            $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">No item lines</td></tr>');
+                            return;
+                        }
+                        $body.empty();
+                        items.forEach(function (d, i) {
+                            var packDate = d.PACK_DATE ? new Date(d.PACK_DATE).toLocaleDateString('en-GB') : '';
+                            $('<tr>').append(
+                                '<td>' + (d.SLNO != null ? d.SLNO : (i + 1)) + '</td>',
+                                '<td>' + (d.MarkName || d.MARK || '') + '</td>',
+                                '<td>' + (d.INVNO || '') + '</td>',
+                                '<td>' + packDate + '</td>',
+                                '<td>' + (d.GradeName || d.GRADE || '') + '</td>',
+                                '<td style="text-align:right;">' + (d.BAG_CHEST || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.SAMPLE_QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + Number(d.RATE || 0).toFixed(2) + '</td>',
+                                '<td style="text-align:right;">' + Number(d.AMOUNT || 0).toFixed(2) + '</td>',
+                                '<td>' + (d.WAREHOUSE || '') + '</td>',
+                                '<td>' + (d.DONO || '') + '</td>',
+                                '<td>' + (d.TransporterName || '') + '</td>'
+                            ).appendTo($body);
+                        });
+                    }).fail(function () {
+                        $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Unable to load item lines.</td></tr>');
+                    });
+                }
+            });
+
+            // =========================================================
+            // "New" inline row (item 2) -- mirrors ERP_Inventory's Purchase_Requisition
+            // list "New" flow: clicking New prepends a row with a Unit picker and a
+            // Packet Type picker (reusing the same, rights-filtered Blend Type list as
+            // the top filter -- see MasterBlendEntryController.GetAllowedBlendTypesAsync)
+            // instead of navigating straight into a blank entry screen. The pencil icon
+            // only lights up once both are chosen, then opens the root Master Blend
+            // Entry window (a new browser tab, not a same-tab navigate like Purchase
+            // Requisition -- so the list stays put behind it) with both passed through
+            // and locked there (see InsertOrUpdate.cshtml's LOCKED_FROM_LIST handling).
+            var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
+            var PACKET_TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(blendTypes));
+
+            function buildNewRow() {
+                var unitOpts = '<option value="">Select Unit</option>' +
+                    UNIT_LIST.map(function (u) { return '<option value="' + u.CODE + '">' + u.CODE + ' - ' + (u.NAME || '') + '</option>'; }).join('');
+                var typeOpts = '<option value="">Select Packet Type</option>' +
+                    Object.keys(PACKET_TYPES).map(function (k) { return '<option value="' + k + '">' + PACKET_TYPES[k] + ' (' + k + ')</option>'; }).join('');
+                return '<tr id="newUnitRow" class="new-entry-row">' +
+                    '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Master Blend Entry"></i></td>' +
+                    '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
+                    '<td colspan="2"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
+                    '<td colspan="9"></td>' +
+                    '</tr>';
+            }
+
+            function refreshGoNewState() {
+                var ready = !!$('#newRowUnit').val() && !!$('#newRowPacketType').val();
+                $('.go-new').toggleClass('is-ready', ready);
+            }
+
+            $('#btnNew').on('click', function () {
+                if ($('#newUnitRow').length) return;
+                $('#blendTable tbody').prepend(buildNewRow());
+                refreshGoNewState();
+            });
+
+            $('#blendTable').on('change', '#newRowUnit, #newRowPacketType', refreshGoNewState);
+
+            $('#blendTable').on('click', '.go-new', function () {
+                var unit = $('#newRowUnit').val(), packetType = $('#newRowPacketType').val();
+                if (!unit) { alert('Please select Unit first'); return; }
+                if (!packetType) { alert('Please select Packet Type first'); return; }
+                window.open('@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
+                    + '?unit=' + encodeURIComponent(unit)
+                    + '&blendType=' + encodeURIComponent(packetType), '_blank');
+            });
+
+            // Row selection is now checkboxes (not a radio group, see the row-check markup
+            // above) so more than one can be ticked at once -- Edit/View/Delete all still
+            // only make sense against exactly one row, so guard the same way Purchase
+            // Requisition's own checkbox-based Delete does.
+            function getSingleChecked(action) {
+                var $c = $('.row-check:checked');
+                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
+                return $c;
+            }
+
+            $('#editBtn').on('click', function () {
+                var $c = getSingleChecked('edit');
+                if (!$c) return;
+                window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
+                    + '?docno=' + encodeURIComponent($c.val())
+                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
+                    + '&blendType=' + encodeURIComponent($c.data('blendtype'));
+            });
+
+            $('#viewBtn').on('click', function () {
+                var $c = getSingleChecked('view');
+                if (!$c) return;
+                window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
+                    + '?docno=' + encodeURIComponent($c.val())
+                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
+                    + '&blendType=' + encodeURIComponent($c.data('blendtype'))
+                    + '&view=true';
+            });
+
+            $('#deleteBtn').on('click', function () {
+                var $c = getSingleChecked('delete');
+                if (!$c) return;
+                if (!confirm('Are you sure you want to delete Blend No against Doc No ' + $c.val() + ' ?')) return;
+
+                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "MasterBlendEntry")' })
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
+                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
+                    .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
+                    .appendTo('body').submit();
+            });
+        });
+    </script>
+</body>
+</html>

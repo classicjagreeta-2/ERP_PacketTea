@@ -1,0 +1,982 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Voucher Entry</title>
+    <!-- CSS -->
+
+    <link href="~/Content1/assets/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/Content1/assets/css/jquery-ui.css">
+    <link rel="stylesheet" href="~/Content1/assets/css/voucher-entry.css">
+    <link rel="stylesheet" href="~/Content1/assets/css/voucher-entry-responsive.css">
+    <script src="https://unpkg.com/slim-select@latest/dist/slimselect.js"></script>
+    <link href="https://unpkg.com/slim-select@latest/dist/slimselect.css" rel="stylesheet"></link>
+</head>
+
+
+<body>
+
+    <!-- third screen start -->
+    <div class="general-container">
+        <div class="voucher-details">
+            <!-- header content start -->
+            <div class="header-content">
+                <!-- action btns start -->
+                <div class="action-btns">
+                    <ul>
+                        <li><a href="#"><i class="fa fa-arrow-left"></i> Back</a></li>
+                        <li><a href="#"><i class="fa fa-plus"></i> New</a></li>
+                        <li><a href="#"><i class="fa fa-floppy-o"></i> Save</a></li>
+                        <li><a href="#"><i class="fa fa-times"></i> Cancel</a></li>
+
+                    </ul>
+                </div>
+                <!-- action btns end -->
+
+
+            </div>
+            <!-- header content end -->
+
+            <div class="voucher-container">
+
+                <div class="voucher-content">
+                    <form id="form1" name="form1" class="cash-form" novalidate="novalidate">
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="DocumentType">Voucher Type:</label>
+
+                                    <select class="required" id="VOU_TYPE" name="VOU_TYPE" onchange="getvouType(this);">
+                                        <option value="CP">Cash Payment</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="InvoiceNo">Voucher No:</label>
+                                    <input class="required" name="_VOU_NO" oninput="this.value = this.value.toUpperCase()"
+                                           readonly="readonly" type="text" value="Auto Generated">
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="InvoiceDate">Voucher Date:</label>
+                                    <div class="date-field">
+                                        <input type="text" id="VoucherDate" placeholder="31-03-2025" readonly />
+                                        <img src="~/Content1/assets/images/calendar.png" alt="icon" class="calendar-icon" id="VoucherIcon" />
+                                    </div>
+                                    <span class="error">Permission till 02-01-2026 &amp; Date Range is 02-06-2025 to 31-12-2025</span>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="ContractDate">Value Date:</label>
+                                    <div class="date-field">
+                                        <input type="text" id="ValueDate" placeholder="31-03-2025" readonly />
+                                        <img src="~/Content1/~/Content1/assets/images/calendar.png" alt="icon" class="calendar-icon" id="ValueIcon" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="CashAccount">Cash Account:</label>
+                                    <div class="custom-select">
+                                        <div class="select-item">
+                                            <input type="text" class="select-input" placeholder="Select a Account"
+                                                   readonly>
+                                        </div>
+
+                                        <div class="dropdown">
+                                            <input type="text" class="select-box" placeholder="Search...">
+                                            <ul class="options">
+                                                <li data-value="1">Account 1</li>
+                                                <li data-value="2">Account 2</li>
+                                                <li data-value="3">Account 3</li>
+                                                <li data-value="4">Account 4</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="Reference">Reference:</label>
+                                    <select id="selectElement" class = "form-control border-bottom",>
+                                        <option>Option 1</option>
+                                        <option>Option 2</option>
+                                        <option>Option 3</option>
+                                    </select>
+                                    @*<div class="custom-select">
+
+
+                                        <div class="select-item">
+                                            <input type="text" class="select-input" placeholder="Select Reference"
+                                                   readonly>
+                                        </div>
+
+                                        <div class="dropdown">
+                                            <input type="text" class="select-box" placeholder="Search...">
+                                            <ul class="options">
+                                                <li data-value="1">Reference 1</li>
+                                                <li data-value="2">Reference 2</li>
+                                                <li data-value="3">Reference 3</li>
+                                                <li data-value="4">Reference 4</li>
+                                            </ul>
+                                        </div>
+                                    </div>*@
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="PaidTo">Paid To:</label>
+                                    <input id="_DESC_ORA" name="_DESC_ORA" type="text" value="">
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="form-group">
+                                    <label for="PassedBy">Passed By:</label>
+                                    <input class="required" name="_PASSED_BY" type="text" value="CORETEAM">
+                                </div>
+                            </div>
+
+                            <div class="col">
+
+                                <div class="checkbox-row">
+                                    <input id="advance" type="checkbox" name="_advancePayBool" value="true">
+                                    <label for="Reference">Advance:</label>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+
+                <div class="voucher-content">
+
+                    <!-- action btns start -->
+                    <div class="action-btns">
+                        <ul>
+                            <li><a href="#"><i class="fa fa-plus"></i> New</a></li>
+                            <li>
+                                <a href="#" class="openPopup" data-popup="BillSettlement">
+                                    <i class="fa fa-file-text-o"></i> Bill
+                                    Settlement
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="openPopup" data-popup="HoldingTax">
+                                    <i class="fa fa-file-o"></i>
+                                    With Holding Tax
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="openPopup" data-popup="DetailsNarration">
+                                    <i class="fa fa-cube"></i> Narration
+                                    Detail
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="openPopup" data-popup="NarrationDescription">
+                                    <i class="fa fa-cube"></i> Narration
+                                    Description
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="openPopup" data-popup="ExpensesAllocation">
+                                    <i class="fa fa-credit-card"></i>
+                                    Expenses Allocation
+                                </a>
+                            </li>
+
+                        </ul>
+                    </div>
+                    <!-- action btns end -->
+
+
+                    <div class="table-responsive">
+                        <table class="border">
+                            <thead>
+                                <tr>
+                                    <th>Action</th>
+                                    <th> A/c Description </th>
+                                    <th>Sub A/c Description </th>
+                                    <th width="7%">Reference Description</th>
+                                    <th>Cost Centre Description</th>
+                                    <th>Narration</th>
+                                    <th>Debit Amount</th>
+                                    <th>Credit Amount</th>
+                                    <th>Quantity</th>
+                                    <th>Currency</th>
+                                    <th>Bank Name</th>
+                                    <th>Clearance Dt.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                                <tr>
+                                    <td class="action-btn-col">
+                                        <button class="fa fa-trash-o"></button>
+                                    </td>
+                                    <td>
+                                        <div class="custom-select">
+                                            <div class="select-item">
+                                                <input type="text" class="select-input" placeholder="Select" readonly>
+                                            </div>
+
+                                            <div class="dropdown">
+                                                <input type="text" class="select-box" placeholder="Search...">
+                                                <ul class="options">
+                                                    <li data-value="1">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="2">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="3">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="4">20000575 : FINANCE CHARGES</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                    </td>
+                                    <td>
+                                        <div class="custom-select">
+                                            <div class="select-item">
+                                                <input type="text" class="select-input" placeholder="Select" readonly>
+                                            </div>
+
+                                            <div class="dropdown">
+                                                <input type="text" class="select-box" placeholder="Search...">
+                                                <ul class="options">
+                                                    <li data-value="1">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="2">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="3">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="4">20000575 : FINANCE CHARGES</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="custom-select">
+                                            <div class="select-item">
+                                                <input type="text" class="select-input" placeholder="Select" readonly>
+                                            </div>
+
+                                            <div class="dropdown">
+                                                <input type="text" class="select-box" placeholder="Search...">
+                                                <ul class="options">
+                                                    <li data-value="1">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="2">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="3">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="4">20000575 : FINANCE CHARGES</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="custom-select">
+                                            <div class="select-item">
+                                                <input type="text" class="select-input" placeholder="Select" readonly>
+                                            </div>
+
+                                            <div class="dropdown">
+                                                <input type="text" class="select-box" placeholder="Search...">
+                                                <ul class="options">
+                                                    <li data-value="1">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="2">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="3">20000575 : FINANCE CHARGES</li>
+                                                    <li data-value="4">20000575 : FINANCE CHARGES</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input class="required" data-id="0" id="editableCell" name="T_BH11Details[0].NARRATION"
+                                               readonly="readonly" required="required" type="text" value="">
+                                    </td>
+                                    <td>
+                                        <input class="dr required" data-val="true" data-val-number="The field DebitAMOUNT must be a number."
+                                               data-val-required="The DebitAMOUNT field is required." id="DebitAMOUNT_0"
+                                               name="T_BH11Details[0].DebitAMOUNT" required="required" type="number" value="">
+                                    </td>
+                                    <td>
+                                        <input class="cr required" data-val="true"
+                                               data-val-number="The field CreditAMOUNT must be a number."
+                                               data-val-required="The CreditAMOUNT field is required." id="CreditAMOUNT_0"
+                                               name="T_BH11Details[0].CreditAMOUNT" required="required" type="number" value="">
+                                    </td>
+                                    <td>
+                                        <input data-val="true" data-val-number="The field QTY must be a number." id="QTY_0"
+                                               name="T_BH11Details[0].QTY" type="number" value="">
+                                    </td>
+                                    <td>
+                                        <input id="CURRENCY_CD_0" name="T_BH11Details[0].CURRENCY_CD" type="text" value="">
+                                    </td>
+                                    <td>
+                                        <input id="bankName_0" name="T_BH11Details[0].BANK" type="text" value="">
+                                    </td>
+                                    <td>
+                                        <input data-val="true" data-val-date="The field BANK_DATE must be a date." id="BANK_DATE_0"
+                                               name="T_BH11Details[0].BANK_DATE" type="text" value="">
+                                    </td>
+
+
+                                </tr>
+
+                            </tbody>
+                            <tfoot>
+                                <tr class="total">
+                                    <th colspan="6" class="right"><strong>Total:</strong></th>
+                                    <th id="totalDebit" class="totalDebit">0.00</th>
+                                    <th id="totalCredit" class="right">0.00</th>
+                                    <th colspan="4" class="right"></th>
+                                </tr>
+                                <tr class="total">
+                                    <th colspan="6" class="right"><strong>Net Amount:</strong></th>
+                                    <th colspan="2" id="netAmount" class="netAmount">0.00</th>
+                                    <th colspan="4" class="right"></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+    <!-- third screen end -->
+    <!-- Overlay -->
+    <div class="popup-overlay">
+
+        <!-- Popup ExpensesAllocation -->
+        <div id="ExpensesAllocation" class="popup-box">
+            <div class="popup-header">
+                <h2>Expenses Allocation</h2>
+                <button class="close-btn">X</button>
+            </div>
+
+
+            <h5>Other Expense Head Wise Amount</h5>
+
+            <!-- table start -->
+            <div class="table-responsive">
+                <table class="border">
+                    <thead>
+                        <tr>
+                            <th>Code - Expense Head</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+
+                        <tr>
+                            <td>abc</td>
+                            <td>abc</td>
+                        </tr>
+
+
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td class="right" colspan="1"> <strong>Total:</strong></td>
+                            <td class="right" id="totalAmount"> </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <!-- table end -->
+
+            <div class="bottom-btn">
+                <button class="btn-white">Back</button>
+                <button class="btn-blue">Save</button>
+            </div>
+        </div>
+
+        <!-- Popup Details Narration -->
+        <div id="DetailsNarration" class="popup-box">
+            <div class="popup-header">
+                <h2>Details Narration</h2>
+                <button class="close-btn">X</button>
+            </div>
+
+
+            <form action="/FN/VoucherEntry/InsertOrUpdate" id="form1" method="post" novalidate="novalidate">
+                <textarea id="NARR" name="NARR"></textarea>
+
+
+                <div class="bottom-btn">
+                    <button type="submit" class="btn-blue">Save</button>
+                    <button type="button" class="btn-white" id="clearBtn">Clear</button>
+                    <button type="button" class="btn-blue" id="cancelNBtn">Cancel</button>
+                </div>
+            </form>
+
+
+        </div>
+
+
+        <!-- Popup Narration Description -->
+        <div id="NarrationDescription" class="popup-box">
+            <div class="popup-header">
+                <h2>Narration Description</h2>
+                <button class="close-btn">X</button>
+            </div>
+
+
+            <form action="/FN/VoucherEntry/InsertOrUpdate" id="form1" method="post" novalidate="novalidate">
+                <textarea id="NARR" name="NARR"></textarea>
+
+
+                <div class="bottom-btn">
+                    <button type="submit" class="btn-blue">Save</button>
+                    <button type="button" class="close-btn btn-white">Cancel</button>
+                </div>
+            </form>
+
+
+        </div>
+
+        <!-- Popup Holding Tax -->
+        <div id="HoldingTax" class="popup-box">
+            <div class="popup-header">
+                <h2>Holding Tax</h2>
+                <button class="close-btn">X</button>
+            </div>
+
+
+            <form id="TaxHolding" name="TaxHolding">
+
+                <div class="form-group">
+                    <label for="exampleInputName1">T.D.S Head</label>
+                    <div class="custom-select">
+                        <div class="select-item">
+                            <input type="text" class="select-input" placeholder="" readonly>
+                        </div>
+
+                        <div class="dropdown">
+                            <input type="text" class="select-box" placeholder="Search...">
+                            <ul class="options">
+                                <li data-value="1">T.D.S 1</li>
+                                <li data-value="2">T.D.S 2</li>
+                                <li data-value="3">T.D.S 3</li>
+                                <li data-value="4">T.D.S 4</li>
+                            </ul>
+                        </div>
+                    </div>
+
+
+                </div>
+
+
+                <div class="form-group">
+                    <label for="exampleInputName2">Party Code</label>
+                    <div class="custom-select">
+                        <div class="select-item">
+                            <input type="text" class="select-input" placeholder="" readonly>
+                        </div>
+
+                        <div class="dropdown">
+                            <input type="text" class="select-box" placeholder="Search...">
+                            <ul class="options">
+                                <li data-value="1">Party Code 1</li>
+                                <li data-value="2">Party Code 2</li>
+                                <li data-value="3">Party Code 3</li>
+                                <li data-value="4">Party Code 4</li>
+                            </ul>
+                        </div>
+                    </div>
+
+
+                </div>
+
+
+                <div class="form-group">
+                    <label for="exampleInputName2">Dedt. on Amt</label>
+                    <input id="DedtAmt" required="required" step="any" type="number" value="">
+
+                </div>
+                <div class="sm-col-row">
+                    <div class="col-50">
+                        <div class="form-group">
+                            <label for="exampleInputName1">T.D.S %</label>
+                            <input id="tds_per" step="any" type="number" value="">
+                        </div>
+                    </div>
+                    <div class="col-50">
+                        <div class="form-group">
+                            <label for="exampleInputName1">T.D.S. Amt.</label>
+                            <input id="tds_amt" step="any" type="number" value="">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-btn">
+                    <button class="btn-blue">Save</button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- Popup Bill Settlement -->
+        <div id="BillSettlement" class="popup-box">
+            <div class="popup-header">
+                <h2>ALLOCATION OF PAYMENT/RECEIVED FROM BILLS</h2>
+                <button class="close-btn">X</button>
+            </div>
+
+            <h5>CODE</h5>
+            <div class="sm-col-row">
+                <div class="col-33">
+                    <div class="form-group">
+                        <input type="text" value="" placeholder="00555">
+                    </div>
+
+                </div>
+                <div class="col-33">
+                    <div class="form-group">
+                        <input type="text" value="" placeholder="0033">
+                    </div>
+
+                </div>
+                <div class="col-33">
+                    <div class="form-group">
+                        <input type="text" value="" placeholder="abc">
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="bill-pop-row">
+
+                <div class="col-40">
+                    <h5>PAYMENT / RECEIPT DETAILS</h5>
+                    <!-- table start -->
+                    <div class="table-responsive">
+                        <table class="border main-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>No.</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Adj. Amt.</th>
+                                    <th>Bal. Amt.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                            </tbody>
+                            <tfoot>
+                                <tr class="total">
+                                    <th class="right" colspan="3"> <strong>Total:</strong></th>
+
+                                    <th>1500</th>
+                                    <th>0</th>
+                                    <th>1500</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <!-- table end -->
+                </div>
+
+
+                <div class="col-60">
+                    <h5>INVOICE DETAILS</h5>
+                    <!-- table start -->
+                    <div class="table-responsive">
+                        <table class="border main-table">
+                            <thead>
+                                <tr>
+                                    <th>Flg.</th>
+                                    <th>No.</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Adj. Amt.</th>
+                                    <th>Bal. Amt.</th>
+                                    <th>Bill No</th>
+                                    <th>Bill Dt</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+                                <tr>
+                                    <td><input type="checkbox" class="checkbox-round" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+                                    <td><input type="text" /></td>
+
+                                </tr>
+
+                            </tbody>
+                            <tfoot>
+                                <tr class="total">
+                                    <th class="right" colspan="3"> <strong>Total:</strong></th>
+
+                                    <th>1500</th>
+                                    <th>0</th>
+                                    <th>1500</th>
+                                    <th></th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <!-- table end -->
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Overlay end -->
+
+    <script src="~/Content1/assets/js/jquery-3.7.1.min.js"></script>
+    <script src="~/Content1/assets/js/jquery-ui.js"></script>
+    <script src="~/Content1/assets/js/custom.js"></script>
+    <script>
+        new SlimSelect({
+            select: '#selectElement'
+        })
+    </script>
+
+
+</body>
+
+</html>
+
