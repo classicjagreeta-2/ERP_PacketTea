@@ -124,7 +124,13 @@ namespace Finance.Controllers.TEA
         // Edit, but the whole form renders read-only (see InsertOrUpdate.cshtml's IS_VIEW).
         public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "", bool view = false)
         {
-            ViewBag.BlendTypes = BlendTypes;
+            // Same rights-filtered list Index() uses for the list page's "New" row
+            // (GetAllowedBlendTypesAsync) -- using the raw BlendTypes dict here let a
+            // user with rights to only e.g. PT/BT/TB pick TT/WT/ST straight from this
+            // form's own Blend Type dropdown whenever it opens without going through
+            // that "New" row (a brand-new entry not locked from the list).
+            var allowedBlendTypes = await GetAllowedBlendTypesAsync();
+            ViewBag.BlendTypes = allowedBlendTypes;
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
             ViewBag.IsView = view;
 
@@ -148,7 +154,14 @@ namespace Finance.Controllers.TEA
             if (string.IsNullOrEmpty(docno))
             {
                 // ⭐ New entry
-                var effectiveBlendType = string.IsNullOrEmpty(blendType) ? "PT" : blendType;
+                // Default to "PT" only when it's actually one of this user's allowed
+                // types -- for a user with no PT rights (e.g. CORETT: TT/ST/WT), fall
+                // back to whatever their first allowed type is instead, so the initial
+                // Unit guess below (UnitForBlendType) isn't computed from a type they
+                // can't even select in the dropdown.
+                var effectiveBlendType = !string.IsNullOrEmpty(blendType) ? blendType :
+                    allowedBlendTypes.ContainsKey("PT") ? "PT" :
+                    allowedBlendTypes.Keys.FirstOrDefault() ?? "PT";
                 var model = new TEA_BLEND_DATA
                 {
                     T_TEA_BLEND = new T_TEA_BLEND
