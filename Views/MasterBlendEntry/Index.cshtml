@@ -323,9 +323,8 @@
             // Packet Type picker (reusing the same, rights-filtered Blend Type list as
             // the top filter -- see MasterBlendEntryController.GetAllowedBlendTypesAsync)
             // instead of navigating straight into a blank entry screen. The pencil icon
-            // only lights up once both are chosen, then opens the root Master Blend
-            // Entry window (a new browser tab, not a same-tab navigate like Purchase
-            // Requisition -- so the list stays put behind it) with both passed through
+            // only lights up once both are chosen, then navigates to the Master Blend
+            // Entry screen in the same tab (same as Edit/View) with both passed through
             // and locked there (see InsertOrUpdate.cshtml's LOCKED_FROM_LIST handling).
             var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
             var PACKET_TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(blendTypes));
@@ -360,9 +359,9 @@
                 var unit = $('#newRowUnit').val(), packetType = $('#newRowPacketType').val();
                 if (!unit) { alert('Please select Unit first'); return; }
                 if (!packetType) { alert('Please select Packet Type first'); return; }
-                window.open('@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
+                window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
                     + '?unit=' + encodeURIComponent(unit)
-                    + '&blendType=' + encodeURIComponent(packetType), '_blank');
+                    + '&blendType=' + encodeURIComponent(packetType);
             });
 
             // Row selection is now checkboxes (not a radio group, see the row-check markup

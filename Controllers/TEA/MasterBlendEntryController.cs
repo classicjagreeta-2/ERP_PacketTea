@@ -304,60 +304,78 @@ namespace Finance.Controllers.TEA
         private ActionResult JsonExact(object data) =>
             Content(JsonConvert.SerializeObject(data), "application/json");
 
+        // Services.GetAsync swallows a failed call (expired session token, refresh
+        // failure, API unreachable, ...) into r.Data == null with r.IsSuccessStatusCode
+        // == false -- returning JsonExact(r.Data) as-is for that case sends the browser
+        // a plain 200 OK with body "null", which every picker's JS reads as "zero
+        // results" with no visible error (this is exactly what made "Select Data" look
+        // like it silently stopped fetching anything after the 45-minute token expired).
+        // Surface it instead: a distinct status the frontend's .fail() handler can
+        // recognize as "your session died, log in again" rather than "no matches".
+        private ActionResult JsonExactOrSessionExpired<T>(ResponseApiModel<T> r)
+        {
+            if (!r.IsSuccessStatusCode)
+            {
+                Response.StatusCode = 440; // Login Timeout
+                return JsonExact(new { sessionExpired = true, message = "Your session has expired. Please log in again." });
+            }
+            return JsonExact(r.Data);
+        }
+
         [HttpGet]
         public async Task<ActionResult> GetParty(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetParty?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetWarehouse(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetWarehouse?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetAllocation(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetBlendGrade(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetMark(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetGarden(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetGarden?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetCategory(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetCategory?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetTransporter(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetTransporter?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
@@ -365,7 +383,7 @@ namespace Finance.Controllers.TEA
         {
             var r = await Services.GetAsync<dynamic>(
                 $"/api/TeaBlend/GetAvailableStock?blendType={blendType}&garden={garden}&mark={mark}&category={category}");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
@@ -374,7 +392,7 @@ namespace Finance.Controllers.TEA
             var qs = string.Join("&", (whCodes ?? new string[0]).Select(w => "whCodes=" + Uri.EscapeDataString(w)));
             var r = await Services.GetAsync<dynamic>(
                 $"/api/TeaBlend/GenerateDoNo?blendType={blendType}&unit={CurrentUnit}&fyShortFrom={fyShortFrom}&fyShortTo={fyShortTo}&{qs}");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
     }
 }

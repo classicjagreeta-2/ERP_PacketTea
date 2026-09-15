@@ -290,8 +290,8 @@
                 }
             });
 
-            // "New" inline row -- see the CSS comment above for the rationale; identical
-            // pattern to Master Blend Entry's own list page.
+            // "New" inline row -- see the CSS comment above for the rationale; same
+            // pattern as Master Blend Entry's own list page (navigates in the same tab).
             var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
             var PACKET_TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(blendTypes));
 
@@ -325,9 +325,9 @@
                 var unit = $('#newRowUnit').val(), packetType = $('#newRowPacketType').val();
                 if (!unit) { alert('Please select Unit first'); return; }
                 if (!packetType) { alert('Please select Packet Type first'); return; }
-                window.open('@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
+                window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
                     + '?unit=' + encodeURIComponent(unit)
-                    + '&blendType=' + encodeURIComponent(packetType), '_blank');
+                    + '&blendType=' + encodeURIComponent(packetType);
             });
 
             // Row selection is now checkboxes (not a radio group, see the row-check markup
