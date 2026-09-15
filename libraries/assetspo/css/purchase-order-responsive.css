@@ -1,7 +1,7 @@
 
 @media (max-width: 991px) {
 table { min-width: 1000px;}
-.form-col-50, .form-col-20 { width: 100%;}
+.form-col-50, .form-col-20, .form-col-15, .form-col-10 { width: 100%;}
 
 
 .serach-box .right-btn {padding-left: 15px; margin-left: auto;}

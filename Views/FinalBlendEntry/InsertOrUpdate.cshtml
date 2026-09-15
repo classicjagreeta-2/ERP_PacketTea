@@ -1,20 +1,17 @@
 @model PacketTea.Models.PT.TEA_BLEND_DATA
 @using Newtonsoft.Json
 @{
-    ViewBag.Title = "Master Blend Entry";
+    ViewBag.Title = "Final Blend Entry";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     bool isEdit = ViewBag.IsEdit ?? false;
-    // True only when this window was opened from the list page's "New" inline row
-    // (item 2) -- Unit + Packet Type were already chosen there, so both repeat here
-    // read-only instead of Blend Type staying editable and Unit staying invisible.
+    // True only when this window was opened from the list page's "New" inline row --
+    // Unit + Packet Type were already chosen there (same as Master Blend Entry).
     bool lockedFromList = ViewBag.LockedFromList ?? false;
-    // Opened via the list page's "View" action (spec: add a View button to the list
-    // toolbar) -- same record fetch as Edit, but the whole form renders read-only.
+    // Opened via the list page's "View" action -- same record fetch as Edit, but the
+    // whole form renders read-only (see IS_VIEW near the bottom of this file's script).
     bool isView = ViewBag.IsView ?? false;
     var head = Model.T_TEA_BLEND;
-    string approved = (head.APPROVED ?? "").Trim().ToUpper();
-    string approvedText = approved == "Y" ? "Approved" : approved == "R" ? "Rejected" : "Pending";
 }
 
 <!doctype html>
@@ -25,67 +22,53 @@
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
     <script src="~/libraries/assetspo/js/custom.js"></script>
     <style>
-        /* Small additions purchase-order.css doesn't already cover -- everything else
-           (action-btns, accordion, form-row/form-col-*, table.border, popup-overlay/box)
-           comes from the shared stylesheet so this page matches the other InsertOrUpdate
-           screens (Purchase Order Entry etc.) instead of a one-off look. */
+        /* Same additions as Master Blend Entry's InsertOrUpdate -- see that view
+           for why these live here instead of purchase-order.css. */
         input[readonly] { background-color: #f3f4f7; color: #555; }
-        /* purchase-order.css hard-codes .accordion-container to a fixed 350px scroll
-           area, sized for the multi-row Header/Lines accordions -- the standalone
-           Unit/Packet Type/Blend Type strip above Header is a single row, so left at
-           350px it renders one short row followed by a huge block of empty space
-           before "Header" begins. Let this one container size to its own content. */
-        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         .disp-pair { display: flex; gap: 0; }
+        /* purchase-order.css hard-codes .accordion-container to a fixed 350px scroll
+           area -- see Master Blend Entry's InsertOrUpdate for the full rationale. Let
+           the standalone Unit/Packet Type/Blend Type strip above Header size to its
+           own (single-row) content instead. */
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         #gridTable th, #gridTable td { white-space: nowrap; }
         #gridTable td input { min-width: 90px; }
-        /* Inv No / Trans Code lookup buttons -- these two grid columns genuinely have a
-           button-triggered popup in trn_blend_sheet.frm's datagrid1 (datagrid1_ButtonClick);
-           every other grid column doesn't, so no button is added to them. Plain inline
-           sibling of the input (no wrapper div) -- something in the page's shared grid
-           CSS/JS distorted the row when these lived inside a flex wrapper div in a <td>. */
         .grid-pick-btn { width: 20px; height: 21px; padding: 0; margin-left: 2px; vertical-align: middle; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; font-size: 11px; line-height: 1; }
         #gridTable td input.f-invno, #gridTable td input.f-transcode { vertical-align: middle; width: 68px; min-width: 0; }
-        /* Every numeric field, grid and header alike, right-aligned. Amount/Rate are also
-           forced to 2 decimal places -- see round2().toFixed(2) in renderGrid(). Number
-           inputs already right-align their content in most browsers, but that's
-           incidental -- pin it explicitly so it doesn't silently depend on that. */
-        #gridTable td input.f-rate, #gridTable td input.f-amount, #gridTable td input.f-qty,
-        #gridTable td input.f-bag, #gridTable td input.f-sampleqty,
+        /* Every numeric field, grid and header alike, right-aligned -- same as Master
+           Blend Entry's InsertOrUpdate. */
         input[type="number"] { text-align: right; }
-        /* Inv No is populated only via the "Select Data" toolbar link now (item 5) -- no
-           free typing, no button, and the cell itself no longer opens the picker either. */
-        #gridTable td input.f-invno[readonly] { background-color: #f3f4f7; color: #555; cursor: default; }
         .popup-box.picker-box { width: 420px; display: none; }
         .popup-box.picker-box.wide { width: 700px; max-width: 90vw; }
         .popup-box .picker-body { max-height: 36vh; overflow-y: auto; margin-top: 8px; }
         .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        /* No color was ever set here, so the header text just inherited whatever the popup's
-           ancestor happened to supply -- washed out to near-illegible once appendTo(body)
-           (below) detached these popups from that ancestor. Pin it explicitly. */
         .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; }
         .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
         .popup-box .picker-body tr:hover td { background: #eef3ff; }
         .popup-box .picker-search { margin-bottom: 8px; }
-        .stock-filters { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-        .stock-filters input { width: 150px; }
         .action-btns li a.is-disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
-        /* In-page alert/confirm -- see showAlert()/showConfirm() below. */
         .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
         .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
         .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
+        #remainingQtyHint { font-size: 12px; color: var(--mbe-muted, #6b7280); padding-top: 6px; }
     </style>
 </head>
 <body>
 
     <input type="hidden" id="isEdit" value="@(isEdit ? "1" : "0")" />
-    <!-- API's T_TEA_BLEND uses an "assigned" (not auto-generated) id strategy --
-         the existing row's ID must be echoed back on update or NHibernate refuses
-         to save ("ids for this class must be manually assigned before calling
-         save()"). Keep it around so btnSave can resend it. -->
     <input type="hidden" id="ID" value="@head.ID" />
     <input type="hidden" id="fyShortFrom" value="@ViewBag.FyShortFrom" />
     <input type="hidden" id="fyShortTo" value="@ViewBag.FyShortTo" />
+    <!-- R_DOCNO/R_DOCDT: the Master Blend this Final Blend was raised against
+         (spec §2.1 txtMstBlendNo/txtMstBlendDate -- displayed via MST_BLEND_NO
+         below, but persisted as R_DOCNO/R_DOCDT per T_TEA_BLEND). -->
+    <input type="hidden" id="R_DOCNO" value="@head.R_DOCNO" />
+    <input type="hidden" id="R_DOCDT" value="@(head.R_DOCDT?.ToString("yyyy-MM-dd"))" />
+    <!-- Baseline for the Blend-Qty proportional rescale (spec §3.5.2): the
+         Master Blend's own qty at the moment it was picked/cloned, NOT
+         whatever Blend Qty currently shows -- ratios are always computed
+         against this fixed baseline so repeated edits don't compound. -->
+    <input type="hidden" id="masterCloneQty" value="@head.MasterBlendQty" />
 
     <div class="general-container">
         <div class="purchase-details">
@@ -93,9 +76,9 @@
             <div class="header-content">
                 <div class="action-btns">
                     <ul>
-                        <li><a href="@Url.Action("Index", "MasterBlendEntry")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                        <li><a href="@Url.Action("Index", "FinalBlendEntry")"><i class="fa fa-arrow-left"></i> Back</a></li>
                         <li><button type="button" id="btnSave"><i class="fa fa-floppy-o"></i> Save</button></li>
-                        <li><a href="@Url.Action("Index", "MasterBlendEntry")"><i class="fa fa-times"></i> Cancel</a></li>
+                        <li><a href="@Url.Action("Index", "FinalBlendEntry")"><i class="fa fa-times"></i> Cancel</a></li>
                         <li><button type="button" id="btnDoPrint" disabled title="Available once at least one line has a DO No"><i class="fa fa-print"></i> DO Print</button></li>
                         <li style="margin-left:auto">
                             <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
@@ -107,26 +90,20 @@
                 <div class="header-details">
                     <div class="left">
                         <div class="order-code">
-                            <div class="txt"><div class="title-heading">Master Blend Entry</div></div>
+                            <div class="txt"><div class="title-heading">Final Blend Entry</div></div>
                         </div>
                         <div class="title-heading">DOC NO. : @(head.DOCNO ?? "")</div>
-                    </div>
-                    <div class="right">
-                        <div>Status : <span id="statusText2">@approvedText</span></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Unit / Packet Type / Blend Type -- its own section above Header per the spec
-                 ("Unit name, Packet Type and Blend type will be in a separate section above
-                 header"), not just the Header accordion's first row, and always visible
-                 (not collapsible away with the rest of Header). Packet Type and Blend Type
-                 are the same underlying value (see MasterBlendEntryController's BlendTypes
-                 dict / the list page's "New" row Packet Type picker) shown twice under their
-                 two names; Unit is otherwise never user-facing (UNIT is derived server-side --
-                 see UnitForBlendType's comment), it's shown here purely for confirmation. Both
-                 lock read-only once Unit + Packet Type were chosen on the list page
-                 (lockedFromList) same as Blend Type already does in Edit mode. -->
+            <!-- Unit / Packet Type / Blend Type -- its own section above Header, same as
+                 Master Blend Entry's InsertOrUpdate (see that view's comment for the full
+                 rationale). Packet Type and Blend Type are the same underlying value shown
+                 twice under their two names; Unit is otherwise never user-facing (UNIT is
+                 derived server-side -- see UnitForBlendType's comment). Both lock read-only
+                 once Unit + Packet Type were chosen on the list page (lockedFromList), same
+                 as Blend Type already does in Edit mode. -->
             <div class="accordion-container compact-accordion">
                 <div class="accordion">
                     <div class="accordion-header active"><span class="txt">Unit / Packet Type / Blend Type</span></div>
@@ -188,13 +165,29 @@
 
                         <div class="form-row">
                             <div class="form-col-20">
-                                <label>Blend No <span>(*)</span></label>
+                                <label>Master Blend No <span>(*)</span></label>
+                                <input type="text" id="MST_BLEND_NO" value="@head.MasterBlendNo" placeholder="Click to pick" readonly style="cursor:pointer;" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Master Blend Date</label>
+                                <input type="text" id="MST_BLEND_DATE" value="@(head.R_DOCDT?.ToString("dd/MM/yyyy"))" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Final Blend No <span>(*)</span></label>
                                 <input type="text" id="BLEND_NO" value="@head.BLEND_NO" />
                             </div>
                             <div class="form-col-20">
-                                <label>Blend Date <span>(*)</span></label>
+                                <label>Final Blend Date <span>(*)</span></label>
                                 <input type="date" id="BLEND_DATE" value="@(head.BLEND_DATE?.ToString("yyyy-MM-dd"))" />
                             </div>
+                            <div class="form-col-20">
+                                <label>Blend Qty</label>
+                                <input type="number" step="0.01" id="BLEND_QTY" value="@head.BLEND_QTY" />
+                                <div id="remainingQtyHint"></div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
                             <div class="form-col-20">
                                 <label>Warehouse <span>(*)</span></label>
                                 <input type="text" id="BLEND_WH" data-picker="warehouse" value="@head.BLEND_WH" placeholder="Code" />
@@ -205,9 +198,6 @@
                                 <input type="text" id="ALLOC_CODE" data-picker="allocation" value="@head.ALLOC_CODE" placeholder="Code" />
                                 <input type="hidden" id="ALLOC_CODE_disp" value="@head.AllocationName" />
                             </div>
-                        </div>
-
-                        <div class="form-row">
                             <div class="form-col-20">
                                 <label>Blend Mark <span>(*)</span></label>
                                 <input type="text" id="BLEND_MARK" data-picker="mark" value="@head.BLEND_MARK" placeholder="Code" />
@@ -222,6 +212,9 @@
                                 <label>No of Chest</label>
                                 <input type="number" step="1" id="BLEND_CHEST" value="@head.BLEND_CHEST" />
                             </div>
+                        </div>
+
+                        <div class="form-row">
                             <div class="form-col-20">
                                 <label>Net WT/Chest</label>
                                 <input type="number" step="0.01" id="BLEND_CHEST_WT" value="@head.BLEND_CHEST_WT" />
@@ -230,10 +223,7 @@
                                 <label>Gross WT/Chest</label>
                                 <input type="number" step="0.01" id="BLEND_CHEST_GROSSWT" value="@head.BLEND_CHEST_GROSSWT" />
                             </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-col-100">
+                            <div class="form-col-60">
                                 <label>Blend Details</label>
                                 <textarea id="BLEND_DESCN" style="height:50px;">@head.BLEND_DESCN</textarea>
                             </div>
@@ -247,6 +237,7 @@
                     <div class="accordion-header"><span class="txt">Header Details</span></div>
                     <div class="accordion-body">
 
+                        <!-- No "Closed" checkbox here -- spec §2.1: Master-mode only, hidden in Issue mode. -->
                         <div class="form-row">
                             <div class="form-col-15">
                                 <label>Export Ref. No</label>
@@ -263,12 +254,6 @@
                             <div class="form-col-20">
                                 <label>Shipping Mark</label>
                                 <input type="text" id="SHIP_MARK" value="@head.SHIP_MARK" />
-                            </div>
-                            <div class="form-col-10">
-                                <label>Closed</label>
-                                <div style="padding-top:6px;">
-                                    <input type="checkbox" id="CLOSED" style="width:auto;" @(head.CLOSED == "Y" ? "checked" : "") /> Yes
-                                </div>
                             </div>
                         </div>
 
@@ -290,10 +275,12 @@
                 <div class="accordion">
                     <div class="accordion-header"><span class="txt">Lines</span></div>
                     <div class="accordion-body active" style="display:block;">
+                        <!-- No "Select Data"/"Add Row" here -- spec §2.3: in Issue mode, detail rows
+                             come only from picking a Master Blend above (cloned wholesale), never
+                             free-typed or picked line-by-line. Inv No is correspondingly locked
+                             (readonly) in the grid below. -->
                         <div class="action-btns">
                             <ul>
-                                <li><a href="javascript:void(0)" id="btnSelectStock"><i class="fa fa-search"></i> Select Data</a></li>
-                                <li><a href="javascript:void(0)" id="btnAddRow"><i class="fa fa-plus"></i> Add Row</a></li>
                                 <li><a href="javascript:void(0)" id="btnRemoveRows"><i class="fa fa-trash-o"></i> Remove Selected</a></li>
                                 <li><a href="javascript:void(0)" id="btnGenDoNo"><i class="fa fa-hashtag"></i> Generate DO No</a></li>
                             </ul>
@@ -305,11 +292,11 @@
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
                                         <th style="width:30px;">Sl</th>
                                         <th>Mark/Garden</th>
-                                        <th>Inv No <span style="color:red;">(*)</span></th>
+                                        <th>Inv No</th>
                                         <th style="width:110px;">Pack Date</th>
                                         <th>Grade</th>
                                         <th>Category</th>
-                                        <th style="width:65px;">Bag <span style="color:red;">(*)</span></th>
+                                        <th style="width:65px;">Bag</th>
                                         <th style="width:85px;text-align:right;">Qty <span style="color:red;">(*)</span></th>
                                         <th style="width:75px;text-align:right;">Sam. Qty</th>
                                         <th style="width:75px;text-align:right;">Rate</th>
@@ -345,7 +332,7 @@
         </div>
     </div>
 
-    <!-- Backdrop shared by both pickers below -->
+    <!-- Backdrop shared by every picker below -->
     <div class="popup-overlay" id="pickerOverlay"></div>
 
     <!-- Generic single-select picker (Party/Warehouse/Allocation/Grade/Mark/Transporter) -->
@@ -358,30 +345,17 @@
         <div class="picker-body" id="pickerBody"></div>
     </div>
 
-    <!-- Stock / "Select Data" picker -->
-    <div class="popup-box picker-box wide" id="stockPicker">
+    <!-- Master Blend picker (spec §3.5) -->
+    <div class="popup-box picker-box wide" id="masterPicker">
         <div class="popup-header">
-            <h2>Select Data (Available Purchased Invoices)</h2>
-            <button type="button" class="close-btn" onclick="closeStockPicker()">X</button>
+            <h2>Select Master Blend</h2>
+            <button type="button" class="close-btn" onclick="closeMasterPicker()">X</button>
         </div>
-        <div class="stock-filters">
-            <input type="text" id="stockGardenFilter" placeholder="Garden code" />
-            <input type="text" id="stockMarkFilter" placeholder="Mark code" />
-            <input type="text" id="stockCategoryFilter" placeholder="Category code" />
-            <button type="button" id="btnStockFilter" class="btn-blue" style="width:auto;padding:5px 14px;">Refresh</button>
-            <button type="button" id="btnStockSelectAll" class="btn-white" style="width:auto;padding:5px 14px;">Select All</button>
-            <button type="button" id="btnStockDeselectAll" class="btn-white" style="width:auto;padding:5px 14px;">De-Select All</button>
-        </div>
-        <div class="picker-body" id="stockBody"></div>
-        <div style="text-align:right;padding-top:10px;">
-            <button type="button" class="btn-blue" id="btnStockOk" style="width:auto;padding:5px 16px;">OK</button>
-            <button type="button" class="btn-white" onclick="closeStockPicker()" style="width:auto;padding:5px 16px;">Cancel</button>
-        </div>
+        <input type="text" id="masterPickerSearch" class="picker-search" placeholder="Search Blend No / Doc No..." />
+        <div class="picker-body" id="masterPickerBody"></div>
     </div>
 
-    <!-- In-page alert/confirm modal -- replaces native alert()/confirm() so
-         messages render in the app's own UI instead of the browser's native
-         "<host> says" dialog chrome. -->
+    <!-- In-page alert/confirm modal -->
     <div class="popup-overlay" id="appAlertOverlay"></div>
     <div class="popup-box alert-box" id="appAlertBox">
         <div class="popup-header">
@@ -396,7 +370,7 @@
 
 <script>
     // =========================================================
-    // In-page alert/confirm (see markup above).
+    // In-page alert/confirm (see MasterBlendEntry's InsertOrUpdate for why).
     // =========================================================
     function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
     function showAlert(message, onOk) {
@@ -414,37 +388,32 @@
         $('#appAlertOverlay, #appAlertBox').fadeIn(120);
     }
 
-    // This view declares its own <html>/<body> while also using _Layout.cshtml as its Layout,
-    // so everything below actually renders nested inside _Layout's own sidebar/wrapper markup
-    // (the browser's HTML parser silently folds the duplicate <html>/<body> tags into the ones
-    // _Layout already opened). If any of THAT wrapper chain carries a CSS transform/filter/
-    // perspective (common for a collapsible-sidebar theme), it creates a new containing block
-    // for `position: fixed` descendants -- so a "fixed, centered" popup ends up centered
-    // against that narrower wrapper instead of the real viewport, clipping its left edge (the
-    // "Select Data" title/filter labels losing their first several characters). Re-parenting
-    // these onto the true <body> sidesteps that regardless of which ancestor is the culprit.
-    $('#pickerOverlay, #genericPicker, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    // Same re-parenting fix as MasterBlendEntry's InsertOrUpdate (see that view
+    // for the full rationale) -- keeps "fixed, centered" popups centered on the
+    // real viewport instead of a transformed ancestor from _Layout's chrome.
+    $('#pickerOverlay, #genericPicker, #masterPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
-    // Packet Type is a read-only echo of Blend Type (same underlying value -- see the
-    // header markup's comment); keep it in sync on the one path where Blend Type is
-    // still editable (a brand-new entry started directly on this screen, not via the
-    // list page's "New" row).
+    // Packet Type is a read-only echo of Blend Type -- keep it in sync on the one path
+    // where Blend Type is still editable (a brand-new entry started directly on this
+    // screen, not via the list page's "New" row). Same as Master Blend Entry.
     $('#BLEND_TYPE').on('change', function () { $('#PACKET_TYPE_disp').val($(this).val()); });
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_TEA_BLEND_DET));
     var rowSeq = 0;
-    // TAG isn't a persisted column (see T_TEA_BLEND_DET) -- VB derived it purely
-    // from "has a DO No been raised for this row", so re-derive it the same way
-    // when re-opening a saved record for edit.
-    rows.forEach(function (r) { r._cid = ++rowSeq; if (r.TAG === undefined) r.TAG = !!r.DONO; });
-    var lastWhInfo = {}; // whCode -> {DONO, DODT, TRANS_CODE, TransporterName}
-
-    // NOTE: Mark/Garden, Grade and Category are deliberately NOT re-derived or validated here.
-    // Checked against the real trn_blend_sheet.frm: DATAGRID1_BeforeColUpdate and
-    // datagrid1_ButtonClick have no Case for any of the three -- the legacy grid never looked
-    // them up or re-joined them on reload either (dtload() never sets a Category field at
-    // all, even in Edit mode). A row is either whole-row-filled by "Select Data", or these
-    // are typed free-hand with zero assist, matching that exactly.
+    rows.forEach(function (r) {
+        r._cid = ++rowSeq;
+        if (r.TAG === undefined) r.TAG = !!r.DONO;
+        // Baseline for the proportional rescale (spec §3.5.2) -- the row's own
+        // cloned values, fixed at pick/load time so repeated Blend Qty edits
+        // always scale from the same starting point instead of compounding.
+        if (r._origQty === undefined) {
+            r._origQty = r.QTY || 0;
+            r._origSample = r.SAMPLE_QTY || 0;
+            r._origBag = r.BAG_CHEST || 0;
+            r._origAmount = r.AMOUNT || 0;
+        }
+    });
+    var lastWhInfo = {};
 
     function fmtDate(iso) {
         if (!iso) return '';
@@ -452,10 +421,7 @@
         if (isNaN(d)) return '';
         return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
     }
-    function toIso(dmy) {
-        // input[type=date] already gives yyyy-mm-dd
-        return dmy || null;
-    }
+    function toIso(dmy) { return dmy || null; }
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
 
@@ -470,25 +436,18 @@
             var tr = $('<tr data-cid="' + r._cid + '"></tr>');
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
             tr.append('<td>' + r.SLNO + '</td>');
-            // Mark/Garden, Grade, Category: plain, freely-typed cells -- no lookup in the
-            // legacy grid (see the note above rows.forEach). Select Data still fills them
-            // wholesale same as before.
             tr.append('<td><input type="text" class="f-mark" value="' + (r.MarkName || r.MARK || '') + '" /></td>');
-            // Inv No DOES have a real legacy lookup (datagrid1_ButtonClick's pINVNO case +
-            // the F1 shortcut in datagrid1_KeyDown), both just reopening "Select Data".
-            // Item 5: no free-typed lookup here any more -- readonly, filled only by
-            // picking a row in "Select Data" (searchable via its Garden/Mark/Category
-            // filters, see loadStock()). No lookup button in the column either -- clicking
-            // the cell itself (or F1) opens "Select Data", same as the click handler below.
-            tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" placeholder="Via Select Data" readonly /></td>');
+            // Inv No is locked in Issue mode (spec §2.3: "locked in Issue mode" --
+            // rows come only from the Master Blend clone, never typed/picked here).
+            tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" readonly /></td>');
             tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" /></td>');
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" /></td>');
             tr.append('<td><input type="text" class="f-category" value="' + (r.CategoryDescn || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-sampleqty" value="' + (r.SAMPLE_QTY || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMOUNT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + (r.RATE || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + (r.AMOUNT || 0) + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-whloca" value="' + (r.WH_LOCA || '') + '" /></td>');
             tr.append('<td><input type="date" class="f-awrdate" value="' + (r.AWR_DATE ? r.AWR_DATE.substring(0, 10) : '') + '" /></td>');
             tr.append('<td><input type="text" class="f-awrno" value="' + (r.AWR_NO || '') + '" /></td>');
@@ -496,9 +455,6 @@
             tr.append('<td style="text-align:center;"><input type="checkbox" class="f-tag" ' + (r.TAG ? 'checked' : '') + ' /></td>');
             tr.append('<td><input type="text" class="f-dono" value="' + (r.DONO || '') + '" /></td>');
             tr.append('<td><input type="date" class="f-dodt" value="' + (r.DODT ? r.DODT.substring(0, 10) : '') + '" /></td>');
-            // Trans Code also has a real legacy lookup (datagrid1_ButtonClick's pTransCode
-            // case, hlpl.GETHELP against rsTransp) -- add the same button here, on top of the
-            // existing blur-resolve which already matches BeforeColUpdate's rsTransp.Find check.
             tr.append('<td><input type="text" class="f-transcode" value="' + (r.TRANS_CODE || '') + '" />' +
                 '<button type="button" class="grid-pick-btn f-transcode-btn" title="Search transporter">&hellip;</button></td>');
             tr.append('<td><input type="text" class="f-transname" value="' + (r.TransporterName || '') + '" readonly /></td>');
@@ -506,12 +462,10 @@
         });
         $('#ftBag').text(round2(totBag));
         $('#ftQty').text(round2(totQty));
-        $('#ftAmt').text(round2(totAmt).toFixed(2));
+        $('#ftAmt').text(round2(totAmt));
         updateDoPrintButton();
     }
 
-    // DO Print (VB Command8_Click) is only ever enabled once the record is saved
-    // and at least one line has a DO No raised against it.
     function updateDoPrintButton() {
         var hasDono = rows.some(function (r) { return r.DONO; });
         $('#btnDoPrint').prop('disabled', !(IS_EDIT && hasDono));
@@ -519,14 +473,12 @@
 
     function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
 
-    // Live edits -> keep the `rows` model in sync + recompute Qty/Amount, mirroring
-    // VB's DATAGRID1_BeforeColUpdate (Bag*NetWt -> Qty, Qty*Rate -> Amount).
     $('#gridBody').on('input change', 'input', function () {
         var $tr = $(this).closest('tr');
         var r = findRow($tr.data('cid'));
         if (!r) return;
         r.MARK = $tr.find('.f-mark').val();
-        r.INVNO = $tr.find('.f-invno').val();
+        // .f-invno is readonly -- INVNO itself never changes from this handler.
         r.PACK_DATE = toIso($tr.find('.f-packdate').val());
         r.GRADE = $tr.find('.f-grade').val();
         r.CategoryDescn = $tr.find('.f-category').val();
@@ -542,19 +494,23 @@
         r.DODT = toIso($tr.find('.f-dodt').val());
         r.TRANS_CODE = $tr.find('.f-transcode').val();
 
-        if ($(this).hasClass('f-qty')) {
-            r.QTY = num($tr.find('.f-qty').val());
-        } else if ($(this).hasClass('f-bag') && r._netWt) {
+        if ($(this).hasClass('f-bag') && r._netWt) {
             r.QTY = round2(r.BAG_CHEST * r._netWt);
             $tr.find('.f-qty').val(r.QTY);
         } else {
             r.QTY = num($tr.find('.f-qty').val());
         }
         r.AMOUNT = round2(r.QTY * r.RATE);
-        $tr.find('.f-amount').val(r.AMOUNT.toFixed(2));
+        $tr.find('.f-amount').val(r.AMOUNT);
 
-        // Tag carry-forward: same warehouse code as a previously tagged row ->
-        // reuse its DO No/DO Date/Transporter (VB datagrid1_MouseUp behaviour).
+        // A manual edit to this row's Qty/Bag/Sample/Amount moves its own
+        // baseline too, so it isn't silently overwritten the next time Blend
+        // Qty changes (that rescale is meant for "issue N% of the whole
+        // clone", not to fight a line the user just corrected by hand).
+        if ($(this).hasClass('f-qty') || $(this).hasClass('f-bag') || $(this).hasClass('f-sampleqty')) {
+            r._origQty = r.QTY; r._origBag = r.BAG_CHEST; r._origSample = r.SAMPLE_QTY; r._origAmount = r.AMOUNT;
+        }
+
         if ($(this).hasClass('f-tag') && r.TAG && r.WAREHOUSE && lastWhInfo[r.WAREHOUSE]) {
             var info = lastWhInfo[r.WAREHOUSE];
             if (!r.DONO) { r.DONO = info.DONO; $tr.find('.f-dono').val(r.DONO); }
@@ -568,20 +524,12 @@
         renderTotalsOnly();
     });
 
-    // Rate: snap the displayed value to 2 decimal places once the user leaves the field
-    // (item 3) -- the live `input`/`change` handler above already keeps r.RATE/r.AMOUNT
-    // numerically correct on every keystroke; this only tidies up what's shown.
-    $('#gridBody').on('blur', '.f-rate', function () {
-        $(this).val(round2($(this).val()).toFixed(2));
-    });
-
-    // Trans Code lookup on blur
     $('#gridBody').on('blur', '.f-transcode', function () {
         var code = $(this).val();
         var $tr = $(this).closest('tr');
         var r = findRow($tr.data('cid'));
         if (!code) { $tr.find('.f-transname').val(''); if (r) r.TransporterName = ''; return; }
-        $.getJSON('@Url.Action("GetTransporter", "MasterBlendEntry")', { search: code }, function (data) {
+        $.getJSON('@Url.Action("GetTransporter", "FinalBlendEntry")', { search: code }, function (data) {
             var m = (data || []).find(function (x) { return (x.CODE || x.code) == code; });
             var name = m ? (m.NAME || m.name) : '';
             $tr.find('.f-transname').val(name);
@@ -589,31 +537,6 @@
         });
     });
 
-    // =========================================================
-    // Inv No -- the ONE grid column (besides Trans Code) that genuinely has a lookup in
-    // trn_blend_sheet.frm:
-    //   datagrid1_ButtonClick  Case GridFCons.pINVNO : Call Command4_Click   ' opens Select Data
-    //   datagrid1_KeyDown      KeyCode = vbKeyF1 ... Case GridFCons.pINVNO : Call Command4_Click
-    //   DATAGRID1_BeforeColUpdate  Case GridFCons.pINVNO : rspack.Find "invno='...'" -- rejects
-    //                              a typed value that isn't in the available-stock recordset
-    //                              ("Enter valid Invoice Code")
-    // Item 5: unlike VB (and unlike this screen's own earlier revision), the cell no longer
-    // accepts a hand-typed value at all -- it's readonly, filled only by picking rows via
-    // the "Select Data" toolbar link, so a value here is always a real, resolved Inv No.
-    // No lookup button in the column, and the column itself no longer opens the picker
-    // either (clicking/F1 on the cell used to reopen it -- removed): "Select Data" (the
-    // toolbar link above the grid) is the only way in.
-    // =========================================================
-    function openStockPicker() {
-        $('#pickerOverlay, #stockPicker').fadeIn(120);
-        loadStock();
-    }
-
-    // =========================================================
-    // Trans Code lookup button -- datagrid1_ButtonClick's pTransCode case
-    // (hlpl.GETHELP against rsTransp), on top of the existing blur-resolve above which
-    // already matches BeforeColUpdate's rsTransp.Find validation.
-    // =========================================================
     $('#gridBody').on('click', '.f-transcode-btn', function () {
         var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
         if (!r) return;
@@ -629,13 +552,8 @@
         rows.forEach(function (r) { totBag += num(r.BAG_CHEST); totQty += num(r.QTY); totAmt += num(r.AMOUNT); });
         $('#ftBag').text(round2(totBag));
         $('#ftQty').text(round2(totQty));
-        $('#ftAmt').text(round2(totAmt).toFixed(2));
+        $('#ftAmt').text(round2(totAmt));
     }
-
-    $('#btnAddRow').on('click', function () {
-        rows.push({ _cid: ++rowSeq, SLNO: rows.length + 1, BAG_CHEST: 0, QTY: 0, SAMPLE_QTY: 0, RATE: 0, AMOUNT: 0, TAG: false });
-        renderGrid();
-    });
 
     $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
 
@@ -647,23 +565,120 @@
     });
 
     // =========================================================
-    // Generic single-select picker (header fields)
+    // Master Blend picker + clone (spec §3.5.1)
+    // =========================================================
+    function openMasterPicker() {
+        $('#pickerOverlay, #masterPicker').fadeIn(120);
+        $('#masterPickerSearch').val('');
+        loadMasterList('');
+        $('#masterPickerSearch').off('input').on('input', function () { loadMasterList($(this).val()); });
+    }
+    function closeMasterPicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+
+    $('#MST_BLEND_NO').on('click focus', openMasterPicker);
+
+    function loadMasterList(term) {
+        $.getJSON('@Url.Action("GetMasterBlendList", "FinalBlendEntry")', { blendType: $('#BLEND_TYPE').val(), search: term }, function (data) {
+            data = data || [];
+            var html = '<table><thead><tr><th>Blend No</th><th>Doc No</th><th>Blend Date</th><th>Blend Qty</th><th>Remaining Qty</th></tr></thead><tbody>';
+            data.forEach(function (m, i) {
+                html += '<tr data-i="' + i + '"><td>' + (m.BLEND_NO || '') + '</td><td>' + (m.DOCNO || '') + '</td>' +
+                    '<td>' + fmtDate(m.BLEND_DATE) + '</td><td>' + m.BLEND_QTY + '</td><td>' + m.REMAINING_QTY + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            $('#masterPickerBody').html(html);
+            $('#masterPickerBody').data('rows', data);
+        });
+    }
+
+    $('#masterPickerBody').on('click', 'tr[data-i]', function () {
+        var data = $('#masterPickerBody').data('rows') || [];
+        var m = data[$(this).data('i')];
+        closeMasterPicker();
+
+        function apply() {
+            $.get('@Url.Action("GetMasterBlendDetail", "FinalBlendEntry")', { docno: m.DOCNO, docdt: m.DOCDT }, function (r) {
+                if (!r || !r.success || !r.head) { showAlert((r && r.message) || 'Unable to load that Master Blend.'); return; }
+                // Field names here match T_TEA_BLEND/T_TEA_BLEND_DET's actual C#
+                // property names (PascalCase, e.g. BLEND_NO) -- the controller
+                // round-trips the API's response through that typed shape before
+                // this JSON is sent down (see GetMasterBlendDetail's comment for why
+                // a raw pass-through would have used different, mangled key names).
+                var h = r.head;
+                $('#R_DOCNO').val(h.DOCNO);
+                $('#R_DOCDT').val((h.DOCDT || '').substring(0, 10));
+                $('#MST_BLEND_NO').val(h.BLEND_NO || '');
+                $('#MST_BLEND_DATE').val(fmtDate(h.BLEND_DATE));
+                $('#masterCloneQty').val(h.BLEND_QTY || 0);
+                $('#BLEND_QTY').val(h.BLEND_QTY || 0);
+                $('#remainingQtyHint').text('Remaining against this Master Blend at pick time: ' + (h.RemainingQty != null ? h.RemainingQty : ''));
+
+                $('#PCODE').val(h.PCODE || ''); $('#PCODE_disp').val(h.PartyName || '');
+                $('#BLEND_WH').val(h.BLEND_WH || ''); $('#BLEND_WH_disp').val(h.WarehouseName || '');
+                $('#ALLOC_CODE').val(h.ALLOC_CODE || ''); $('#ALLOC_CODE_disp').val(h.AllocationName || '');
+                $('#BLEND_MARK').val(h.BLEND_MARK || ''); $('#BLEND_MARK_disp').val(h.BlendMarkName || '');
+                $('#BLEND_GRADE').val(h.BLEND_GRADE || ''); $('#BLEND_GRADE_disp').val(h.BlendGradeName || '');
+                $('#BLEND_CHEST').val(h.BLEND_CHEST || 0);
+                $('#BLEND_CHEST_WT').val(h.BLEND_CHEST_WT || 0);
+                $('#BLEND_CHEST_GROSSWT').val(h.BLEND_CHEST_GROSSWT || 0);
+                $('#BLEND_DESCN').val(h.BLEND_DESCN || '');
+                $('#TPT').val(h.TPT || ''); $('#TPT_disp').val(h.TransporterName || '');
+                $('#SHIP_MARK').val(h.SHIP_MARK || '');
+
+                rows = (r.details || []).map(function (d) {
+                    return {
+                        _cid: ++rowSeq, _netWt: (d.BAG_CHEST ? d.QTY / d.BAG_CHEST : 0),
+                        MARK: d.MARK, MarkName: d.MarkName || '',
+                        INVNO: d.INVNO, PACK_DATE: d.PACK_DATE, GRADE: d.GRADE,
+                        BAG_CHEST: d.BAG_CHEST || 0, QTY: d.QTY || 0, SAMPLE_QTY: d.SAMPLE_QTY || 0,
+                        RATE: d.RATE || 0, AMOUNT: d.AMOUNT || 0,
+                        WH_LOCA: d.WH_LOCA || '', WAREHOUSE: d.WAREHOUSE || '',
+                        AWR_NO: d.AWR_NO || '', AWR_DATE: d.AWR_DATE || null,
+                        TAG: false, DONO: '', DODT: null, TRANS_CODE: '', TransporterName: '',
+                        _origQty: d.QTY || 0, _origBag: d.BAG_CHEST || 0, _origSample: d.SAMPLE_QTY || 0, _origAmount: d.AMOUNT || 0
+                    };
+                });
+                renderGrid();
+            });
+        }
+
+        if (rows.length) {
+            showConfirm('This replaces the current lines with the picked Master Blend\'s lines. Continue?', apply);
+        } else {
+            apply();
+        }
+    });
+
+    // Blend Qty proportional rescale (spec §3.5.2) -- always scales from each
+    // row's fixed _orig* baseline against the fixed master-clone qty, not from
+    // whatever the previous rescale left behind.
+    $('#BLEND_QTY').on('change', function () {
+        var baseline = num($('#masterCloneQty').val());
+        var newQty = num($(this).val());
+        if (!baseline) return;
+        var ratio = newQty / baseline;
+        rows.forEach(function (r) {
+            r.QTY = round2(r._origQty * ratio);
+            r.SAMPLE_QTY = round2(r._origSample * ratio);
+            r.BAG_CHEST = round2(r._origBag * ratio);
+            r.AMOUNT = round2(r._origAmount * ratio);
+        });
+        renderGrid();
+    });
+
+    // =========================================================
+    // Generic single-select picker (header fields) -- identical to
+    // MasterBlendEntry's InsertOrUpdate.
     // =========================================================
     var pickerConfig = {
-        party: { url: '@Url.Action("GetParty", "MasterBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCODE' },
-        warehouse: { url: '@Url.Action("GetWarehouse", "MasterBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['DESTI', 'Destination']], target: 'BLEND_WH' },
-        allocation: { url: '@Url.Action("GetAllocation", "MasterBlendEntry")', cols: [['CODE', 'Code'], ['DESCN', 'Description']], target: 'ALLOC_CODE' },
-        blendgrade: { url: '@Url.Action("GetBlendGrade", "MasterBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'BLEND_GRADE' },
-        mark: { url: '@Url.Action("GetMark", "MasterBlendEntry")', cols: [['MCD', 'Code'], ['MDESC', 'Garden/Mark']], target: 'BLEND_MARK' },
-        transporter: { url: '@Url.Action("GetTransporter", "MasterBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'TPT' }
+        party: { url: '@Url.Action("GetParty", "FinalBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCODE' },
+        warehouse: { url: '@Url.Action("GetWarehouse", "FinalBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['DESTI', 'Destination']], target: 'BLEND_WH' },
+        allocation: { url: '@Url.Action("GetAllocation", "FinalBlendEntry")', cols: [['CODE', 'Code'], ['DESCN', 'Description']], target: 'ALLOC_CODE' },
+        blendgrade: { url: '@Url.Action("GetBlendGrade", "FinalBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'BLEND_GRADE' },
+        mark: { url: '@Url.Action("GetMark", "FinalBlendEntry")', cols: [['MCD', 'Code'], ['MDESC', 'Garden/Mark']], target: 'BLEND_MARK' },
+        transporter: { url: '@Url.Action("GetTransporter", "FinalBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'TPT' }
     };
     var activePicker = null;
-    // In-flight lookup request + a bump-on-every-request sequence number. Without these, opening
-    // a picker (or retyping the search box) while a previous request is still in the air lets that
-    // OLDER response land after the newer one and repaint the box with the wrong lookup's rows --
-    // seen as the popup flashing another field's data, blurred mid fade-in, before "correcting"
-    // itself moments later. Aborting the old request and ignoring any response that isn't from the
-    // latest one closes both gaps.
     var pickerXhr = null;
     var pickerReqSeq = 0;
 
@@ -673,8 +688,6 @@
         activePicker = { key: key, input: $input, onSelect: onSelect };
         $('#pickerTitle').text('Select ' + key);
         $('#pickerSearch').val('');
-        // Clear immediately -- otherwise the fade-in animates in over whatever the PREVIOUS
-        // picker left behind, which is exactly the "blurred, wrong lookup" flash being reported.
         $('#pickerBody').empty().removeData('rows');
         $('#pickerOverlay, #genericPicker').fadeIn(120);
         loadPickerData('');
@@ -687,7 +700,7 @@
         var myReq = ++pickerReqSeq;
         if (pickerXhr) { pickerXhr.abort(); }
         pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
-            if (myReq !== pickerReqSeq) return; // superseded by a newer open/keystroke -- drop it
+            if (myReq !== pickerReqSeq) return;
             data = data || [];
             var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
             data.forEach(function (row, i) {
@@ -708,8 +721,6 @@
         var cfg = pickerConfig[activePicker.key];
 
         if (activePicker.onSelect) {
-            // Row-scoped lookups (Trans Code's picker button on a Lines row) supply their own
-            // handler since there's no single fixed target id to write into.
             activePicker.onSelect(row);
         } else if (cfg.target) {
             var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
@@ -721,91 +732,21 @@
     });
 
     // =========================================================
-    // Stock / "Select Data" picker (VB Command4_Click / dataselect) -- openStockPicker() is
-    // defined further down (Inv No lookup block) since the grid's Inv No button/F1 shortcut
-    // reopen this exact same popup, matching datagrid1_ButtonClick/datagrid1_KeyDown.
+    // Generate DO No (same rule as Master Blend Entry, spec §3.6)
     // =========================================================
-    $('#btnSelectStock').on('click', openStockPicker);
-    function closeStockPicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
-    $('#btnStockFilter').on('click', loadStock);
-
-    // Item 5: these three filters are now Select Data's only search surface (Inv No's
-    // own free-typed lookup is gone -- see the grid's f-invno cell), so they filter live
-    // as you type (debounced), not only when "Refresh" is clicked. The API side already
-    // matches these case-insensitively and as a partial/contains match, not just an
-    // exact code (see GetAvailableStock).
-    var stockFilterTimer;
-    $('#stockGardenFilter, #stockMarkFilter, #stockCategoryFilter').on('input', function () {
-        clearTimeout(stockFilterTimer);
-        stockFilterTimer = setTimeout(loadStock, 350);
-    });
-
-    function loadStock() {
-        var blendType = $('#BLEND_TYPE').val();
-        $.getJSON('@Url.Action("GetAvailableStock", "MasterBlendEntry")', {
-            blendType: blendType,
-            garden: $('#stockGardenFilter').val(),
-            mark: $('#stockMarkFilter').val(),
-            category: $('#stockCategoryFilter').val()
-        }, function (data) {
-            data = data || [];
-            var html = '<table><thead><tr><th></th><th>Inv No</th><th>Garden/Mark</th><th>Grade</th><th>Pack Date</th><th>Bag</th><th>Available Qty</th><th style="text-align:right;">Rate</th></tr></thead><tbody>';
-            data.forEach(function (r, i) {
-                html += '<tr data-i="' + i + '"><td><input type="checkbox" class="stockChk" /></td><td>' + (r.invno || '') + '</td><td>' + (r.markDescn || '') + '</td>' +
-                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td>' + r.bagChest + '</td><td>' + r.available + '</td><td style="text-align:right;">' + round2(r.rate).toFixed(2) + '</td></tr>';
-            });
-            html += '</tbody></table>';
-            $('#stockBody').html(html);
-            $('#stockBody').data('rows', data);
-        });
-    }
-
-    $('#btnStockSelectAll').on('click', function () { $('#stockBody .stockChk').prop('checked', true); });
-    $('#btnStockDeselectAll').on('click', function () { $('#stockBody .stockChk').prop('checked', false); });
-
-    $('#btnStockOk').on('click', function () {
-        var data = $('#stockBody').data('rows') || [];
-        $('#stockBody .stockChk:checked').each(function () {
-            var i = $(this).closest('tr').data('i');
-            var s = data[i];
-            var dup = rows.some(function (r) { return r.INVNO === s.invno && r.GRADE === s.grade && r.MARK === s.mark && (r.PACK_DATE || '').substring(0, 10) === (s.packDate || '').substring(0, 10); });
-            if (dup) return;
-            rows.push({
-                _cid: ++rowSeq, _netWt: s.netWt,
-                MARK: s.mark, MarkName: s.markDescn || '',
-                INVNO: s.invno, PACK_DATE: s.packDate, GRADE: s.grade,
-                CategoryDescn: s.categoryDescn || '',
-                BAG_CHEST: s.bagChest, QTY: s.available, SAMPLE_QTY: 0,
-                RATE: s.rate, AMOUNT: round2(s.available * s.rate),
-                WH_LOCA: '', WAREHOUSE: '', AWR_NO: '', AWR_DATE: null,
-                TAG: false, DONO: '', DODT: null, TRANS_CODE: '', TransporterName: ''
-            });
-        });
-        renderGrid();
-        closeStockPicker();
-    });
-
-    // =========================================================
-    // Generate DO No (VB Command7_Click) -- one DO number per distinct
-    // warehouse code among tagged rows that don't have one yet.
-    // =========================================================
-    // Spec §2.2 Command7: only enabled in Edit mode (save first in Add mode).
     if (!IS_EDIT) { $('#btnGenDoNo').addClass('is-disabled'); }
     $('#btnGenDoNo').on('click', function () {
         if (!IS_EDIT) { showAlert('Save the record first, then Generate DO No.'); return; }
         var need = [];
         rows.forEach(function (r) { if (r.TAG && !r.DONO && r.WAREHOUSE && need.indexOf(r.WAREHOUSE) === -1) need.push(r.WAREHOUSE); });
         if (!need.length) { showAlert('Tag a row (with a Warehouse set) that needs a DO No first.'); return; }
-        // Build the query string by hand (whCodes=A&whCodes=B) -- jQuery's default
-        // (non-traditional) array serialization emits whCodes[]=A which MVC5's
-        // model binder does not bind to a string[] parameter.
         var qs = $.param({
             blendType: $('#BLEND_TYPE').val(),
             fyShortFrom: $('#fyShortFrom').val(),
             fyShortTo: $('#fyShortTo').val(),
             whCodes: need
         }, true);
-        $.getJSON('@Url.Action("GenerateDoNo", "MasterBlendEntry")' + '?' + qs, function (map) {
+        $.getJSON('@Url.Action("GenerateDoNo", "FinalBlendEntry")' + '?' + qs, function (map) {
             rows.forEach(function (r) {
                 if (r.TAG && !r.DONO && r.WAREHOUSE && map[r.WAREHOUSE]) r.DONO = map[r.WAREHOUSE];
             });
@@ -814,19 +755,17 @@
     });
 
     // =========================================================
-    // Save (mirrors VB Command1_Click validation order)
+    // Save (mirrors VB Command1_Click validation order, plus the Master
+    // Blend requirement from spec §2.1)
     // =========================================================
     $('#btnSave').on('click', function () {
         if (!$('#DOCDT').val()) { showAlert('Doc Date cannot be blank'); return; }
         var docDtVal = $('#DOCDT').val(), fyMin = $('#DOCDT').attr('min'), fyMax = $('#DOCDT').attr('max');
-        // input[type=date] always gives the LOCAL calendar date with no time/zone attached, so
-        // "today" must be built from local getters too. new Date().toISOString() reports UTC --
-        // for any timezone ahead of UTC (IST included) that's still "yesterday" for several
-        // hours after local midnight, which made a same-day Doc Date get rejected as "future".
         var now = new Date();
         var todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         if (docDtVal > todayStr) { showAlert('Doc Date cannot be a future date'); return; }
         if ((fyMin && docDtVal < fyMin) || (fyMax && docDtVal > fyMax)) { showAlert('Doc Date must fall within the current financial year'); return; }
+        if (!$('#R_DOCNO').val()) { showAlert('Master Blend No cannot be blank'); return; }
         if (!$('#BLEND_WH').val()) { showAlert('Warehouse cannot be blank'); return; }
         if (!$('#BLEND_GRADE').val()) { showAlert('Blend Grade cannot be blank'); return; }
         if (!$('#BLEND_MARK').val()) { showAlert('Blend Mark cannot be blank'); return; }
@@ -840,7 +779,6 @@
         if (!valid.length) { showAlert('Without Invoice Detail, Record Can Not be Saved.'); return; }
         if (valid.some(function (r) { return num(r.QTY) <= 0; })) { showAlert('Enter Quantity Invoice Detail !'); return; }
 
-        // Spec §5 dupe key: Invoice + Grade + Mark only (no Pack Date).
         var seen = {};
         for (var i = 0; i < valid.length; i++) {
             var k = valid[i].INVNO + '|' + valid[i].GRADE + '|' + valid[i].MARK;
@@ -857,6 +795,8 @@
                     DOCNO: $('#DOCNO').val(),
                     DOCDT: $('#DOCDT').val(),
                     BLEND_TYPE: $('#BLEND_TYPE').val(),
+                    R_DOCNO: $('#R_DOCNO').val(),
+                    R_DOCDT: $('#R_DOCDT').val(),
                     ALLOC_CODE: $('#ALLOC_CODE').val(),
                     BLEND_NO: $('#BLEND_NO').val(),
                     BLEND_GRADE: $('#BLEND_GRADE').val(),
@@ -867,24 +807,24 @@
                     BLEND_CHEST: num($('#BLEND_CHEST').val()),
                     BLEND_CHEST_WT: netWt,
                     BLEND_CHEST_GROSSWT: grossWt,
+                    BLEND_QTY: num($('#BLEND_QTY').val()),
                     PCODE: $('#PCODE').val(),
                     TPT: $('#TPT').val(),
                     EXPREF_NO: $('#EXPREF_NO').val(),
                     SHIP_MARK: $('#SHIP_MARK').val(),
                     NOTES: $('#NOTES').val(),
-                    SP_NOTES: $('#SP_NOTES').val(),
-                    CLOSED: $('#CLOSED').is(':checked') ? 'Y' : 'N'
+                    SP_NOTES: $('#SP_NOTES').val()
                 },
                 T_TEA_BLEND_DET: valid
             };
 
             $.ajax({
-                url: '@Url.Action("Save", "MasterBlendEntry")',
+                url: '@Url.Action("Save", "FinalBlendEntry")',
                 type: 'POST', contentType: 'application/json', data: JSON.stringify(model),
                 success: function (resp) {
                     if (resp.success) {
                         showAlert(resp.message || 'Saved.', function () {
-                            window.location.href = '@Url.Action("Index", "MasterBlendEntry")' + '?blendType=' + encodeURIComponent($('#BLEND_TYPE').val());
+                            window.location.href = '@Url.Action("Index", "FinalBlendEntry")' + '?blendType=' + encodeURIComponent($('#BLEND_TYPE').val());
                         });
                     } else {
                         showAlert(resp.message || 'Save failed.');
@@ -896,23 +836,15 @@
     });
 
     // =========================================================
-    // DO Print (VB Command8_Click)
-    // NOTE: the VB form drove a full Crystal Report ("Conf DI") pulling in
-    // consignee/broker/destination/HSN details from half a dozen master
-    // tables. That report isn't reproduced here -- this opens a plain,
-    // printable summary of each Delivery Order (grouped the same way VB
-    // grouped them: one block per DO No) using the data already on screen,
-    // so there's a working "hand this to the transporter" document while a
-    // full report-parity pass is a separate follow-up.
+    // DO Print -- same plain printable summary as Master Blend Entry (see
+    // that view's comment on why a full Crystal Report isn't reproduced here).
     // =========================================================
     $('#btnDoPrint').on('click', function () {
         var tagged = rows.filter(function (r) { return r.DONO; });
         if (!tagged.length) return;
 
         var groups = {};
-        tagged.forEach(function (r) {
-            (groups[r.DONO] = groups[r.DONO] || []).push(r);
-        });
+        tagged.forEach(function (r) { (groups[r.DONO] = groups[r.DONO] || []).push(r); });
 
         var html = '<!doctype html><html><head><title>Delivery Order - ' + $('#DOCNO').val() + '</title><style>' +
             'body{font-family:Arial,sans-serif;font-size:13px;color:#222;margin:24px;}' +
@@ -926,8 +858,8 @@
 
         html += '<h2>Delivery Order</h2>';
         html += '<div class="meta">Doc No: <b>' + ($('#DOCNO').val() || '') + '</b> &nbsp; ' +
-            'Blend No: <b>' + ($('#BLEND_NO').val() || '') + '</b> &nbsp; ' +
-            'Blend Date: <b>' + ($('#BLEND_DATE').val() || '') + '</b> &nbsp; ' +
+            'Final Blend No: <b>' + ($('#BLEND_NO').val() || '') + '</b> &nbsp; ' +
+            'Master Blend No: <b>' + ($('#MST_BLEND_NO').val() || '') + '</b> &nbsp; ' +
             'Party: <b>' + ($('#PCODE_disp').val() || $('#PCODE').val() || '') + '</b></div>';
 
         Object.keys(groups).forEach(function (dono) {
@@ -959,16 +891,14 @@
     renderGrid();
 
     // =========================================================
-    // View mode (spec: list page "View" action) -- same data as Edit, but nothing on
-    // the form is editable. Runs once, after the initial renderGrid() above has built
-    // every grid row (nothing adds more afterwards in view mode -- Select Data/Add Row/
-    // Remove Selected/Generate DO No are all locked out below too), so a single blanket
-    // disable here covers the header fields and the whole grid.
+    // View mode (spec: list page "View" action) -- same as Master Blend Entry's own
+    // InsertOrUpdate: runs once, after the initial renderGrid() above has built every
+    // grid row, and disables the header fields plus the whole grid in one go.
     // =========================================================
     var IS_VIEW = @Html.Raw(isView ? "true" : "false");
     if (IS_VIEW) {
         $('.accordion-container :input').prop('disabled', true);
-        $('#btnSave, #btnDoPrint, #btnSelectStock, #btnAddRow, #btnRemoveRows, #btnGenDoNo')
+        $('#btnSave, #btnDoPrint, #btnRemoveRows, #btnGenDoNo')
             .addClass('is-disabled').prop('disabled', true);
     }
 </script>

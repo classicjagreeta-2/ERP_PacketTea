@@ -234,7 +234,9 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\AuthController.cs" />
     <Compile Include="Controllers\TEA\BlendEntryController.cs" />
+    <Compile Include="Controllers\TEA\FinalBlendEntryController.cs" />
     <Compile Include="Controllers\TEA\MasterBlendEntryController.cs" />
+    <Compile Include="Controllers\TEA\PackingController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaInvoiceController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaPurchaseEntryController.cs" />
     <Compile Include="Controllers\MenuController.cs" />
@@ -260,6 +262,7 @@
     <Compile Include="Models\PT\App_Start\BundleConfig.cs" />
     <Compile Include="Models\PT\App_Start\FilterConfig.cs" />
     <Compile Include="Models\PT\App_Start\RouteConfig.cs" />
+    <Compile Include="Models\PT\BLEND_PACKING_DATA.cs" />
     <Compile Include="Models\PT\FreeDetail.cs" />
     <Compile Include="Models\PT\ItemStock.cs" />
     <Compile Include="Models\PT\ITMAS.cs" />
@@ -272,11 +275,16 @@
     <Compile Include="Models\PT\PT_ALL_LIST.cs" />
     <Compile Include="Models\PT\SLMAS.cs" />
     <Compile Include="Models\PT\TeaPurchase_LISTING.cs" />
+    <Compile Include="Models\PT\TEA_BLEND_DATA.cs" />
+    <Compile Include="Models\PT\T_BLEND_PACKING.cs" />
+    <Compile Include="Models\PT\T_TEA_BLEND.cs" />
+    <Compile Include="Models\PT\T_TEA_BLEND_DET.cs" />
     <Compile Include="Models\PT\T_TEA_PURCHASE.cs" />
     <Compile Include="Models\PT\UNBL.cs" />
     <Compile Include="Models\PT\UNBLPLT.cs" />
     <Compile Include="Models\PT\UNBL_HED.cs" />
     <Compile Include="Models\PT\UNIT.cs" />
+    <Compile Include="Models\PT\UnitOption.cs" />
     <Compile Include="Models\PT\VEHMAS.cs" />
     <Compile Include="Models\PT\VTYPE.cs" />
     <Compile Include="Models\Report\REP_HOURLY_GLEAF.cs" />
@@ -5230,6 +5238,7 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="Scripts\jquery.validate-vsdoc.js" />
+    <None Include="Scripts\jquery-3.7.1-vsdoc.js" />
     <Content Include="Scripts\jquery.unobtrusive-ajax.min.js" />
     <Content Include="Scripts\jquery.userTimeout.js" />
     <Content Include="Scripts\jquery.validate.js" />
@@ -5306,6 +5315,10 @@
     <Content Include="Views\PacketTeaPurchaseEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\MasterBlendEntry\Index.cshtml" />
     <Content Include="Views\MasterBlendEntry\InsertOrUpdate.cshtml" />
+    <Content Include="Views\FinalBlendEntry\Index.cshtml" />
+    <Content Include="Views\FinalBlendEntry\InsertOrUpdate.cshtml" />
+    <Content Include="Views\Packing\Index.cshtml" />
+    <Content Include="Views\Packing\InsertOrUpdate.cshtml" />
     <Content Include="Views\BlendEntry\Index.cshtml" />
     <Content Include="Views\BlendEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\PurchaseContractEntry\Index.cshtml" />

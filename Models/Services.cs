@@ -2,6 +2,7 @@
 using PacketTea.Utility;
 using Microsoft.Ajax.Utilities;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -77,7 +78,7 @@ namespace PacketTea.Models
         {
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
             _client.DefaultRequestHeaders.Clear();
-            _client.DefaultRequestHeaders.Add("x-module", "PACKETTEA");
+            _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
             _client.DefaultRequestHeaders.Add("x-docyear", Utility.SessionHelper.GetUser().DocYear);
             //_client.DefaultRequestHeaders.Add("x-username", Utility.SessionHelper.GetUser().getUserName ?? "");// Utility.SessionHelper.GetUser().getUserName
 
@@ -150,11 +151,11 @@ namespace PacketTea.Models
         {
             Logger logger = LogManager.GetCurrentClassLogger();
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
+            string responseBody = await rest.Content.ReadAsStringAsync();
             try
             {
                 if (rest.IsSuccessStatusCode)
                 {
-                    string responseBody = await rest.Content.ReadAsStringAsync();
                     //logger.Warn("rest LogError: - " + responseBody + ". Data : " + rest);
                     tdata.Data = JsonConvert.DeserializeObject<TData>(responseBody);
                     tdata.StatusCode = rest.StatusCode.ToString();
@@ -168,24 +169,48 @@ namespace PacketTea.Models
                 }
                 else
                 {
-                    string responseBody = await rest.Content.ReadAsStringAsync();
                     logger.Error("rest LogError: - " + responseBody + ". Data : " + rest);
-                    var res1 = JsonConvert.DeserializeObject<UnauthorizedModel>(responseBody);
-                    //if (!string.IsNullOrEmpty(res1.message))
-                    //{
-
-                    //}
                     var res = JsonConvert.DeserializeObject<dynamic>(responseBody);
                     tdata.IsSuccessStatusCode = rest.IsSuccessStatusCode;
                     if (res != null)
-                        tdata.Message = res.message;
+                    {
+                        string message = res.message;
+                        if (string.IsNullOrEmpty(message))
+                        {
+                            // ASP.NET Core's [ApiController] automatic model-validation
+                            // failures come back as a ValidationProblemDetails body
+                            // ({"title": "...", "errors": {"Field": ["msg", ...]}}),
+                            // which has no "message" property -- surface that instead
+                            // of silently falling back to a generic "Save failed.".
+                            string title = res.title;
+                            var errorLines = new List<string>();
+                            if (res.errors != null)
+                            {
+                                foreach (var prop in (JObject)res.errors)
+                                {
+                                    foreach (var msg in prop.Value)
+                                        errorLines.Add(msg.ToString());
+                                }
+                            }
+                            message = errorLines.Count > 0
+                                ? string.Join(" ", errorLines)
+                                : title;
+                        }
+                        tdata.Message = message;
+                    }
                     tdata.StatusCode = rest.StatusCode.ToString();
                 }
             }
             catch (Exception ex)
             {
-                logger.Error("rest exception LogError: - " + ex.Message + ". Data : " + rest);
-                throw;
+                // The API can answer with a plain-text/HTML body (e.g. a routing
+                // error) instead of JSON, even on a 2xx. Newtonsoft throws in that
+                // case -- degrade to a failed response instead of a 500/YSOD so the
+                // caller's existing "!IsSuccessStatusCode" handling can show it.
+                logger.Error("rest exception LogError: - " + ex.Message + ". Data : " + rest + ". Body : " + responseBody);
+                tdata.IsSuccessStatusCode = false;
+                tdata.StatusCode = rest.StatusCode.ToString();
+                tdata.Message = string.IsNullOrWhiteSpace(responseBody) ? ex.Message : responseBody;
             }
 
             return tdata;
@@ -195,7 +220,7 @@ namespace PacketTea.Models
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
             JsonContent content = JsonContent.Create(model);
             _client.DefaultRequestHeaders.Clear();
-            _client.DefaultRequestHeaders.Add("x-module", "PACKETTEA");
+            _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
             _client.DefaultRequestHeaders.Add("x-docyear", Utility.SessionHelper.GetUser().DocYear);
             if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getToken))
             {
