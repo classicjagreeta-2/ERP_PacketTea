@@ -8,6 +8,7 @@
     // True only when this window was opened from the list page's "New" inline row --
     // Unit + Packet Type were already chosen there (same as Master/Final Blend Entry).
     bool lockedFromList = ViewBag.LockedFromList ?? false;
+    bool isView = ViewBag.IsView ?? false;
     var head = Model;
 }
 
@@ -66,7 +67,7 @@
                         <li><a href="@Url.Action("Index", "Packing")"><i class="fa fa-times"></i> Cancel</a></li>
                         <li style="margin-left:auto">
                             <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
-                                Status : <span id="statusText">@(isEdit ? "Edit" : "Add")</span>
+                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
                             </label>
                         </li>
                     </ul>
@@ -146,7 +147,7 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Party</label>
-                                <input type="text" id="PCODE" value="@head.PCODE" readonly placeholder="Code" />
+                                <input type="text" id="PCODE" data-picker="party" value="@head.PCODE" placeholder="Code" style="cursor:pointer;" />
                             </div>
                             <div class="form-col-20">
                                 <label>Party Name</label>
@@ -161,16 +162,19 @@
                                 <input type="text" id="SaleCentre_disp" value="@head.SaleCentreName" readonly />
                             </div>
                             <div class="form-col-20">
-                                <label>Shipping Mark</label>
-                                <input type="text" id="ShipMark" value="@head.ShipMark" readonly />
-                            </div>
-                            <div class="form-col-20">
                                 <label>Short/Excess</label>
                                 <input type="number" step="0.01" id="ShortExcess" value="@head.ShortExcess" />
                             </div>
                             <div class="form-col-20">
                                 <label>Total Qty</label>
                                 <input type="number" id="TotalQty" readonly />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-100">
+                                <label>Shipping Mark</label>
+                                <textarea id="ShipMark" rows="3" style="height:60px;resize:vertical;">@head.ShipMark</textarea>
                             </div>
                         </div>
 
@@ -366,7 +370,7 @@
             tr.append('<td><input type="number" step="0.01" class="f-gross" value="' + (r.GROSS || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-net" value="' + net + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-tare" value="' + (r.TARE || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + fmt2(r.QTY) + '" /></td>');
             tr.append('<td><input type="text" class="f-batchno" value="' + esc(r.BATCHNO) + '" /></td>');
             tr.append('<td><input type="date" class="f-mfgfrom" value="' + (r.MFG_FROM ? r.MFG_FROM.substring(0, 10) : '') + '" /></td>');
             tr.append('<td><input type="text" class="f-szcode code-input" value="' + esc(r.SZ_CODE) + '" placeholder="Code" />' +
@@ -378,7 +382,10 @@
                 '<button type="button" class="grid-pick-btn f-alloc-btn" title="Search allocation">&hellip;</button></td>');
             tr.append('<td><input type="text" class="f-allocname" value="' + esc(r.AllocationName) + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-itcd" value="' + esc(r.ITCD) + '" /></td>');
-            tr.append('<td><input type="text" class="f-mrp" value="' + esc(r.MRP) + '" /></td>');
+            // maxlength matches the live FACT_*.T_BLEND_PACKING.MRP column, which is
+            // only 4 chars wide (confirmed via ORA-12899 on save) -- the docs DDL's
+            // VARCHAR2(20) does not reflect the actual production schema.
+            tr.append('<td><input type="text" class="f-mrp" maxlength="4" value="' + esc(r.MRP) + '" /></td>');
             $tb.append(tr);
         });
         $('#ftBag').text(round2(totBag));
@@ -440,6 +447,14 @@
         renderTotalsOnly();
     });
 
+    // Rate/Qty: snap the displayed value to 2 decimal places once the user leaves the
+    // field (same as Master/Final Blend Entry) -- the live input/change handler above
+    // already keeps r.RATE/r.QTY/r.AMOUNT numerically correct on every keystroke; this
+    // only tidies up what's shown.
+    $('#gridBody').on('blur', '.f-rate, .f-qty', function () {
+        $(this).val(round2($(this).val()).toFixed(2));
+    });
+
     function renderTotalsOnly() {
         var totBag = 0, totQty = 0, totAmt = 0;
         rows.forEach(function (r) { totBag += num(r.BAG_CHEST); totQty += num(r.QTY); totAmt += num(r.AMOUNT); });
@@ -472,7 +487,8 @@
         category: { url: '@Url.Action("GetCategory", "Packing")', cols: [['CAT', 'Code'], ['DESCN', 'Description']] },
         chestsize: { url: '@Url.Action("GetChestSize", "Packing")', cols: [['SZ_CODE', 'Code'], ['SZ_DESC', 'Description']] },
         allocation: { url: '@Url.Action("GetAllocation", "Packing")', cols: [['CODE', 'Code'], ['DESCN', 'Description']] },
-        salescentre: { url: '@Url.Action("GetSalesCentre", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SaleCentre' }
+        salescentre: { url: '@Url.Action("GetSalesCentre", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SaleCentre' },
+        party: { url: '@Url.Action("GetParty", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCODE', dispTarget: 'PartyName' }
     };
     var activePicker = null;
     var pickerXhr = null, pickerReqSeq = 0;
@@ -554,7 +570,7 @@
             activePicker.onSelect(row);
         } else if (cfg.target) {
             $('#' + cfg.target).val(row[cfg.cols[0][0]]);
-            $('#' + cfg.target + '_disp').val(row[cfg.cols[1][0]] || '');
+            $('#' + (cfg.dispTarget || cfg.target + '_disp')).val(row[cfg.cols[1][0]] || '');
         }
         closePicker();
         renderTotalsOnly();
@@ -715,6 +731,13 @@
     });
 
     renderGrid();
+
+    if (@Html.Raw(isView ? "true" : "false")) {
+        $('.accordion-container :input').prop('disabled', true);
+        $('[data-picker], #MasterBlendNo').off('click focus');
+        $('#btnSave').prop('disabled', true);
+        $('#btnAddRow, #btnRemoveRows').css({ opacity: .4, pointerEvents: 'none' });
+    }
 </script>
 </body>
 </html>

@@ -518,7 +518,7 @@
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" /></td>');
             tr.append('<td><input type="text" class="f-category" value="' + (r.CategoryDescn || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + round2(r.QTY).toFixed(2) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-sampleqty" value="' + (r.SAMPLE_QTY || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMOUNT).toFixed(2) + '" readonly /></td>');
@@ -606,7 +606,7 @@
     // Rate: snap the displayed value to 2 decimal places once the user leaves the field
     // (item 3) -- the live `input`/`change` handler above already keeps r.RATE/r.AMOUNT
     // numerically correct on every keystroke; this only tidies up what's shown.
-    $('#gridBody').on('blur', '.f-rate', function () {
+    $('#gridBody').on('blur', '.f-rate, .f-qty', function () {
         $(this).val(round2($(this).val()).toFixed(2));
     });
 

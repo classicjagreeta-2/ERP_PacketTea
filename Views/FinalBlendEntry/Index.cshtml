@@ -117,6 +117,11 @@
                         <i class="fa fa-trash-o"></i> Delete
                     </a>
                 </li>
+                <li>
+                    <a href="javascript:void(0)" id="linesBtn">
+                        <i class="fa fa-list"></i> Lines
+                    </a>
+                </li>
                 <li style="margin-left:auto">
                     <label class="btn btn-inverse pull-right" style="margin: 10px;">LIST</label>
                 </li>
@@ -282,52 +287,67 @@
             $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
             $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
 
+            function openDetail($btn) {
+                var $detail = $('#' + $btn.data('target'));
+                $detail.show();
+                $btn.removeClass('fa-plus').addClass('fa-minus');
+                var $body = $detail.find('.detail-items-body');
+                $.get('@Url.Action("GetRowDetail", "FinalBlendEntry")', {
+                    docno: $detail.data('docno'),
+                    docdt: $detail.data('docdt'),
+                    blendType: $detail.data('blendtype')
+                }).done(function (r) {
+                    if (!r || !r.success) {
+                        $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
+                        return;
+                    }
+                    var items = r.details || [];
+                    if (items.length === 0) {
+                        $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">No item lines</td></tr>');
+                        return;
+                    }
+                    $body.empty();
+                    items.forEach(function (d, i) {
+                        var packDate = d.PACK_DATE ? new Date(d.PACK_DATE).toLocaleDateString('en-GB') : '';
+                        $('<tr>').append(
+                            '<td>' + (d.SLNO != null ? d.SLNO : (i + 1)) + '</td>',
+                            '<td>' + (d.MarkName || d.MARK || '') + '</td>',
+                            '<td>' + (d.INVNO || '') + '</td>',
+                            '<td>' + packDate + '</td>',
+                            '<td>' + (d.GradeName || d.GRADE || '') + '</td>',
+                            '<td style="text-align:right;">' + (d.BAG_CHEST || 0) + '</td>',
+                            '<td style="text-align:right;">' + (d.QTY || 0) + '</td>',
+                            '<td style="text-align:right;">' + (d.SAMPLE_QTY || 0) + '</td>',
+                            '<td style="text-align:right;">' + (d.RATE || 0) + '</td>',
+                            '<td style="text-align:right;">' + (d.AMOUNT || 0) + '</td>',
+                            '<td>' + (d.WAREHOUSE || '') + '</td>',
+                            '<td>' + (d.DONO || '') + '</td>',
+                            '<td>' + (d.TransporterName || '') + '</td>'
+                        ).appendTo($body);
+                    });
+                }).fail(function () {
+                    $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
+                });
+            }
+            function closeDetail($btn) {
+                $('#' + $btn.data('target')).hide();
+                $btn.removeClass('fa-minus').addClass('fa-plus');
+            }
+
             $('#blendTable').on('click', '.row-expand-btn', function () {
                 var $btn = $(this);
-                var $detail = $('#' + $btn.data('target'));
-                var opening = !$detail.is(':visible');
-                $detail.toggle(opening);
-                $btn.toggleClass('fa-plus', !opening).toggleClass('fa-minus', opening);
+                if ($('#' + $btn.data('target')).is(':visible')) closeDetail($btn); else openDetail($btn);
+            });
 
-                if (opening) {
-                    var $body = $detail.find('.detail-items-body');
-                    $.get('@Url.Action("GetRowDetail", "FinalBlendEntry")', {
-                        docno: $detail.data('docno'),
-                        docdt: $detail.data('docdt'),
-                        blendType: $detail.data('blendtype')
-                    }).done(function (r) {
-                        if (!r || !r.success) {
-                            $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
-                            return;
-                        }
-                        var items = r.details || [];
-                        if (items.length === 0) {
-                            $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">No item lines</td></tr>');
-                            return;
-                        }
-                        $body.empty();
-                        items.forEach(function (d, i) {
-                            var packDate = d.PACK_DATE ? new Date(d.PACK_DATE).toLocaleDateString('en-GB') : '';
-                            $('<tr>').append(
-                                '<td>' + (d.SLNO != null ? d.SLNO : (i + 1)) + '</td>',
-                                '<td>' + (d.MarkName || d.MARK || '') + '</td>',
-                                '<td>' + (d.INVNO || '') + '</td>',
-                                '<td>' + packDate + '</td>',
-                                '<td>' + (d.GradeName || d.GRADE || '') + '</td>',
-                                '<td style="text-align:right;">' + (d.BAG_CHEST || 0) + '</td>',
-                                '<td style="text-align:right;">' + (d.QTY || 0) + '</td>',
-                                '<td style="text-align:right;">' + (d.SAMPLE_QTY || 0) + '</td>',
-                                '<td style="text-align:right;">' + (d.RATE || 0) + '</td>',
-                                '<td style="text-align:right;">' + (d.AMOUNT || 0) + '</td>',
-                                '<td>' + (d.WAREHOUSE || '') + '</td>',
-                                '<td>' + (d.DONO || '') + '</td>',
-                                '<td>' + (d.TransporterName || '') + '</td>'
-                            ).appendTo($body);
-                        });
-                    }).fail(function () {
-                        $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
-                    });
-                }
+            // "Lines": expand the ticked rows' item lines, or every row when none is ticked;
+            // a second click collapses them again (same as Packing Entry's list).
+            $('#linesBtn').on('click', function () {
+                var $checked = $('.row-check:checked');
+                var $btns = $checked.length
+                    ? $checked.closest('tr').find('.row-expand-btn')
+                    : $('#blendTable .row-expand-btn');
+                var anyClosed = $btns.filter('.fa-plus').length > 0;
+                $btns.each(function () { anyClosed ? openDetail($(this)) : closeDetail($(this)); });
             });
 
             // "New" inline row -- see the CSS comment above for the rationale; same

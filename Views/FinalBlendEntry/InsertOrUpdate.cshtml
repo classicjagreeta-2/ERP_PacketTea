@@ -466,7 +466,7 @@
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" /></td>');
             tr.append('<td><input type="text" class="f-category" value="' + (r.CategoryDescn || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + fmt2(r.QTY) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-sampleqty" value="' + (r.SAMPLE_QTY || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + fmt2(r.RATE) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + fmt2(r.AMOUNT) + '" readonly /></td>');
@@ -495,7 +495,7 @@
 
     function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
 
-    $('#gridBody').on('input change', 'input', function () {
+    $('#gridBody').on('input change', 'input:not(.rowChk)', function () {
         var $tr = $(this).closest('tr');
         var r = findRow($tr.data('cid'));
         if (!r) return;
@@ -546,6 +546,14 @@
         renderTotalsOnly();
     });
 
+    // Rate/Qty: snap the displayed value to 2 decimal places once the user leaves the
+    // field (same as Master Blend Entry) -- the live input/change handler above already
+    // keeps r.RATE/r.QTY/r.AMOUNT numerically correct on every keystroke; this only
+    // tidies up what's shown.
+    $('#gridBody').on('blur', '.f-rate, .f-qty', function () {
+        $(this).val(round2($(this).val()).toFixed(2));
+    });
+
     $('#gridBody').on('blur', '.f-transcode', function () {
         var code = $(this).val();
         var $tr = $(this).closest('tr');
@@ -577,12 +585,15 @@
         $('#ftAmt').text(fmt2(totAmt));
     }
 
-    $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
+    $(document).on('change', '#chkAll', function () { $('#gridBody .rowChk').prop('checked', $(this).is(':checked')); });
 
-    $('#btnRemoveRows').on('click', function () {
-        var cids = $('.rowChk:checked').map(function () { return $(this).closest('tr').data('cid'); }).get();
+    $(document).on('click', '#btnRemoveRows', function (e) {
+        e.preventDefault();
+        if (IS_VIEW) return;
+        var cids = $('#gridBody .rowChk:checked').map(function () { return String($(this).closest('tr').attr('data-cid')); }).get();
         if (!cids.length) { showAlert('Select at least one row to remove.'); return; }
-        rows = rows.filter(function (r) { return cids.indexOf(r._cid) === -1; });
+        rows = rows.filter(function (r) { return cids.indexOf(String(r._cid)) === -1; });
+        $('#chkAll').prop('checked', false);
         renderGrid();
     });
 
@@ -775,24 +786,36 @@
     // =========================================================
     // Generate DO No (same rule as Master Blend Entry, spec §3.6)
     // =========================================================
-    if (!IS_EDIT) { $('#btnGenDoNo').addClass('is-disabled'); }
-    $('#btnGenDoNo').on('click', function () {
+    // VB Command7_Click: every tagged row with an Inv No and no DO No gets one DO number per
+    // warehouse; rows with a blank warehouse share a number too (VB's WH_CODE = "" branch).
+    var BLANK_WH = '_';
+    function whKey(r) { return r.WAREHOUSE ? r.WAREHOUSE : BLANK_WH; }
+    $(document).on('click', '#btnGenDoNo', function (e) {
+        e.preventDefault();
+        if (IS_VIEW) return;
         if (!IS_EDIT) { showAlert('Save the record first, then Generate DO No.'); return; }
+        var pending = rows.filter(function (r) { return r.INVNO && r.TAG && !r.DONO; });
+        if (!pending.length) { showAlert('Tick "Tag" on the rows that need a DO No (rows that already have a DO No are skipped).'); return; }
         var need = [];
-        rows.forEach(function (r) { if (r.TAG && !r.DONO && r.WAREHOUSE && need.indexOf(r.WAREHOUSE) === -1) need.push(r.WAREHOUSE); });
-        if (!need.length) { showAlert('Tag a row (with a Warehouse set) that needs a DO No first.'); return; }
+        pending.forEach(function (r) { if (need.indexOf(whKey(r)) === -1) need.push(whKey(r)); });
         var qs = $.param({
             blendType: $('#BLEND_TYPE').val(),
             fyShortFrom: $('#fyShortFrom').val(),
             fyShortTo: $('#fyShortTo').val(),
             whCodes: need
         }, true);
-        $.getJSON('@Url.Action("GenerateDoNo", "FinalBlendEntry")' + '?' + qs, function (map) {
-            rows.forEach(function (r) {
-                if (r.TAG && !r.DONO && r.WAREHOUSE && map[r.WAREHOUSE]) r.DONO = map[r.WAREHOUSE];
+        $.getJSON('@Url.Action("GenerateDoNo", "FinalBlendEntry")' + '?' + qs)
+            .done(function (map) {
+                map = map || {};
+                pending.forEach(function (r) { if (map[whKey(r)]) r.DONO = map[whKey(r)]; });
+                renderGrid();
+            })
+            .fail(function (xhr) {
+                var detail = xhr.responseJSON && xhr.responseJSON.message
+                    ? xhr.responseJSON.message
+                    : 'HTTP ' + xhr.status + (xhr.responseText ? ': ' + xhr.responseText.substring(0, 300) : '');
+                showAlert('Unable to generate DO No. ' + detail);
             });
-            renderGrid();
-        });
     });
 
     // =========================================================

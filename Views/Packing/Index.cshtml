@@ -106,6 +106,8 @@
                 <li><a href="javascript:void(0)" id="btnNew"><i class="fa fa-plus"></i> New</a></li>
                 <li><a href="javascript:void(0)" id="editBtn"><i class="fa fa-pencil"></i> Edit</a></li>
                 <li><a href="javascript:void(0)" id="deleteBtn"><i class="fa fa-trash-o"></i> Delete</a></li>
+                <li><a href="javascript:void(0)" id="viewBtn"><i class="fa fa-eye"></i> View</a></li>
+                <li><a href="javascript:void(0)" id="linesBtn"><i class="fa fa-list"></i> Lines</a></li>
                 <li style="margin-left:auto">
                     <label class="btn btn-inverse pull-right" style="margin: 10px;">LIST</label>
                 </li>
@@ -127,6 +129,7 @@
                 <thead>
                     <tr>
                         <th style="width:26px;"></th>
+                        <th style="width:26px;"></th>
                         @SortTh("DOCNO", "Doc No")
                         @SortTh("DOCDT", "Date")
                         @SortTh("BLEND_NO", "Blend No")
@@ -143,19 +146,28 @@
                 <tbody>
                     @if (Model != null && Model.Count > 0)
                     {
+                        var rowIndex = 0;
                         foreach (var row in Model)
                         {
+                            rowIndex++;
+                            var detailId = "rowDetail" + rowIndex;
+                            var rowBlendType = string.IsNullOrEmpty(row.BLEND_TYPE) ? currentBlendType : row.BLEND_TYPE;
                             <tr>
                                 <td>
                                     <!-- The row's own Packet Type, not the page filter's: the list
                                          now shows every type the user has rights to at once, so
                                          Edit/Delete have to carry each row's actual type. -->
-                                    <input type="radio" name="rowSel" class="row-check"
+                                    <input type="checkbox" class="row-check"
                                            value="@row.DOCNO"
                                            data-docdt="@(row.DOCDT?.ToString("yyyy-MM-dd"))"
-                                           data-blendtype="@(string.IsNullOrEmpty(row.BLEND_TYPE) ? currentBlendType : row.BLEND_TYPE)" />
+                                           data-blendtype="@rowBlendType" />
                                 </td>
-                                <td>@row.DOCNO</td>
+                                <td style="text-align:center;">
+                                    <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show item lines" style="cursor:pointer;"></i>
+                                </td>
+                                <td>
+                                    <a href="@Url.Action("InsertOrUpdate", "Packing", new { docno = row.DOCNO, docdt = row.DOCDT?.ToString("yyyy-MM-dd"), blendType = rowBlendType })">@row.DOCNO</a>
+                                </td>
                                 <td>@(row.DOCDT?.ToString("dd/MM/yyyy"))</td>
                                 @* "Blend No" is the Final Blend's business number (BLEND_NO,
                                    e.g. "R023"), which is what the VB form displays -- its
@@ -172,11 +184,47 @@
                                 <td class="text-right">@row.TotalBag</td>
                                 <td class="text-right">@row.TotalQty</td>
                             </tr>
+                            <tr class="row-detail" id="@detailId" style="display:none;"
+                                data-docno="@row.DOCNO" data-docdt="@(row.DOCDT?.ToString("yyyy-MM-dd"))" data-blendtype="@rowBlendType">
+                                <td colspan="13" style="background:#f8f9fc;padding:10px 12px;">
+                                    <div style="overflow-x:auto;">
+                                        <table class="detail-sub-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:34px;">Sl</th>
+                                                    <th>Mark</th>
+                                                    <th>Grade</th>
+                                                    <th>Category</th>
+                                                    <th>Inv No</th>
+                                                    <th>Pack Date</th>
+                                                    <th>Season</th>
+                                                    <th style="text-align:right;">Bag</th>
+                                                    <th style="text-align:right;">Chest From</th>
+                                                    <th style="text-align:right;">Chest To</th>
+                                                    <th style="text-align:right;">Gross Wt</th>
+                                                    <th style="text-align:right;">Tare</th>
+                                                    <th style="text-align:right;">Qty</th>
+                                                    <th>Batch No</th>
+                                                    <th>Size</th>
+                                                    <th style="text-align:right;">Rate</th>
+                                                    <th style="text-align:right;">Amount</th>
+                                                    <th>Allocation</th>
+                                                    <th>Item</th>
+                                                    <th>MRP</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="detail-items-body">
+                                                <tr><td colspan="20" style="text-align:center;color:#666;">Loading...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
                         }
                     }
                     else
                     {
-                        <tr><td colspan="12" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="13" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -245,10 +293,10 @@
                 var typeOpts = '<option value="">Select Packet Type</option>' +
                     Object.keys(PACKET_TYPES).map(function (k) { return '<option value="' + k + '">' + PACKET_TYPES[k] + ' (' + k + ')</option>'; }).join('');
                 return '<tr id="newUnitRow" class="new-entry-row">' +
-                    '<td style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Packing Entry"></i></td>' +
-                    '<td colspan="3"><select id="newRowUnit">' + unitOpts + '</select></td>' +
+                    '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Packing Entry"></i></td>' +
+                    '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
                     '<td colspan="3"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
-                    '<td colspan="5"></td>' +
+                    '<td colspan="6"></td>' +
                     '</tr>';
             }
 
@@ -274,18 +322,115 @@
                     + '&blendType=' + encodeURIComponent(packetType);
             });
 
-            $('#editBtn').on('click', function () {
+            function fmtNum(v) { return v == null ? '' : v; }
+            function fmtDmy(v) { return v ? new Date(v).toLocaleDateString('en-GB') : ''; }
+            function esc(v) {
+                return (v == null ? '' : String(v)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            function openDetail($btn) {
+                var $detail = $('#' + $btn.data('target'));
+                $detail.show();
+                $btn.removeClass('fa-plus').addClass('fa-minus');
+                if ($detail.data('loaded')) return;
+                $detail.data('loaded', true);
+                var $body = $detail.find('.detail-items-body');
+                $.get('@Url.Action("GetRowDetail", "Packing")', {
+                    docno: $detail.data('docno'),
+                    docdt: $detail.data('docdt'),
+                    blendType: $detail.data('blendtype')
+                }).done(function (r) {
+                    if (!r || !r.success) {
+                        $detail.data('loaded', false);
+                        $body.html('<tr><td colspan="20" style="text-align:center;color:#666;">' + esc((r && r.message) || 'Unable to load item lines.') + '</td></tr>');
+                        return;
+                    }
+                    var items = r.details || [];
+                    if (!items.length) {
+                        $body.html('<tr><td colspan="20" style="text-align:center;color:#666;">No item lines</td></tr>');
+                        return;
+                    }
+                    $body.empty();
+                    items.forEach(function (d, i) {
+                        $('<tr>').append(
+                            '<td>' + esc(d.SL_NO || (i + 1)) + '</td>',
+                            '<td>' + esc(d.MarkName || d.MARK) + '</td>',
+                            '<td>' + esc(d.GradeName || d.GRADE) + '</td>',
+                            '<td>' + esc(d.CategoryName || d.CAT) + '</td>',
+                            '<td>' + esc(d.INVNO) + '</td>',
+                            '<td>' + fmtDmy(d.PACK_DATE) + '</td>',
+                            '<td>' + esc(d.SEASON) + '</td>',
+                            '<td style="text-align:right;">' + fmtNum(d.BAG_CHEST) + '</td>',
+                            '<td style="text-align:right;">' + fmtNum(d.CHESTSLF) + '</td>',
+                            '<td style="text-align:right;">' + fmtNum(d.CHESTSLT) + '</td>',
+                            '<td style="text-align:right;">' + fmtNum(d.GROSS) + '</td>',
+                            '<td style="text-align:right;">' + fmtNum(d.TARE) + '</td>',
+                            '<td style="text-align:right;">' + fmtNum(d.QTY) + '</td>',
+                            '<td>' + esc(d.BATCHNO) + '</td>',
+                            '<td>' + esc(d.SzDesc || d.SZ_CODE) + '</td>',
+                            '<td style="text-align:right;">' + (d.RATE != null ? Number(d.RATE).toFixed(2) : '') + '</td>',
+                            '<td style="text-align:right;">' + (d.AMOUNT != null ? Number(d.AMOUNT).toFixed(2) : '') + '</td>',
+                            '<td>' + esc(d.AllocationName || d.ALLOCATION) + '</td>',
+                            '<td>' + esc(d.ITCD) + '</td>',
+                            '<td>' + esc(d.MRP) + '</td>'
+                        ).appendTo($body);
+                    });
+                }).fail(function () {
+                    $detail.data('loaded', false);
+                    $body.html('<tr><td colspan="20" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
+                });
+            }
+
+            function closeDetail($btn) {
+                $('#' + $btn.data('target')).hide();
+                $btn.removeClass('fa-minus').addClass('fa-plus');
+            }
+
+            $('#packingTable').on('click', '.row-expand-btn', function () {
+                var $btn = $(this);
+                if ($('#' + $btn.data('target')).is(':visible')) closeDetail($btn); else openDetail($btn);
+            });
+
+            // "Lines": expand the ticked rows' item lines, or every row when none is ticked;
+            // a second click collapses them again.
+            $('#linesBtn').on('click', function () {
+                var $checked = $('.row-check:checked');
+                var $btns = $checked.length
+                    ? $checked.closest('tr').find('.row-expand-btn')
+                    : $('#packingTable .row-expand-btn');
+                var anyClosed = $btns.filter('.fa-plus').length > 0;
+                $btns.each(function () { anyClosed ? openDetail($(this)) : closeDetail($(this)); });
+            });
+
+            function getSingleChecked(action) {
                 var $c = $('.row-check:checked');
-                if ($c.length === 0) { alert('Please select a record to edit.'); return; }
+                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
+                return $c;
+            }
+
+            $('#editBtn').on('click', function () {
+                var $c = getSingleChecked('edit');
+                if (!$c) return;
                 window.location.href = '@Url.Action("InsertOrUpdate", "Packing")'
                     + '?docno=' + encodeURIComponent($c.val())
                     + '&docdt=' + encodeURIComponent($c.data('docdt'))
                     + '&blendType=' + encodeURIComponent($c.data('blendtype'));
             });
 
+            $('#viewBtn').on('click', function () {
+                var $c = getSingleChecked('view');
+                if (!$c) return;
+                window.location.href = '@Url.Action("InsertOrUpdate", "Packing")'
+                    + '?docno=' + encodeURIComponent($c.val())
+                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
+                    + '&blendType=' + encodeURIComponent($c.data('blendtype'))
+                    + '&view=true';
+            });
+
             $('#deleteBtn').on('click', function () {
-                var $c = $('.row-check:checked');
-                if ($c.length === 0) { alert('Please select a record to delete.'); return; }
+                var $c = getSingleChecked('delete');
+                if (!$c) return;
                 if (!confirm('Are you sure you want to delete Packing Doc No ' + $c.val() + ' ?')) return;
 
                 $('<form>', { method: 'POST', action: '@Url.Action("Delete", "Packing")' })

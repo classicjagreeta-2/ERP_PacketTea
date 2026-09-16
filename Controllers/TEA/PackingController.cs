@@ -94,10 +94,11 @@ namespace Finance.Controllers.TEA
         // `unit` is only populated when this was opened from the list page's "New" inline
         // row -- Unit + Packet Type were already chosen there, so the Unit/Blend Type strip
         // shows them read-only instead of leaving Unit unset (same as Master/Final Blend).
-        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "")
+        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "", bool view = false)
         {
             var allowedBlendTypes = await GetAllowedBlendTypesAsync();
             ViewBag.BlendTypes = allowedBlendTypes;
+            ViewBag.IsView = view;
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
 
             string fy = Session["SelectedfinancialYear"]?.ToString();
@@ -137,7 +138,7 @@ namespace Finance.Controllers.TEA
             }
 
             var response = await Services.GetAsync<dynamic>(
-                $"/api/BlendPacking/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}");
+                $"/api/BlendPacking/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}&forView={view}");
 
             if (!response.IsSuccessStatusCode || response.Data == null)
             {
@@ -214,6 +215,27 @@ namespace Finance.Controllers.TEA
                 return JsonExact(new { sessionExpired = true, message = "Your session has expired. Please log in again." });
             }
             return JsonExact(r.Data);
+        }
+
+        // GET: Packing/GetRowDetail (AJAX, list page's "+" toggle). forView skips the API's
+        // locked-period check, which only guards editing -- older documents must still show.
+        [HttpGet]
+        public async Task<ActionResult> GetRowDetail(string docno = "", string docdt = "", string blendType = "")
+        {
+            var r = await Services.GetAsync<dynamic>(
+                $"/api/BlendPacking/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}&forView=true");
+            if (!r.IsSuccessStatusCode || r.Data == null)
+                return JsonExact(new { success = false, message = r.Message ?? "Record not found." });
+
+            var wrapper = JsonConvert.DeserializeObject<GetByDocNoResult>(JsonConvert.SerializeObject(r.Data));
+            return JsonExact(new { success = true, details = wrapper?.details ?? new List<T_BLEND_PACKING>() });
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> GetParty(string search = "")
+        {
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetParty?search={Uri.EscapeDataString(search ?? "")}&pageSize=50");
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]

@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--no-build", "--project", "D:\\GIT\\ClassicERPCoreAPI\\ClassicERPCore.API.csproj", "--urls", "https://localhost:5001"],
+      "port": 5001
+    },
+    {
+      "name": "packettea",
+      "runtimeExecutable": "C:\\Program Files\\IIS Express\\iisexpress.exe",
+      "runtimeArgs": ["/config:D:\\GIT\\ERP_PacketTea\\.vs\\PacketTea\\config\\applicationhost.config", "/site:PacketTea"],
+      "port": 44350,
+      "url": "https://localhost:44350"
+    }
+  ]
+}
