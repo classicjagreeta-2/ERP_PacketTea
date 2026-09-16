@@ -41,6 +41,7 @@ namespace PacketTea
             private DateTime? _lastLoginDt;
             private string _factoryedb;
             private string _firstname;
+            private string _financedb;
             public string DocYear
             {
                 get { return _docyear; }
@@ -141,6 +142,11 @@ namespace PacketTea
             {
                 get { return _factoryedb; }
                 set { _factoryedb = value; }
+            }
+            public string Financedb
+            {
+                get { return _financedb; }
+                set { _financedb = value; }
             }
         }
 

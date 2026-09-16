@@ -241,6 +241,104 @@ namespace PacketTea.Models
             tdata = await ReadAsString<TData>(rest);
             return tdata;
         }
+
+        public static async Task<ResponseApiModel<TData>> FinanceGetAsync<TData>(string url)
+        {
+            ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
+
+            _client.DefaultRequestHeaders.Clear();
+
+            _client.DefaultRequestHeaders.Add("x-module", "Finance");
+
+            _client.DefaultRequestHeaders.Add(
+                "x-docyear",
+                Utility.SessionHelper.GetUser().DocYear
+            );
+
+            if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getToken))
+            {
+                _client.DefaultRequestHeaders.Add(
+                    "Authorization",
+                    "Bearer " + Utility.SessionHelper.GetUser().getToken
+                );
+            }
+
+            if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getDbName))
+            {
+                var financedb = Utility.SessionHelper.GetUser().Financedb;
+                _client.DefaultRequestHeaders.Add(
+                    "x-database", financedb);
+            }
+
+            if (!string.IsNullOrEmpty(_dbType))
+            {
+                _client.DefaultRequestHeaders.Add("x-dbtype", _dbType);
+            }
+            if (!String.IsNullOrEmpty(_baseDomain))
+            {
+                url = _baseDomain + url;
+            }
+
+            var rest = await _client.GetAsync(url);
+
+            tdata = await ReadAsString<TData>(rest);
+
+            return tdata;
+        }
+
+        public static async Task<ResponseApiModel<TData>> FinancePostAsync<TData>(
+    string url,
+    object model,
+    Type type = null)
+        {
+            ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
+
+            JsonContent content = JsonContent.Create(model);
+
+            _client.DefaultRequestHeaders.Clear();
+
+            _client.DefaultRequestHeaders.Add("x-module", "Finance");
+
+            _client.DefaultRequestHeaders.Add(
+                "x-docyear",
+                Utility.SessionHelper.GetUser().DocYear
+            );
+
+            if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getToken))
+            {
+                _client.DefaultRequestHeaders.Add(
+                    "Authorization",
+                    "Bearer " + Utility.SessionHelper.GetUser().getToken
+                );
+            }
+
+            if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getDbName))
+            {
+                var financedb = Utility.SessionHelper.GetUser().Financedb;
+
+                _client.DefaultRequestHeaders.Add(
+                    "x-database",
+                    financedb
+                );
+            }
+
+            if (!string.IsNullOrEmpty(_dbType))
+            {
+                _client.DefaultRequestHeaders.Add("x-dbtype", _dbType);
+            }
+
+            if (!string.IsNullOrEmpty(_baseDomain))
+            {
+                url = _baseDomain + url;
+            }
+
+            var rest = await _client.PostAsync(url, content);
+
+            tdata = await ReadAsString<TData>(rest);
+
+            return tdata;
+        }
+
         public static async Task<ResponseApiModel<TData>> BoughtleafGetAsync<TData>(string url)
         {
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
