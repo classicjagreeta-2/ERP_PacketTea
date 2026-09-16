@@ -1,0 +1,137 @@
+﻿
+
+
+@model IPagedList<PacketTea.Models.PT.TeaPurchase_LISTING>
+
+@using PacketTea.Utility
+@using PagedList.Mvc;
+@using PagedList;
+
+
+
+@foreach (var ho in Model)
+{
+
+    var LockedByUserId = ho.lockedbyuserid;
+    var LockedUntil = ho.lockeduntil;
+    //var IsLock = ho.isLock;
+    var currentUser = SessionHelper.GetUser().getUserName;
+    var disabled = !string.IsNullOrEmpty(ho.lockedbyuserid)
+       && ho.lockedbyuserid != currentUser
+       && ho.lockeduntil.HasValue
+       && ho.lockeduntil > DateTime.Now;
+    var disabled1 = !string.IsNullOrEmpty(LockedByUserId) && ho.lockedbyuserid != @SessionHelper.GetUser().getUserName;
+   <tr class="main-row @(disabled ? "disabled-row" : "")"
+       title="@(disabled ? "This record is currently being edited by - " + ho.lockedbyuserid : "")"
+       data-id="@ho.id"
+       data-encrypted-id="@(ho.id.HasValue
+        ? PacketTea.Utility.Cryptography.Encrypt(ho.id.Value.ToString())
+        : "")"
+       style="@(disabled ? "background-color:#f2f2f2;color:#808080;opacity:0.6;" : "")">
+       @*<td><input type="checkbox" /></td>*@
+       <td>
+           <input type="checkbox"
+                  class="row-check"
+                  data-unit="@ho.unit"
+                  data-docdt="@ho.docdt"
+                  data-docno="@ho.docno" />
+       </td>
+
+       <td>
+           <i class="fa fa-plus toggle-details  @(disabled == true  ? "disabled-link" : "")"
+              data-unit="@ho.unit"
+              data-docdt="@ho.docdt"
+              data-docno="@ho.docno"
+              style="cursor:pointer;">
+           </i>
+       </td>
+
+
+
+
+
+       <td>
+           <a href="@(disabled || !ho.id.HasValue ? "#" : Url.Action("InsertOrUpdate", "PacketTeaPurchaseEntry") + "?id=" + HttpUtility.UrlEncode(PacketTea.Utility.Cryptography.Encrypt(ho.id.Value.ToString()))
+          + "&docno=" + HttpUtility.UrlEncode(ho.docno) + "&unit=" + HttpUtility.UrlEncode(ho.unit) + "&docdt=" + HttpUtility.UrlEncode(ho.docdt?.ToString("yyyy-MM-dd")) )"
+              onclick="return @(disabled || !ho.id.HasValue ? "false" : "true");">
+               @ho.docno
+           </a>
+       </td>
+
+
+       <td>@DateHelper.DateFormatter(ho.docdt)</td>
+
+       <td>@ho.loca</td>
+
+       <td>@ho.billno</td>
+
+       <td>@DateHelper.DateFormatter(ho.billdt)</td>
+
+       <td>@DateHelper.DateFormatter(ho.prompT_DATE)</td>
+
+       <td>@ho.pcode</td>
+
+       <td>@ho.broK_CODE</td>
+
+       <td>@ho.salE_NO</td>
+
+       <td>@ho.veH_NO</td>
+
+       <td>@ho.tpt</td>
+
+       <td>@ho.conS_NO</td>
+
+       <td>@DateHelper.DateFormatter(ho.conS_DT)</td>
+
+       <td>@ho.ewaybillno</td>
+
+       <td>@ho.ewaybilldt</td>
+
+       <td>@ho.flavour</td>
+
+
+
+   </tr>
+
+    <tr class="child-row" style="display:none; background:#f9f9f9;">
+        <td colspan="18">
+            @*<taple class="taple taple-sm taple-bordered mb-0">*@
+            <table class="taple taple-sm taple-bordered mb-0" style="width: 50%; position: relative; left: 3.0%;">
+                <thead>
+                    <tr>
+                        <th>Inv No  </th>
+                        <th>Mark Code  </th>
+                        <th>Mark</th>
+                        <th>Grade Code  </th>
+                        <th>Grade</th>
+                        <th>Category</th>
+                        <th>Bags </th>
+                        <th style="text-align:right;">Net Wt  </th>
+                        <th style="text-align:right;">Gross Wt </th>
+                        <th style="text-align:right;">Total Net Wt </th>
+                        <th>Size Code </th>
+                        <th>Size</th>
+                        <th style="text-align:right;">Rate  </th>
+                        <th style="text-align:right;">Amount</th>
+                        <th style="text-align:right;">Disc %  </th>
+                        <th style="text-align:right;">Disc Value </th>
+                        <th style="text-align:right;">Taxable Amt</th>
+                        <th style="text-align:right;">CGST %</th>
+                        <th style="text-align:right;">CGST Amt</th>
+                        <th style="text-align:right;">SGST %</th>
+                        <th style="text-align:right;">SGST Amt</th>
+                        <th style="text-align:right;">IGST %</th>
+                        <th style="text-align:right;">IGST Amt</th>
+                        <th style="text-align:right;">Total Amt</th>
+                        <th>WH Code  </th>
+
+
+                    </tr>
+                </thead>
+                <tbody class="child-details-body">
+                    <!-- Ajax inserts rows here -->
+                </tbody>
+            </table>
+        </td>
+    </tr>
+}
