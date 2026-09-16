@@ -350,6 +350,7 @@
     <Compile Include="Models\PT\M_GSTMAS.cs" />
     <Compile Include="Models\PT\M_MARK.cs" />
     <Compile Include="Models\PT\M_PMAST.cs" />
+    <Compile Include="Models\PT\M_SALESCENTRE.cs" />
     <Compile Include="Models\PT\M_Transp.cs" />
     <Compile Include="Models\PT\PT_ALL_LIST.cs" />
     <Compile Include="Models\PT\SLMAS.cs" />

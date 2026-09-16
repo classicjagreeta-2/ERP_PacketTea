@@ -99,9 +99,14 @@ namespace PacketTea.Controllers.TEA
             {
                 q = value;
             }
-            var resp = await Services.GetAsync<PageModel<M_MARK>>($"/api/Bl_M_Mark/GetByPage?search={q}&page={p}&pageSize={limit}");
-            var data = resp?.Data?.value;
-            return Json(new { data = data.results ?? new List<M_MARK>(), count = data.rowCount }, JsonRequestBehavior.AllowGet);
+            var resp = await Services.GetAsync<PageValue<M_MARK>>($"/api/TeaPurchase/GetMarkCode?search={q}&page={p}&pageSize={limit}");
+            var data = resp?.Data.results;
+
+            return Json(new
+            {
+                data = data ?? new List<M_MARK>(),
+                count = resp?.Data.rowCount ?? 0
+            }, JsonRequestBehavior.AllowGet);
         }
         public async Task<JsonResult> GetGrade(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
@@ -109,17 +114,37 @@ namespace PacketTea.Controllers.TEA
             {
                 q = value;
             }
-            var resp = await Services.GetAsync<PageModel<M_GRADE>>($"/api/Bl_M_Mark/GetByPage?search={q}&page={p}&pageSize={limit}");
-            var data = resp?.Data?.value;
-            return Json(new { data = data.results ?? new List<M_GRADE>(), count = data.rowCount }, JsonRequestBehavior.AllowGet);
+            var resp = await Services.GetAsync<PageValue<M_GRADE>>($"/api/TeaPurchase/GetMarkGrade?search={q}&page={p}&pageSize={limit}");
+            var data = resp?.Data.results;
+
+            return Json(new
+            {
+                data = data ?? new List<M_GRADE>(),
+                count = resp?.Data.rowCount ?? 0
+            }, JsonRequestBehavior.AllowGet);
+        }
+        public async Task<JsonResult> GetLocation(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        {
+            if (string.IsNullOrEmpty(q))
+            {
+                q = value;
+            }
+            var resp = await Services.GetAsync<PageValue<M_SALESCENTRE>>($"/api/TeaPurchase/GetLocation?search={q}&page={p}&pageSize={limit}");
+            var data = resp?.Data.results;
+
+            return Json(new
+            {
+                data = data ?? new List<M_SALESCENTRE>(),
+                count = resp?.Data.rowCount ?? 0
+            }, JsonRequestBehavior.AllowGet);
         }
 
         public async Task<JsonResult> GetBroker( string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            //if (string.IsNullOrEmpty(q))
-            //{
-            //    q = value;
-            //}
+            if (string.IsNullOrEmpty(q))
+            {
+                q = value;
+            }
 
             var resp = await Services.GetAsync<PageValue<M_Broker>>(
                 $"/api/TeaPurchase/GetBroker?search={q}&page={p}&pageSize={limit}"
@@ -149,7 +174,23 @@ namespace PacketTea.Controllers.TEA
             }, JsonRequestBehavior.AllowGet);
         }
 
+        public ActionResult AddProductRow(int rowIndex)
+        {
+            ViewBag.RowIndex = rowIndex;
 
+            var model = new List<PT_ALL_LIST>
+    {
+        new PT_ALL_LIST
+        {
+            T_TEA_DETAIL = new List<T_TEA_PURCHASE>
+            {
+                new T_TEA_PURCHASE()
+            }
+        }
+    };
+
+            return PartialView("_Product_Details", model);
+        }
         public async Task<JsonResult> GetDetailJson(string unit, string docdt, string docno)
         {
             try
