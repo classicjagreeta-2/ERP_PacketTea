@@ -172,7 +172,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Final Blend Date <span>(*)</span></label>
-                                <input type="date" id="BLEND_DATE" value="@(head.BLEND_DATE?.ToString("yyyy-MM-dd"))" />
+                                <input type="date" id="BLEND_DATE" value="@(head.BLEND_DATE?.ToString("yyyy-MM-dd"))" min="@ViewBag.FyStart" max="@ViewBag.FyEnd" />
                             </div>
                             <div class="form-col-20">
                                 <label>Blend Qty</label>
@@ -408,6 +408,13 @@
     $('#pickerOverlay, #genericPicker, #masterPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
+    // Doc Date and Blend Date must fall inside the selected financial year. Pack Date is
+    // deliberately NOT bounded: it is the date the tea was packed at the garden, carried in
+    // from the purchase invoice, so stock bought in an earlier financial year legitimately
+    // carries an earlier Pack Date when it is blended now.
+    var FY_MIN = '@ViewBag.FyStart';
+    var FY_MAX = '@ViewBag.FyEnd';
+    function withinFy(dateStr) { return !dateStr || !FY_MIN || !FY_MAX || (dateStr >= FY_MIN && dateStr <= FY_MAX); }
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_TEA_BLEND_DET));
     var rowSeq = 0;
     rows.forEach(function (r) {
@@ -805,6 +812,7 @@
         if (!$('#BLEND_MARK').val()) { showAlert('Blend Mark cannot be blank'); return; }
         if (!$('#BLEND_NO').val()) { showAlert('Blend No cannot be blank'); return; }
         if (!$('#BLEND_DATE').val()) { showAlert('Blend Date cannot be blank'); return; }
+        if (!withinFy($('#BLEND_DATE').val())) { showAlert('Blend Date must fall within the current financial year'); return; }
 
         var netWt = num($('#BLEND_CHEST_WT').val()), grossWt = num($('#BLEND_CHEST_GROSSWT').val());
         if (netWt > grossWt) { showAlert("Gross Weight Can't Be Less Than Net Weight Or Blank. Please Check It."); return; }

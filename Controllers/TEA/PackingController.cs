@@ -61,11 +61,13 @@ namespace Finance.Controllers.TEA
         }
 
         // GET: Packing
-        public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15)
+        public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15, string sortBy = "", string sortDir = "")
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
             ViewBag.CurrentFilter = searchString;
+            ViewBag.SortBy = sortBy;
+            ViewBag.SortDir = sortDir;
             ViewBag.PageSize = pageSize;
             ViewBag.Page = page ?? 1;
             ViewBag.BlendType = blendType;
@@ -73,7 +75,7 @@ namespace Finance.Controllers.TEA
             ViewBag.UnitList = await GetUnitsForUserAsync();
 
             var response = await Services.GetAsync<PageModel<BLEND_PACKING_DATA>>(
-                $"/api/BlendPacking/GetByPage?blendType={blendType}&unit={CurrentUnit}&search={searchString}&page={page}&pageSize={pageSize}");
+                $"/api/BlendPacking/GetByPage?blendType={blendType}&unit={CurrentUnit}&search={searchString}&page={page}&pageSize={pageSize}&sortBy={sortBy}&sortDir={sortDir}");
 
             var list = response?.Data?.value?.results ?? new List<BLEND_PACKING_DATA>();
             ViewBag.RowCount = response?.Data?.value?.rowCount ?? 0;

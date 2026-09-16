@@ -447,10 +447,11 @@
     $('#pickerOverlay, #genericPicker, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
-    // Every date on this screen (Doc Date, Blend Date, and the Lines grid's Pack
-    // Date/Arrival Date/DO Date) must fall within the currently selected financial
-    // year -- same [FyStart, FyEnd] bound Doc Date's own min/max attribute already
-    // enforces (see ViewBag.FyStart/FyEnd in the controller).
+    // Doc Date, Blend Date and the Lines grid's Arrival Date / DO Date must fall within the
+    // currently selected financial year -- same [FyStart, FyEnd] bound Doc Date's own
+    // min/max attribute already enforces (see ViewBag.FyStart/FyEnd in the controller).
+    // Pack Date is deliberately NOT bounded: it is the garden packing date carried in from
+    // the purchase invoice, so stock bought in an earlier year legitimately predates this FY.
     var FY_MIN = '@ViewBag.FyStart';
     var FY_MAX = '@ViewBag.FyEnd';
     function withinFy(dateStr) { return !dateStr || !FY_MIN || !FY_MAX || (dateStr >= FY_MIN && dateStr <= FY_MAX); }
@@ -513,7 +514,7 @@
             // filters, see loadStock()). No lookup button in the column either -- clicking
             // the cell itself (or F1) opens "Select Data", same as the click handler below.
             tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" placeholder="Via Select Data" readonly /></td>');
-            tr.append('<td><input type="date" class="f-packdate" min="' + FY_MIN + '" max="' + FY_MAX + '" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" /></td>');
+            tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" /></td>');
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" /></td>');
             tr.append('<td><input type="text" class="f-category" value="' + (r.CategoryDescn || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
@@ -921,7 +922,6 @@
         var valid = rows.filter(function (r) { return r.INVNO; });
         if (!valid.length) { showAlert('Without Invoice Detail, Record Can Not be Saved.'); return; }
         if (valid.some(function (r) { return num(r.QTY) <= 0; })) { showAlert('Enter Quantity Invoice Detail !'); return; }
-        if (valid.some(function (r) { return r.PACK_DATE && !withinFy(r.PACK_DATE.substring(0, 10)); })) { showAlert('Pack Date must fall within the current financial year'); return; }
         if (valid.some(function (r) { return r.AWR_DATE && !withinFy(r.AWR_DATE.substring(0, 10)); })) { showAlert('Arrival Date must fall within the current financial year'); return; }
         if (valid.some(function (r) { return r.DODT && !withinFy(r.DODT.substring(0, 10)); })) { showAlert('DO Date must fall within the current financial year'); return; }
 
