@@ -37,6 +37,29 @@ namespace Finance.Controllers.TEA
             !string.IsNullOrEmpty(CurrentUnit) ? CurrentUnit :
             (blendType != null && BlendTypeUnit.TryGetValue(blendType, out var u) ? u : "");
 
+        // Packet Type codes (M_SALETYPE.CODE, TRN_TYPE='P') the current user has rights
+        // to, per FACT_JSTIL2027.M_UNIT_USER_RIGHT -- the same rule the Master/Final
+        // Blend lists apply, reusing the same API endpoint (the rights table is per user
+        // and type, not per screen). Falls back to the full list on any API failure so a
+        // transient outage doesn't lock every user out of the screen.
+        private async Task<Dictionary<string, string>> GetAllowedBlendTypesAsync()
+        {
+            var response = await Services.GetAsync<List<string>>("/api/TeaBlend/GetAllowedBlendTypes");
+            if (!response.IsSuccessStatusCode || response.Data == null)
+                return BlendTypes;
+
+            return BlendTypes.Where(bt => response.Data.Contains(bt.Key))
+                              .ToDictionary(bt => bt.Key, bt => bt.Value);
+        }
+
+        // Units this user is provisioned for -- backs the list page's "New" inline row
+        // Unit picker, same as the Master/Final Blend lists.
+        private async Task<List<UnitOption>> GetUnitsForUserAsync()
+        {
+            var response = await Services.GetAsync<List<UnitOption>>("/api/TeaBlend/GetUnitsForUser");
+            return (response.IsSuccessStatusCode ? response.Data : null) ?? new List<UnitOption>();
+        }
+
         // GET: Packing
         public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15)
         {
@@ -46,7 +69,8 @@ namespace Finance.Controllers.TEA
             ViewBag.PageSize = pageSize;
             ViewBag.Page = page ?? 1;
             ViewBag.BlendType = blendType;
-            ViewBag.BlendTypes = BlendTypes;
+            ViewBag.BlendTypes = await GetAllowedBlendTypesAsync();
+            ViewBag.UnitList = await GetUnitsForUserAsync();
 
             var response = await Services.GetAsync<PageModel<BLEND_PACKING_DATA>>(
                 $"/api/BlendPacking/GetByPage?blendType={blendType}&unit={CurrentUnit}&search={searchString}&page={page}&pageSize={pageSize}");
@@ -65,9 +89,14 @@ namespace Finance.Controllers.TEA
         }
 
         // GET: Packing/InsertOrUpdate
-        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "")
+        // `unit` is only populated when this was opened from the list page's "New" inline
+        // row -- Unit + Packet Type were already chosen there, so the Unit/Blend Type strip
+        // shows them read-only instead of leaving Unit unset (same as Master/Final Blend).
+        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "")
         {
-            ViewBag.BlendTypes = BlendTypes;
+            var allowedBlendTypes = await GetAllowedBlendTypesAsync();
+            ViewBag.BlendTypes = allowedBlendTypes;
+            ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
 
             string fy = Session["SelectedfinancialYear"]?.ToString();
             if (!string.IsNullOrEmpty(fy) && fy.Contains("-"))
@@ -84,12 +113,19 @@ namespace Finance.Controllers.TEA
 
             if (string.IsNullOrEmpty(docno))
             {
-                var effectiveBlendType = string.IsNullOrEmpty(blendType) ? "PT" : blendType;
+                // Default to "PT" only when the user actually has rights to it, else
+                // their first allowed type -- so the Unit guess below isn't derived from
+                // a Packet Type they cannot select (same as Master/Final Blend Entry).
+                var effectiveBlendType = !string.IsNullOrEmpty(blendType) ? blendType :
+                    allowedBlendTypes.ContainsKey("PT") ? "PT" :
+                    allowedBlendTypes.Keys.FirstOrDefault() ?? "PT";
                 var model = new BLEND_PACKING_DATA
                 {
                     LOCA = CurrentLoca,
                     GLOCA = CurrentLoca,
-                    UNIT = UnitForBlendType(effectiveBlendType),
+                    // Honor the Unit explicitly chosen on the list page's "New" row over
+                    // the BlendTypeUnit stopgap guess (see UnitForBlendType's comment).
+                    UNIT = !string.IsNullOrEmpty(unit) ? unit : UnitForBlendType(effectiveBlendType),
                     BLEND_TYPE = effectiveBlendType,
                     DOCDT = DateTime.Today,
                     Details = new List<T_BLEND_PACKING>()
@@ -165,39 +201,61 @@ namespace Finance.Controllers.TEA
         private ActionResult JsonExact(object data) =>
             Content(JsonConvert.SerializeObject(data), "application/json");
 
+        // A failed call comes back as Data == null with IsSuccessStatusCode == false;
+        // forwarding that as a plain 200 "null" reads to the picker JS as "no matches"
+        // with no visible error -- see MasterBlendEntryController for the full story.
+        private ActionResult JsonExactOrSessionExpired<T>(ResponseApiModel<T> r)
+        {
+            if (!r.IsSuccessStatusCode)
+            {
+                Response.StatusCode = 440; // Login Timeout
+                return JsonExact(new { sessionExpired = true, message = "Your session has expired. Please log in again." });
+            }
+            return JsonExact(r.Data);
+        }
+
         [HttpGet]
         public async Task<ActionResult> GetMark(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
+        }
+
+        // Backs the grid's Category column: the VB form resolved a row's category from
+        // its grade's GRADE_TYPE, but a user can also override it per row from here.
+        [HttpGet]
+        public async Task<ActionResult> GetCategory(string search = "")
+        {
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetCategory?search={search}&pageSize=50");
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetBlendGrade(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetAllocation(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetSalesCentre(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/BlendPacking/GetSalesCentre?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetChestSize(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/BlendPacking/GetChestSize?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
@@ -205,7 +263,7 @@ namespace Finance.Controllers.TEA
         {
             var r = await Services.GetAsync<dynamic>(
                 $"/api/BlendPacking/GetFinalBlendList?blendType={blendType}&unit={CurrentUnit}&search={search}");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
@@ -213,7 +271,7 @@ namespace Finance.Controllers.TEA
         {
             var r = await Services.GetAsync<dynamic>(
                 $"/api/BlendPacking/GetFinalBlendRowValues?docno={docno}&docdt={docdt}&blendType={blendType}&excludeDocNo={excludeDocNo}&excludeDocDt={excludeDocDt}");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
     }
 }

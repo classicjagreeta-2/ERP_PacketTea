@@ -5,6 +5,9 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     bool isEdit = ViewBag.IsEdit ?? false;
+    // True only when this window was opened from the list page's "New" inline row --
+    // Unit + Packet Type were already chosen there (same as Master/Final Blend Entry).
+    bool lockedFromList = ViewBag.LockedFromList ?? false;
     var head = Model;
 }
 
@@ -18,8 +21,19 @@
     <style>
         /* Same additions as Master/Final Blend Entry's InsertOrUpdate views. */
         input[readonly] { background-color: #f3f4f7; color: #555; }
+        /* purchase-order.css hard-codes .accordion-container to a fixed 350px scroll
+           area -- let the standalone Unit/Blend Type strip above Header size to its
+           own single-row content instead (same as the other two entry screens). */
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
+        /* Every numeric field right-aligned, grid and header alike -- same as
+           Master/Final Blend Entry. Rate/Amount additionally render to 2 decimals
+           (see fmt2 in the script below). */
+        input[type="number"] { text-align: right; }
         #gridTable th, #gridTable td { white-space: nowrap; }
         #gridTable td input { min-width: 80px; }
+        /* Code columns sit next to their description, so keep the code inputs narrow
+           enough that the pair still fits on one line. */
+        #gridTable td input.code-input { width: 72px; min-width: 0; }
         .grid-pick-btn { width: 20px; height: 21px; padding: 0; margin-left: 2px; vertical-align: middle; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; font-size: 11px; line-height: 1; }
         .popup-box.picker-box { width: 420px; display: none; }
         .popup-box.picker-box.wide { width: 760px; max-width: 92vw; }
@@ -67,6 +81,36 @@
                 </div>
             </div>
 
+            <!-- Unit / Blend Type -- its own section above Header, matching the root UI of
+                 Master and Final Blend Entry (the list page's "New" row still calls this
+                 value "Packet Type" in its own picker label; it is one and the same field,
+                 so it is not shown twice here). Unit is otherwise never user-facing (UNIT is
+                 derived server-side -- see UnitForBlendType's comment), it's shown purely for
+                 confirmation. Both lock read-only once Unit + Packet Type were chosen on the
+                 list page (lockedFromList), same as Blend Type already does in Edit mode. -->
+            <div class="accordion-container compact-accordion">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Unit / Blend Type</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Unit</label>
+                                <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Blend Type <span>(*)</span></label>
+                                <select id="BLEND_TYPE" @((isEdit || lockedFromList) ? "disabled" : "")>
+                                    @foreach (var bt in blendTypes)
+                                    {
+                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="accordion-container">
 
                 <div class="accordion">
@@ -74,15 +118,6 @@
                     <div class="accordion-body">
 
                         <div class="form-row">
-                            <div class="form-col-20">
-                                <label>Blend Type <span>(*)</span></label>
-                                <select id="BLEND_TYPE" @(isEdit ? "disabled" : "")>
-                                    @foreach (var bt in blendTypes)
-                                    {
-                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
-                                    }
-                                </select>
-                            </div>
                             <div class="form-col-20">
                                 <label>Doc No</label>
                                 <input type="text" id="DOCNO" value="@head.DOCNO" readonly placeholder="(auto)" />
@@ -103,15 +138,27 @@
                             </div>
                         </div>
 
+                        <!-- Code/description pairs, same as Master and Final Blend Entry's
+                             headers. Party is carried over from the picked Final Blend (VB:
+                             txtParty + lblParty), so both halves are read-only here;
+                             Location's description used to be a hidden input, which left a
+                             picked code on screen with nothing saying what it was. -->
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Party</label>
+                                <input type="text" id="PCODE" value="@head.PCODE" readonly placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Party Name</label>
                                 <input type="text" id="PartyName" value="@head.PartyName" readonly />
                             </div>
                             <div class="form-col-20">
                                 <label>Location <span>(*)</span></label>
                                 <input type="text" id="SaleCentre" data-picker="salescentre" value="@head.SaleCentre" placeholder="Code" />
-                                <input type="hidden" id="SaleCentre_disp" value="@head.SaleCentreName" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Location Name</label>
+                                <input type="text" id="SaleCentre_disp" value="@head.SaleCentreName" readonly />
                             </div>
                             <div class="form-col-20">
                                 <label>Shipping Mark</label>
@@ -149,12 +196,21 @@
                         <div class="table-responsive">
                             <table class="border" id="gridTable">
                                 <thead>
+                                    <!-- Column set follows the VB6 grid (trn_blend_Packing.frx),
+                                         which pairs every coded column with its description:
+                                         Mark Code/Mark, Grade Code/Grade, Cat/Category,
+                                         Size Code/Size, Alloc Code/Allocation. The description
+                                         halves are filled by the lookups (which now return code
+                                         AND description) and are read-only. -->
                                     <tr>
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
                                         <th style="width:30px;">Sl</th>
                                         <th style="width:40px;">Blend</th>
-                                        <th>Mark <span style="color:red;">(*)</span></th>
-                                        <th>Grade <span style="color:red;">(*)</span></th>
+                                        <th>Mark Code <span style="color:red;">(*)</span></th>
+                                        <th>Mark</th>
+                                        <th>Grade Code <span style="color:red;">(*)</span></th>
+                                        <th>Grade</th>
+                                        <th style="width:60px;">Cat</th>
                                         <th>Category</th>
                                         <th>Inv No <span style="color:red;">(*)</span></th>
                                         <th style="width:110px;">Pack Date</th>
@@ -168,24 +224,27 @@
                                         <th style="width:85px;text-align:right;">Qty</th>
                                         <th>Batch No</th>
                                         <th style="width:110px;">Mfg Date</th>
+                                        <th>Size Code</th>
                                         <th>Size</th>
                                         <th style="width:75px;text-align:right;">Rate</th>
                                         <th style="width:90px;text-align:right;">Amount</th>
-                                        <th>Alloc</th>
+                                        <th>Alloc Code</th>
+                                        <th>Allocation</th>
                                         <th>Item</th>
                                         <th style="width:60px;">MRP</th>
                                     </tr>
                                 </thead>
                                 <tbody id="gridBody"></tbody>
                                 <tfoot>
+                                    <!-- 29 columns: 12 + Bag + 5 + Qty + 5 + Amount + 4. -->
                                     <tr class="total">
-                                        <td colspan="9" style="text-align:right;">Total</td>
+                                        <td colspan="12" style="text-align:right;">Total</td>
                                         <td id="ftBag" style="text-align:right;"></td>
-                                        <td colspan="4"></td>
+                                        <td colspan="5"></td>
                                         <td id="ftQty" style="text-align:right;"></td>
-                                        <td colspan="4"></td>
+                                        <td colspan="5"></td>
                                         <td id="ftAmt" style="text-align:right;"></td>
-                                        <td colspan="3"></td>
+                                        <td colspan="4"></td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -262,6 +321,19 @@
     }
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
+    // Money columns (Rate/Amount) always render with exactly 2 decimals -- a raw
+    // 132.5 or 132 from the API would otherwise sit next to a 132.50 typed by hand.
+    // Right alignment comes from the input[type=number] rule in this view's <style>;
+    // the totals row sets it per-cell.
+    function fmt2(v) { return num(v).toFixed(2); }
+    // Grid cells are built by string concatenation, so anything free-text (a mark
+    // description with an apostrophe or a quote, say) has to be escaped or it breaks
+    // out of the value="..." attribute it lands in.
+    function esc(v) {
+        return (v == null ? '' : String(v))
+            .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
 
     function renderGrid() {
         var $tb = $('#gridBody').empty();
@@ -276,14 +348,18 @@
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
             tr.append('<td>' + r.SL_NO + '</td>');
             tr.append('<td><button type="button" class="grid-pick-btn f-blend-btn" title="Pick a Final Blend for this row">&hellip;</button></td>');
-            tr.append('<td><input type="text" class="f-mark" value="' + (r.MARK || '') + '" placeholder="Code" />' +
+            tr.append('<td><input type="text" class="f-mark code-input" value="' + esc(r.MARK) + '" placeholder="Code" />' +
                 '<button type="button" class="grid-pick-btn f-mark-btn" title="Search mark">&hellip;</button></td>');
-            tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" placeholder="Code" />' +
+            tr.append('<td><input type="text" class="f-markname" value="' + esc(r.MarkName) + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-grade code-input" value="' + esc(r.GRADE) + '" placeholder="Code" />' +
                 '<button type="button" class="grid-pick-btn f-grade-btn" title="Search grade">&hellip;</button></td>');
-            tr.append('<td><input type="text" class="f-cat" value="' + (r.CAT || '') + '" readonly /></td>');
-            tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" maxlength="10" /></td>');
+            tr.append('<td><input type="text" class="f-gradename" value="' + esc(r.GradeName) + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-cat code-input" value="' + esc(r.CAT) + '" placeholder="Code" />' +
+                '<button type="button" class="grid-pick-btn f-cat-btn" title="Search category">&hellip;</button></td>');
+            tr.append('<td><input type="text" class="f-catname" value="' + esc(r.CategoryName) + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-invno" value="' + esc(r.INVNO) + '" maxlength="10" /></td>');
             tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-season" value="' + (r.SEASON || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-season" value="' + esc(r.SEASON) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
             tr.append('<td><input type="number" class="f-chestf" value="' + (r.CHESTSLF || 0) + '" /></td>');
             tr.append('<td><input type="number" class="f-chestt" value="' + (r.CHESTSLT || 0) + '" /></td>');
@@ -291,21 +367,23 @@
             tr.append('<td><input type="number" step="0.01" class="f-net" value="' + net + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-tare" value="' + (r.TARE || 0) + '" readonly /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
-            tr.append('<td><input type="text" class="f-batchno" value="' + (r.BATCHNO || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-batchno" value="' + esc(r.BATCHNO) + '" /></td>');
             tr.append('<td><input type="date" class="f-mfgfrom" value="' + (r.MFG_FROM ? r.MFG_FROM.substring(0, 10) : '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-szcode" value="' + (r.SZ_CODE || '') + '" placeholder="Code" />' +
+            tr.append('<td><input type="text" class="f-szcode code-input" value="' + esc(r.SZ_CODE) + '" placeholder="Code" />' +
                 '<button type="button" class="grid-pick-btn f-sz-btn" title="Search chest size">&hellip;</button></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + (r.RATE || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + (r.AMOUNT || 0) + '" readonly /></td>');
-            tr.append('<td><input type="text" class="f-alloc" value="' + (r.ALLOCATION || '') + '" placeholder="Code" />' +
+            tr.append('<td><input type="text" class="f-szdesc" value="' + esc(r.SzDesc) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + fmt2(r.RATE) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + fmt2(r.AMOUNT) + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-alloc code-input" value="' + esc(r.ALLOCATION) + '" placeholder="Code" />' +
                 '<button type="button" class="grid-pick-btn f-alloc-btn" title="Search allocation">&hellip;</button></td>');
-            tr.append('<td><input type="text" class="f-itcd" value="' + (r.ITCD || '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-mrp" value="' + (r.MRP || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-allocname" value="' + esc(r.AllocationName) + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-itcd" value="' + esc(r.ITCD) + '" /></td>');
+            tr.append('<td><input type="text" class="f-mrp" value="' + esc(r.MRP) + '" /></td>');
             $tb.append(tr);
         });
         $('#ftBag').text(round2(totBag));
         $('#ftQty').text(round2(totQty));
-        $('#ftAmt').text(round2(totAmt));
+        $('#ftAmt').text(fmt2(totAmt));
         $('#TotalQty').val(round2(totQty + num($('#ShortExcess').val())));
     }
 
@@ -317,6 +395,7 @@
         if (!r) return;
         r.MARK = $tr.find('.f-mark').val();
         r.GRADE = $tr.find('.f-grade').val();
+        r.CAT = $tr.find('.f-cat').val();
         r.INVNO = $tr.find('.f-invno').val();
         r.PACK_DATE = $tr.find('.f-packdate').val() || null;
         r.SEASON = $tr.find('.f-season').val();
@@ -356,7 +435,7 @@
 
         r.AMOUNT = round2(r.QTY * num($tr.find('.f-rate').val()));
         r.RATE = num($tr.find('.f-rate').val());
-        $tr.find('.f-amount').val(r.AMOUNT);
+        $tr.find('.f-amount').val(fmt2(r.AMOUNT));
 
         renderTotalsOnly();
     });
@@ -366,7 +445,7 @@
         rows.forEach(function (r) { totBag += num(r.BAG_CHEST); totQty += num(r.QTY); totAmt += num(r.AMOUNT); });
         $('#ftBag').text(round2(totBag));
         $('#ftQty').text(round2(totQty));
-        $('#ftAmt').text(round2(totAmt));
+        $('#ftAmt').text(fmt2(totAmt));
         $('#TotalQty').val(round2(totQty + num($('#ShortExcess').val())));
     }
     $('#ShortExcess').on('input change', renderTotalsOnly);
@@ -390,6 +469,7 @@
     var pickerConfig = {
         mark: { url: '@Url.Action("GetMark", "Packing")', cols: [['MCD', 'Code'], ['MDESC', 'Garden/Mark']] },
         grade: { url: '@Url.Action("GetBlendGrade", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']] },
+        category: { url: '@Url.Action("GetCategory", "Packing")', cols: [['CAT', 'Code'], ['DESCN', 'Description']] },
         chestsize: { url: '@Url.Action("GetChestSize", "Packing")', cols: [['SZ_CODE', 'Code'], ['SZ_DESC', 'Description']] },
         allocation: { url: '@Url.Action("GetAllocation", "Packing")', cols: [['CODE', 'Code'], ['DESCN', 'Description']] },
         salescentre: { url: '@Url.Action("GetSalesCentre", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SaleCentre' }
@@ -397,16 +477,45 @@
     var activePicker = null;
     var pickerXhr = null, pickerReqSeq = 0;
 
+    // Every row picker writes BOTH halves of its pair -- the code into the editable
+    // input and the description into the read-only one beside it -- and keeps the
+    // same two values on the row object so they survive a re-render.
     $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
-    $('#gridBody').on('click', '.f-mark-btn', function () { rowPicker(this, 'mark', function (r, row) { r.MARK = row.MCD; $(this).closest('tr').find('.f-mark').val(row.MCD); }); });
-    $('#gridBody').on('click', '.f-grade-btn', function () { rowPicker(this, 'grade', function (r, row) { r.GRADE = row.CODE; $(this).closest('tr').find('.f-grade').val(row.CODE); }); });
-    $('#gridBody').on('click', '.f-sz-btn', function () { rowPicker(this, 'chestsize', function (r, row) { r.SZ_CODE = row.SZ_CODE; $(this).closest('tr').find('.f-szcode').val(row.SZ_CODE); }); });
-    $('#gridBody').on('click', '.f-alloc-btn', function () { rowPicker(this, 'allocation', function (r, row) { r.ALLOCATION = row.CODE; $(this).closest('tr').find('.f-alloc').val(row.CODE); }); });
+    $('#gridBody').on('click', '.f-mark-btn', function () {
+        rowPicker(this, 'mark', function (r, row, $tr) {
+            r.MARK = row.MCD; r.MarkName = row.MDESC || '';
+            $tr.find('.f-mark').val(r.MARK); $tr.find('.f-markname').val(r.MarkName);
+        });
+    });
+    $('#gridBody').on('click', '.f-grade-btn', function () {
+        rowPicker(this, 'grade', function (r, row, $tr) {
+            r.GRADE = row.CODE; r.GradeName = row.NAME || '';
+            $tr.find('.f-grade').val(r.GRADE); $tr.find('.f-gradename').val(r.GradeName);
+        });
+    });
+    $('#gridBody').on('click', '.f-cat-btn', function () {
+        rowPicker(this, 'category', function (r, row, $tr) {
+            r.CAT = row.CAT; r.CategoryName = row.DESCN || '';
+            $tr.find('.f-cat').val(r.CAT); $tr.find('.f-catname').val(r.CategoryName);
+        });
+    });
+    $('#gridBody').on('click', '.f-sz-btn', function () {
+        rowPicker(this, 'chestsize', function (r, row, $tr) {
+            r.SZ_CODE = row.SZ_CODE; r.SzDesc = row.SZ_DESC || '';
+            $tr.find('.f-szcode').val(r.SZ_CODE); $tr.find('.f-szdesc').val(r.SzDesc);
+        });
+    });
+    $('#gridBody').on('click', '.f-alloc-btn', function () {
+        rowPicker(this, 'allocation', function (r, row, $tr) {
+            r.ALLOCATION = row.CODE; r.AllocationName = row.DESCN || '';
+            $tr.find('.f-alloc').val(r.ALLOCATION); $tr.find('.f-allocname').val(r.AllocationName);
+        });
+    });
 
     function rowPicker(btn, key, apply) {
         var $tr = $(btn).closest('tr'), r = findRow($tr.data('cid'));
         if (!r) return;
-        openPicker(key, null, function (row) { apply.call(btn, r, row); });
+        openPicker(key, null, function (row) { apply(r, row, $tr); });
     }
 
     function openPicker(key, $input, onSelect) {
@@ -474,8 +583,11 @@
             data = data || [];
             var html = '<table><thead><tr><th>Blend No</th><th>Doc No</th><th>Blend Qty</th><th>Packed Qty</th><th>Remaining</th><th>Rate</th></tr></thead><tbody>';
             data.forEach(function (b, i) {
-                html += '<tr data-i="' + i + '"><td>' + (b.BLEND_NO || '') + '</td><td>' + (b.DOCNO || '') + '</td>' +
-                    '<td>' + b.BLEND_QTY + '</td><td>' + b.PACKED_QTY + '</td><td>' + b.REMAINING_QTY + '</td><td>' + b.RATE + '</td></tr>';
+                html += '<tr data-i="' + i + '"><td>' + esc(b.BLEND_NO) + '</td><td>' + esc(b.DOCNO) + '</td>' +
+                    '<td style="text-align:right;">' + fmt2(b.BLEND_QTY) + '</td>' +
+                    '<td style="text-align:right;">' + fmt2(b.PACKED_QTY) + '</td>' +
+                    '<td style="text-align:right;">' + fmt2(b.REMAINING_QTY) + '</td>' +
+                    '<td style="text-align:right;">' + fmt2(b.RATE) + '</td></tr>';
             });
             html += '</tbody></table>';
             $('#blendPickerBody').html(html);
@@ -490,13 +602,16 @@
         closeBlendPicker();
 
         if (target === 'header') {
+            // VB TxtBlendNo_Validate: the picked blend fills Blend Date, Party
+            // (code + name), Shipping Mark and the "Balance Qty To Be Packed" label.
             $('#BlendDocNo').val(b.DOCNO);
-            $('#BlendDocDt').val(b.DOCDT);
+            $('#BlendDocDt').val((b.DOCDT || '').substring(0, 10));
             $('#MasterBlendNo').val(b.BLEND_NO || '');
             $('#MasterBlendDate').val(fmtDate(b.BLEND_DATE));
+            $('#PCODE').val(b.PCODE || '');
             $('#PartyName').val(b.PartyName || '');
             $('#ShipMark').val(b.SHIP_MARK || '');
-            $('#balanceHint').text('Balance Qty To Be Packed: ' + b.REMAINING_QTY);
+            $('#balanceHint').text('Balance Qty To Be Packed: ' + fmt2(b.REMAINING_QTY));
             // Auto-populate ONE summary row, same as VB's TxtBlendNo_Validate --
             // only when adding fresh with an empty grid, so re-picking the
             // header blend on an in-progress document never clobbers rows.
@@ -508,12 +623,17 @@
         }
     });
 
+    // Fills one grid row from a picked Final Blend -- a direct port of VB's
+    // TxtBlendNo_Validate "If bfmode = 'A'" block (Mark/Grade/Category/Inv No/
+    // Bags/Net/Gross/Qty/Rate/Amount/Allocation). The server does the arithmetic,
+    // since it is the side that knows how much of the blend is already packed;
+    // see BlendPackingController.GetFinalBlendRowValues for the line-by-line map.
     function applyBlendToRow(blendDocNo, blendDocDt, cid) {
         $.get('@Url.Action("GetFinalBlendRowValues", "Packing")', {
-            docno: blendDocNo, docdt: blendDocDt, blendType: $('#BLEND_TYPE').val(),
+            docno: blendDocNo, docdt: (blendDocDt || '').substring(0, 10), blendType: $('#BLEND_TYPE').val(),
             excludeDocNo: $('#DOCNO').val(), excludeDocDt: $('#DOCDT').val()
         }, function (v) {
-            if (!v) return;
+            if (!v || !v.blendDocNo) { showAlert('Unable to read that Final Blend.'); return; }
             var r = cid ? findRow(cid) : null;
             if (!r) {
                 r = { _cid: ++rowSeq };
@@ -521,18 +641,23 @@
             }
             r.BLEND_DOCNO = v.blendDocNo;
             r.BLEND_DOCDT = v.blendDocDt;
-            r.MARK = v.mark; r.MarkName = v.markName;
-            r.GRADE = v.grade; r.GradeName = v.gradeName;
-            r.CAT = v.cat;
+            r.MARK = v.mark; r.MarkName = v.markName || '';
+            r.GRADE = v.grade; r.GradeName = v.gradeName || '';
+            r.CAT = v.cat; r.CategoryName = v.categoryName || '';
             r.INVNO = v.invno;
-            r.BAG_CHEST = v.bagChest;
-            r.GROSS = v.grossWt; // GrossWt seeded from the blend's own value; Net is what the header field represents
-            r.TARE = round2(v.grossWt - v.netWt);
-            r.QTY = v.qty;
-            r.RATE = v.rate;
-            r.AMOUNT = v.amount;
-            r.ALLOCATION = v.allocCode;
+            r.BAG_CHEST = num(v.bagChest);
+            // Gross is the blend's own per-chest gross; the grid's Net Wt column is
+            // derived (Gross - Tare), so seed Tare from the pair the blend carries.
+            r.GROSS = num(v.grossWt);
+            r.TARE = round2(num(v.grossWt) - num(v.netWt));
+            r.QTY = num(v.qty);
+            r.RATE = num(v.rate);
+            r.AMOUNT = num(v.amount);
+            r.ALLOCATION = v.allocCode; r.AllocationName = v.allocName || '';
             renderGrid();
+            if (v.remainingQty != null) {
+                $('#balanceHint').text('Balance Qty To Be Packed: ' + fmt2(v.remainingQty));
+            }
         });
     }
 
@@ -560,6 +685,10 @@
                 DOCNO: $('#DOCNO').val(),
                 DOCDT: $('#DOCDT').val(),
                 BLEND_TYPE: $('#BLEND_TYPE').val(),
+                // The Unit actually chosen on the list page's "New" row (or loaded with
+                // the record). Left blank the server falls back to its Blend-Type -> Unit
+                // guess, which is only ever a stopgap -- see UnitForBlendType's comment.
+                UNIT: $('#UNIT_disp').val(),
                 BlendDocNo: $('#BlendDocNo').val(),
                 BlendDocDt: $('#BlendDocDt').val(),
                 SaleCentre: $('#SaleCentre').val(),

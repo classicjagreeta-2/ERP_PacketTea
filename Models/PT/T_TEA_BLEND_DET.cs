@@ -39,5 +39,18 @@ namespace PacketTea.Models.PT
         public string MarkName { get; set; }
         public string GradeName { get; set; }
         public string TransporterName { get; set; }
+
+        // Resolved alongside the raw row by FinalBlendController.GetMasterBlendDetail,
+        // which is the only place they're produced: the Master Blend clone (VB6
+        // GetMasterBlend) fills the Final Blend grid's Category / Warehouse-name
+        // columns and needs NetWt to re-derive Qty when Bag is edited afterwards.
+        // These MUST be declared here even though nothing posts them back -- the MVC
+        // controller round-trips the API's JSON through this typed shape before
+        // handing it to the browser, so a property that isn't on this class is simply
+        // dropped and arrives at the grid as undefined.
+        public string Cat { get; set; }
+        public string CategoryDescn { get; set; }
+        public string WarehouseName { get; set; }
+        public decimal? NetWt { get; set; }
     }
 }

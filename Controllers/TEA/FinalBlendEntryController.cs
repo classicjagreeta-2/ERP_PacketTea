@@ -46,6 +46,21 @@ namespace Finance.Controllers.TEA
             !string.IsNullOrEmpty(CurrentUnit) ? CurrentUnit :
             (blendType != null && BlendTypeUnit.TryGetValue(blendType, out var u) ? u : "");
 
+        // Packet/Blend Type codes (M_SALETYPE.CODE, TRN_TYPE='P') the current user has
+        // rights to, per FACT_JSTIL2027.M_UNIT_USER_RIGHT -- identical rule to Master
+        // Blend Entry's list (see MasterBlendEntryController.GetAllowedBlendTypesAsync
+        // for the fallback rationale). Reuses the same API endpoint rather than a Final
+        // Blend-specific one: the rights table is per user and type, not per screen.
+        private async Task<Dictionary<string, string>> GetAllowedBlendTypesAsync()
+        {
+            var response = await Services.GetAsync<List<string>>("/api/TeaBlend/GetAllowedBlendTypes");
+            if (!response.IsSuccessStatusCode || response.Data == null)
+                return BlendTypes;
+
+            return BlendTypes.Where(bt => response.Data.Contains(bt.Key))
+                              .ToDictionary(bt => bt.Key, bt => bt.Value);
+        }
+
         // User.UnitList for the PacketTea module (see JwtMiddleware.cs) -- backs the list
         // page's "New" inline row Unit picker, same as MasterBlendEntryController (reuses
         // the same generic, module-scoped API endpoint rather than duplicating it).
@@ -64,7 +79,7 @@ namespace Finance.Controllers.TEA
             ViewBag.PageSize = pageSize;
             ViewBag.Page = page ?? 1;
             ViewBag.BlendType = blendType;
-            ViewBag.BlendTypes = BlendTypes;
+            ViewBag.BlendTypes = await GetAllowedBlendTypesAsync();
             ViewBag.UnitList = await GetUnitsForUserAsync();
 
             var response = await Services.GetAsync<PageModel<T_TEA_BLEND>>(
@@ -92,7 +107,11 @@ namespace Finance.Controllers.TEA
         // Edit, but the whole form renders read-only.
         public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "", bool view = false)
         {
-            ViewBag.BlendTypes = BlendTypes;
+            // Rights-filtered here too, not just on the list: reaching this screen without
+            // going through the list's "New" row would otherwise offer every blend type in
+            // its own dropdown regardless of M_UNIT_USER_RIGHT (same fix as Master Blend).
+            var allowedBlendTypes = await GetAllowedBlendTypesAsync();
+            ViewBag.BlendTypes = allowedBlendTypes;
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
             ViewBag.IsView = view;
 
@@ -115,7 +134,12 @@ namespace Finance.Controllers.TEA
             {
                 // New entry -- Master Blend, and everything it carries, is picked
                 // on-screen (spec §3.5.1); nothing to clone until then.
-                var effectiveBlendType = string.IsNullOrEmpty(blendType) ? "PT" : blendType;
+                // Default to "PT" only when the user actually has rights to it --
+                // otherwise fall back to their first allowed type, so the Unit guess
+                // below isn't derived from a type they can't select (same as Master Blend).
+                var effectiveBlendType = !string.IsNullOrEmpty(blendType) ? blendType :
+                    allowedBlendTypes.ContainsKey("PT") ? "PT" :
+                    allowedBlendTypes.Keys.FirstOrDefault() ?? "PT";
                 var model = new TEA_BLEND_DATA
                 {
                     T_TEA_BLEND = new T_TEA_BLEND
@@ -231,12 +255,26 @@ namespace Finance.Controllers.TEA
         private ActionResult JsonExact(object data) =>
             Content(JsonConvert.SerializeObject(data), "application/json");
 
+        // A failed call (expired token, API unreachable, ...) comes back as Data == null
+        // with IsSuccessStatusCode == false; forwarding that as a plain 200 "null" reads
+        // to every picker's JS as "no matches" with no visible error. Surface it as a
+        // distinct status the frontend can tell apart -- same as MasterBlendEntryController.
+        private ActionResult JsonExactOrSessionExpired<T>(ResponseApiModel<T> r)
+        {
+            if (!r.IsSuccessStatusCode)
+            {
+                Response.StatusCode = 440; // Login Timeout
+                return JsonExact(new { sessionExpired = true, message = "Your session has expired. Please log in again." });
+            }
+            return JsonExact(r.Data);
+        }
+
         [HttpGet]
         public async Task<ActionResult> GetMasterBlendList(string blendType = "", string search = "")
         {
             var r = await Services.GetAsync<dynamic>(
                 $"/api/FinalBlend/GetMasterBlendList?blendType={blendType}&unit={CurrentUnit}&search={search}");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
@@ -270,42 +308,42 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> GetParty(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetParty?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetWarehouse(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetWarehouse?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetAllocation(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetBlendGrade(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetMark(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetTransporter(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetTransporter?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
@@ -314,7 +352,7 @@ namespace Finance.Controllers.TEA
             var qs = string.Join("&", (whCodes ?? new string[0]).Select(w => "whCodes=" + Uri.EscapeDataString(w)));
             var r = await Services.GetAsync<dynamic>(
                 $"/api/TeaBlend/GenerateDoNo?blendType={blendType}&unit={CurrentUnit}&fyShortFrom={fyShortFrom}&fyShortTo={fyShortTo}&{qs}");
-            return JsonExact(r.Data);
+            return JsonExactOrSessionExpired(r);
         }
     }
 }

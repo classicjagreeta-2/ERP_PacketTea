@@ -41,9 +41,15 @@ namespace PacketTea.Models.PT
         public string BLEND_DOCNO { get; set; }
         public DateTime? BLEND_DOCDT { get; set; }
 
-        // Display-only fields returned by the API alongside the raw row
+        // Display-only fields returned by the API alongside the raw row -- the grid
+        // shows each coded column next to its description (the VB6 grid's Mark Code/
+        // Mark, Grade Code/Grade, Cat/Category, Size Code/Size, Alloc Code/Allocation
+        // pairs). These must be declared here even though nothing posts them back: the
+        // MVC controller round-trips the API's JSON through this typed shape, so a
+        // property missing from this class is dropped and reaches the grid as undefined.
         public string MarkName { get; set; }
         public string GradeName { get; set; }
+        public string CategoryName { get; set; }
         public string SzDesc { get; set; }
         public string AllocationName { get; set; }
         public decimal? NET { get; set; }

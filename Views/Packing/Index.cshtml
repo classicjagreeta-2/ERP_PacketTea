@@ -6,6 +6,7 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     var currentBlendType = (string)ViewBag.BlendType;
+    var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
 }
 
 <!doctype html>
@@ -34,11 +35,15 @@
             text-decoration: none; transition: background .15s ease;
         }
         .action-btns ul li a:hover, .action-btns ul li button:hover:not(:disabled) { background: var(--mbe-bg); color: var(--mbe-text); }
-        #blendTypeFilter {
-            border: 1px solid var(--mbe-border); border-radius: 6px; padding: 7px 10px;
-            background: #fff; color: var(--mbe-text); font-size: 13px;
-        }
         .title-heading { padding: 18px 20px 14px; font-size: 20px; font-weight: 700; color: var(--mbe-text); }
+
+        /* "New" inline row -- identical to the Master/Final Blend lists: pick Unit +
+           Packet Type here first, then the pencil (enabled only once both are picked)
+           opens the Packing Entry window with both locked in. */
+        tr.new-entry-row td { background: #eef3ff; vertical-align: middle; }
+        tr.new-entry-row select { border: 1px solid var(--mbe-border); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; }
+        tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
+        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: var(--mbe-accent); }
         #searchInput { border: 1px solid var(--mbe-border); border-radius: 6px; }
         .table-responsive { padding: 0 20px; overflow-x: auto; }
         table.main-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -55,14 +60,11 @@
         <div class="action-btns">
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
-                <li>
-                    <select id="blendTypeFilter" class="form-control" style="width:170px;display:inline-block;">
-                        @foreach (var bt in blendTypes)
-                        {
-                            <option value="@bt.Key" selected="@(bt.Key == currentBlendType)">@bt.Value (@bt.Key)</option>
-                        }
-                    </select>
-                </li>
+                <!-- The Packet Type filter dropdown that used to sit here is gone, same as
+                     on the Master/Final Blend lists: Packet Type is picked in the "New"
+                     inline row instead, so the list itself shows every type the user has
+                     rights to (PackingController.GetAllowedBlendTypesAsync) rather than one
+                     type at a time. -->
                 <li><a href="javascript:void(0)" id="btnNew"><i class="fa fa-plus"></i> New</a></li>
                 <li><a href="javascript:void(0)" id="editBtn"><i class="fa fa-pencil"></i> Edit</a></li>
                 <li><a href="javascript:void(0)" id="deleteBtn"><i class="fa fa-trash-o"></i> Delete</a></li>
@@ -106,10 +108,13 @@
                         {
                             <tr>
                                 <td>
+                                    <!-- The row's own Packet Type, not the page filter's: the list
+                                         now shows every type the user has rights to at once, so
+                                         Edit/Delete have to carry each row's actual type. -->
                                     <input type="radio" name="rowSel" class="row-check"
                                            value="@row.DOCNO"
                                            data-docdt="@(row.DOCDT?.ToString("yyyy-MM-dd"))"
-                                           data-blendtype="@currentBlendType" />
+                                           data-blendtype="@(string.IsNullOrEmpty(row.BLEND_TYPE) ? currentBlendType : row.BLEND_TYPE)" />
                                 </td>
                                 <td>@row.DOCNO</td>
                                 <td>@(row.DOCDT?.ToString("dd/MM/yyyy"))</td>
@@ -150,27 +155,66 @@
 
     <script>
         $(function () {
-            $('#blendTypeFilter').on('change', function () { reload(); });
-
             var searchTimer;
             $('#searchInput').on('input', function () {
                 clearTimeout(searchTimer);
                 searchTimer = setTimeout(reload, 400);
             });
 
+            // No blendType in the query string any more -- the list is no longer filtered
+            // to one Packet Type (see the markup comment where the dropdown used to be).
             function reload(page) {
                 window.location.href = '@Url.Action("Index", "Packing")'
-                    + '?blendType=' + encodeURIComponent($('#blendTypeFilter').val())
-                    + '&searchString=' + encodeURIComponent($('#searchInput').val())
+                    + '?searchString=' + encodeURIComponent($('#searchInput').val())
                     + '&page=' + (page || 1);
             }
 
             $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
             $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
 
+            // =========================================================
+            // "New" inline row -- same flow as the Master/Final Blend lists: New
+            // prepends a row with a Unit picker and a (rights-filtered) Packet Type
+            // picker rather than navigating straight into a blank entry screen. The
+            // pencil lights up only once both are chosen, then opens Packing Entry in
+            // the same tab with both passed through and locked there.
+            // =========================================================
+            var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
+            var PACKET_TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(blendTypes));
+
+            function buildNewRow() {
+                var unitOpts = '<option value="">Select Unit</option>' +
+                    UNIT_LIST.map(function (u) { return '<option value="' + u.CODE + '">' + u.CODE + ' - ' + (u.NAME || '') + '</option>'; }).join('');
+                var typeOpts = '<option value="">Select Packet Type</option>' +
+                    Object.keys(PACKET_TYPES).map(function (k) { return '<option value="' + k + '">' + PACKET_TYPES[k] + ' (' + k + ')</option>'; }).join('');
+                return '<tr id="newUnitRow" class="new-entry-row">' +
+                    '<td style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Packing Entry"></i></td>' +
+                    '<td colspan="3"><select id="newRowUnit">' + unitOpts + '</select></td>' +
+                    '<td colspan="3"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
+                    '<td colspan="5"></td>' +
+                    '</tr>';
+            }
+
+            function refreshGoNewState() {
+                var ready = !!$('#newRowUnit').val() && !!$('#newRowPacketType').val();
+                $('.go-new').toggleClass('is-ready', ready);
+            }
+
             $('#btnNew').on('click', function () {
+                if ($('#newUnitRow').length) return;
+                $('#packingTable tbody').prepend(buildNewRow());
+                refreshGoNewState();
+            });
+
+            $('#packingTable').on('change', '#newRowUnit, #newRowPacketType', refreshGoNewState);
+
+            $('#packingTable').on('click', '.go-new', function () {
+                var unit = $('#newRowUnit').val(), packetType = $('#newRowPacketType').val();
+                if (!unit) { alert('Please select Unit first'); return; }
+                if (!packetType) { alert('Please select Packet Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "Packing")'
-                    + '?blendType=' + encodeURIComponent($('#blendTypeFilter').val());
+                    + '?unit=' + encodeURIComponent(unit)
+                    + '&blendType=' + encodeURIComponent(packetType);
             });
 
             $('#editBtn').on('click', function () {
