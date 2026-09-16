@@ -1,0 +1,158 @@
+/* scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.3);
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+::-webkit-scrollbar-thumb:window-inactive {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+a {
+  cursor: pointer;
+}
+
+.select2-container--default
+  .select2-selection--single
+  .select2-selection__rendered {
+  background-color: transparent;
+  color: #495057;
+  padding: 0px ;
+  font-size:13px;
+  font-weight: 500;
+  line-height: 1.5;
+      text-align: left;
+    text-transform: capitalize;
+}
+
+.select2-container--default
+  .select2-selection--single
+  .select2-selection__arrow {
+  top: 5px;
+}
+
+.select2-container--default .select2-selection--single {
+  color: #495057;
+}
+
+.select2-container--default
+  .select2-selection--single
+  .select2-selection__arrow
+  b {
+  border-color: #495057 transparent transparent transparent;
+}
+
+.col-form-label {
+  font-size: 12px;
+  padding-bottom: calc(0.1rem - 1px * 2);
+  font-weight: 600 !important;
+}
+
+.table td, .table th {
+  padding: 0.15rem;
+      vertical-align: middle;
+      /*text-align: center;*/
+}
+
+.btn-sm-ag {
+  padding: 3px 14px;
+  line-height: 16px;
+  font-size: 11px;
+}
+
+.btn-sm-ag i {
+  margin-right: 0;
+}
+
+td {
+  white-space: normal;
+}
+
+.form-group {
+  margin-bottom: 1em;
+}
+
+.form-control-sm, .input-group-sm>.form-control, .input-group-sm>.input-group-addon, .input-group-sm>.input-group-btn>.btn {
+  padding: .25rem .15rem;
+  min-height: 40px;
+    border-radius: 0;
+}
+
+.ag-i-btn {
+  padding: 5px;
+}
+
+.hiddenRow {
+  padding: 0 !important;
+}
+.btn-drp {
+    background: #504e4e;
+    color: #fff!important;
+    padding: 5px 7px;
+    border-radius: 5px;
+    border:transparent;
+}
+.btn-del{
+   background: red;
+    color: #fff!important;
+    padding:3px 7px;
+    border-radius: 5px;
+    margin: 0 0 0 5px;
+    border:transparent;
+}
+.multipleselectbtn input{
+    padding: 0.25rem 0.15rem;
+    border-radius: 0;
+    min-height: 45px;
+}
+
+.multipleselectbtn .select2-container--default .select2-selection--multiple {
+    padding: 3px;
+    border-radius: 0;
+    border: 1px solid #ccc;
+}
+.table-wdth .select2-selection--multiple {
+    border: 1px solid #ddd;
+    border-radius: 0;
+    cursor: text;
+    width: 120px;
+}
+.submit-btn{float: right; margin-top: 8px;}
+.main-body .form-control {height: 32px;   }
+.main-body .select2-container--default .select2-selection--single{height: 32px !important; padding: 8px 8px;}
+.main-body .form-radio label{font-size: 13px;}
+
+.select2-container--default .select2-selection--single{ height: 45px; }
+ul#select2-ddlcountryOrigin-results li {
+    text-transform: uppercase;
+}
+#target{z-index: 1;padding: 10px 22px; margin: 10px 0 0 0 !important;}
+
+.pcoded .pcoded-header .navbar-logo[logo-theme="theme1"] {
+    background-color: #ffffff;
+}
+.page-body .accordion-msg {
+    padding: 1px 0;
+}
+
+/*.sticky {
+    position: fixed;
+    top: 0px;
+    width: 100%;
+    z-index: 9;
+    background: #ddd;
+    padding: 10px 30px;
+}*/

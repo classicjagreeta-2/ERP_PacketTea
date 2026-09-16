@@ -1,0 +1,26 @@
+
+@media (max-width: 991px) {
+table { min-width: 1000px;}
+.form-col-50, .form-col-20, .form-col-15, .form-col-10 { width: 100%;}
+
+
+.serach-box .right-btn {padding-left: 15px; margin-left: auto;}
+.serach-box .search input[type="text"] { width: auto;}
+.serach-box { justify-content: flex-start;}
+
+.popup-box { width: 95%; padding: 15px;}
+.purchase-details .header-details .order-code,
+.purchase-details .header-details { gap: 10px;}
+.purchase-details .header-details { flex-wrap: wrap; padding-bottom: 15px;}
+.action-btns ul { flex-wrap: wrap;}
+.action-btns ul li { padding-bottom: 5px;}
+
+.terms-code select { max-width: 150px;}
+
+.sm-col-row { flex-wrap: wrap;}
+.sm-col-row .col {width: 100%;}
+.sm-col-row .date-col { max-width: none; width: 100%;}
+
+}
+
+

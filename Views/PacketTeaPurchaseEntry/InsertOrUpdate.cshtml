@@ -1,0 +1,1148 @@
+﻿
+
+@model PacketTea.Models.PT.PT_ALL_LIST
+@using PacketTea.Utility
+@{
+    ViewBag.Title = "InsertOrUpdate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <!-- CSS -->
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/jquery-ui.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
+
+    <style>
+        #prScroll {
+            max-height: 420px; /* change height */
+            overflow-y: auto;
+        }
+
+        .popup-overlay {
+            display: none;
+        }
+
+        .popup-box {
+            display: none;
+        }
+
+        tbody div {
+            overflow: visible !important;
+            height: max-content;
+        }
+
+        .table.table-sm td, .table.table-sm th {
+            padding: 0.4rem 0.2rem !important;
+        }
+
+        .inputpicker-wrapped-list {
+            min-width: max-content !important;
+            max-width: max-content !important;
+        }
+
+            .inputpicker-wrapped-list table {
+                width: max-content !important;
+            }
+
+        .table th {
+            background-color: #404e68 !important;
+        }
+        #linesTableWrapper {
+            position: relative;
+            min-height: 80px;
+        }
+
+        #linesLoader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            min-height: 80px;
+            background: rgba(255, 255, 255, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 999;
+        }
+
+        .lines-spinner {
+            width: 30px;
+            height: 30px;
+            border: 4px solid #ddd;
+            border-top: 4px solid #404e68;
+            border-radius: 50%;
+            animation: linesSpinner 0.8s linear infinite;
+        }
+
+        #linesLoader span {
+            margin-top: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        @@keyframes linesSpinner {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+
+
+    <!-- second screen start -->
+    <div class="general-container">
+        <div class="purchase-details">
+
+            @using (Html.BeginForm("SaveForm", "PacketTeaPurchaseEntry", FormMethod.Post, new { id = "frmpo" }))
+            {
+                @Html.HiddenFor(m => m.T_TEA_HEAD.UNIT, new { id = "UNIT" })
+                @Html.HiddenFor(m => m.T_TEA_HEAD.GLOCA, new { id = "GLOCA" })
+                @Html.HiddenFor(m => m.T_TEA_HEAD.DOCDT, new { id = "DOCDT" })
+                @Html.HiddenFor(m => m.T_TEA_HEAD.DOCNO, new { id = "DOCNO" })
+                @Html.HiddenFor(m => m.T_TEA_HEAD.ID, new { id = "ID" })
+
+                @Html.AntiForgeryToken()
+
+
+                <!-- header content start -->
+                <div class="header-content">
+                    <!-- action btns start -->
+                    <div class="action-btns">
+                        <ul>
+
+                            <li>
+                                <a href="@Url.Action("Index", "PacketTeaPurchaseEntry")"
+                                   onclick="return ReleaseLockAndRedirect(this);">
+                                    <i class="fa fa-arrow-left"></i> Back
+                                </a>
+                            </li>
+                            <li>
+                                <button type="submit" style="background:none;border:0;cursor:pointer;">
+                                    <i class="fa fa-floppy-o"></i> Save
+                                </button>
+                            </li>
+                            <li><a href="@Url.Action("Index", "PacketTeaPurchaseEntry")" onclick="return ReleaseLockAndRedirect(this);"><i class="fa fa-times"></i> Cancel</a></li>
+
+
+                            <li><a href="javascript:void(0)" class="openPopup" data-popup="Notes"><i class="fa fa-file-text-o"></i> Notes</a></li>
+                            <li style="margin-left:auto">
+                                <label class="btn btn-inverse pull-right" style="margin:20px; border:none;">
+
+                                    Status : <span id="statusText" style="color:white;">Add</span>
+
+                                </label>
+                            </li>
+                        </ul>
+                    </div>
+                    <!-- action btns end -->
+                    <div class="header-details">
+                        <div class="left">
+                            <div class="order-code">
+                                <div class="txt">
+                                    <div class="title-heading">Packet Tea Purchase Entry</div>
+                                </div>
+                                <div class="field">
+                                    @*Unit Code & Name*@
+                                </div>
+                            </div>
+
+                            <div class="title-heading">
+                                PT NO. : @(Model.T_TEA_HEAD.GLOCA ?? "")@(Model.T_TEA_HEAD.DOCNO ?? "")
+                            </div>
+                        </div>
+
+                        <div class="right">
+
+                            <div>
+                                Status : <span id="statusText2">Unknown</span>
+                            </div>
+
+                            @*<input type="hidden" id="approvedVal" value="@((Model.TRN_PO_HEAD.APPROVED ?? "").Trim())" />*@
+                        </div>
+                    </div>
+                </div>
+                <!-- header content end -->
+                <div class="accordion-container">
+                    <!-- Accordion for Header Section -->
+                    <div class="accordion">
+                        <div class="accordion-header"><span class="txt">Header</span></div>
+                        <div class="accordion-body ">
+                            <!-- Customer account -->
+                            <div class="form-row">
+                                <div class="form-col-10">
+                                    <label>Document No <span>(*)</span></label>
+
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.DOCNO, new { @class = "form-control", @readonly = "readonly", tabindex = "-1" })
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Date</label>
+                                    <div class="date-field">
+
+                                        @Html.TextBoxFor(m => m.T_TEA_HEAD.DOCDT, "{0:dd/MM/yyyy}",
+                        new { @class = "form-control", @id = "PacketDate" })
+                                        <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
+                                             alt="calendar"
+                                             class="calendar-icon" data-target="PacketDate" />
+                                    </div>
+
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Pur. Location <span>(*)</span></label>
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.ALLOCATION, new { @class = "form-control" })
+
+                                </div>
+
+
+                                <div class="form-col-10">
+                                    <label>Flavour Purchase</label>
+
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.FLAVOUR, new { @class = "form-control" })
+                                </div>
+                                <div class="form-col-10">
+                                    <label>Vendor Code <span>(*)</span></label>
+
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.PCODE, new { @class = "form-control req vendor-code" })
+
+                                </div>
+                                <div class="form-col-20">
+                                    <label>Vendor Name</label>
+
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.VENDORNAME, new { @class = "form-control  vendor-desc", @readonly = "readonly" })
+
+                                </div>
+
+                                <!-- Dept Name -->
+
+
+
+                            </div>
+
+                            <div class="form-row" style="line-height:2.5;">
+                                <div class="form-col-10">
+                                    <label>Broker</label>
+
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.BROK_CODE, new { @class = "form-control broker-code" })
+                                </div>
+                                <div class="form-col-20">
+                                    <label>Broker Name</label>
+
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.BROKERNAME, new { @class = "form-control broker-desc", @readonly = "readonly", tabindex = "-1" })
+                                </div>
+
+                                <div class="form-col-10">
+                                    <label>Transporter</label>
+
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TPT, new { @class = "form-control trans-code" })
+                                </div>
+                                <div class="form-col-20">
+                                    <label>Transporter Name</label>
+
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TRANSPORTERNAME, new { @class = "form-control trans-desc", @readonly = "readonly", tabindex = "-1" })
+                                </div>
+                            </div>
+
+
+                        </div>
+                    </div>
+
+                    <!-- Accordion for Header Details Section -->
+                    <div class="accordion">
+                        <div class="accordion-header"><span class="txt">Header Details</span></div>
+                        <div class="accordion-body">
+
+                            <div class="form-row">
+                                <div class="form-col-20">
+                                    <label>Informations 1</label>
+                                    <input type="text" />
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label>Informations 2</label>
+                                    <input type="text" />
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label>Informations 3</label>
+                                    <input type="text" />
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label>Informations 4</label>
+                                    <input type="text" />
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label>Informations 5</label>
+                                    <input type="text" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Accordion for Lines Section -->
+                    <div class="accordion">
+                        <div class="accordion-header"><span class="txt">Lines</span></div>
+                        <div class="accordion-body active" style="display:block;">
+                            <!-- action btns start -->
+                            <div class="action-btns">
+                                <ul>
+                                    <li><a href="#"><i class="fa fa-plus"></i> Add</a></li>
+                                    <li><a href="#" id="btnRemoveAll"><i class="fa fa-trash-o"></i> Remove</a></li>
+                                    @*<li>
+                                            <a href="javascript:void(0)" class="openPopup" data-popup="InvoNoData">
+                                                <i class="fa fa-credit-card"></i>
+                                                Invo No Data
+                                            </a>
+                                        </li>*@
+                                </ul>
+                            </div>
+                            <!-- action btns end -->
+                            <!-- table start -->
+                            <div class="table-responsive" id="linesTableWrapper">
+
+                                <!-- Lines Loader -->
+                                <div id="linesLoader">
+                                    <div class="lines-spinner"></div>
+                                    <span>Loading...</span>
+                                </div>
+                                <table class="border" id="mainTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:30px;" hidden>ID</th>
+                                            <th style="width:30px;" hidden>Loca</th>
+                                            <th style="width:30px;" hidden>Unit</th>
+                                            <th style="width:30px;" hidden>PCD</th>
+                                            <th style="width:30px;" hidden>DocDate</th>
+                                            <th style="width:30px;" hidden>DocYear</th>
+                                            <th style="width:30px;" hidden>DocNo</th>
+                                            <th style="width:30px;" hidden>DocType</th>
+                                            <th style="width:30px;" hidden>IndUnit</th>
+                                            <th style="width:30px;" hidden>IndLoca</th>
+                                            <th style="width:30px;" hidden>IndType</th>
+                                            <th style="width:30px;" hidden>SrlNo</th>
+                                            <th>Select</th>
+                                            <th>Sl.</th>
+                                            <th>Inv No  <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th>Mark Code  <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th>Mark</th>
+                                            <th>Grade Code  <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th>Grade</th>
+                                            <th>Category</th>
+                                            <th>Bags  <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Net Wt  <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Gross Wt <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Total Net Wt <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th>Size Code <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th>Size</th>
+                                            <th style="text-align:right;">Rate  <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Amount</th>
+                                            <th style="text-align:right;">Disc %  <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Disc Value  <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Taxable Amt</th>
+                                            <th style="text-align:right;">CGST %</th>
+                                            <th style="text-align:right;">CGST Amt</th>
+                                            <th style="text-align:right;">SGST %</th>
+                                            <th style="text-align:right;">SGST Amt</th>
+                                            <th style="text-align:right;">IGST %</th>
+                                            <th style="text-align:right;">IGST Amt</th>
+                                            <th style="text-align:right;">Total Amt</th>
+                                            <th>WH Code  <span style="font-weight: bold; color: red;">(*)</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                                <div id="modalContainer"></div>
+                            </div>
+                            <!-- table end -->
+                        </div>
+                    </div>
+
+                    <!-- Accordion for Line Details Section -->
+                    <div class="accordion">
+                        <div class="accordion-header"><span class="txt">Line Details</span></div>
+                        <div class="accordion-body active" style="display:block;">
+                            <div class="form-row">
+                                <div class="form-col-20">
+                                    <label>Remarks</label>
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.REMARKS, new { @class = "form-control " })
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label>Total GST As Per System </label>
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_GSTAMT_M, new { @class = "form-control" })
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label> Rounded Off</label>
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.ROUNDOFF, new { @class = "form-control" })
+                                </div>
+
+                                <div class="form-col-20">
+                                    <label> Total Amt</label>
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_AMT, new { @class = "form-control" })
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- second screen end -->
+                    <!-- Overlay -->
+                    <!--<div class="popup-overlay">
+
+                    <div id="InvoNoData" class="popup-box">
+
+                        <div class="popup-header">
+                            <h2>  Invo No Data  </h2>
+                            <button class="close-btn" type="button"> X</button>
+                        </div>-->
+                    <!-- Existing Search -->
+                    <!--<div class="search-box">
+                        <div class="search">
+                            <input type="text" id="searchInput" placeholder="Search" />
+
+                        </div>
+                    </div>-->
+                    <!-- Added section only -->
+                    <!--<div class="form-row" style="line-height: 2.5; margin: 0 -0.1px;">
+
+
+
+                    <div class="form-col-10">
+                        <label>Contact No</label>
+                        <input type="text"
+                               id="txtContactNo"
+                               class="form-control Catagory-desc"
+                                />
+                    </div>
+                    <div class="form-col-10">
+                        <label>Invno </label>
+                        <input type="text"
+                               id="txtInvNo"
+                               class="form-control" />
+                    </div>-->
+                    <!-- ADD HERE -->
+                    <!--<div style="display:flex; align-items:flex-end; gap:18px; margin-left:auto;">
+                            <button type="button"
+                                    id="btnGetData"
+                                    class="btn-blue"
+                                    style="width:60px;height:30px;">
+                                Get Data
+                            </button>
+                            <button type="button"
+                                    id="btnRefresh"
+                                    class="btn-white"
+                                    style="width:60px;height:30px;">
+                                Refresh
+                            </button>
+                        </div>
+
+                    </div>-->
+                    <!-- Existing table unchanged -->
+                    <!--<div class="table-responsive" id="prScroll" style="margin-top:8px;">
+                        <table class="border main-table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" id="chkAllRows" />
+                                    </th>
+                                    <th style="text-align:right;">Sl.</th>
+                                    <th style="text-align:right;">Sl.</th>
+                                    <th>Tag</th>
+                                    <th>Inv No.</th>
+                                    <th>MARK</th>
+                                    <th>Grade</th>
+                                    <th>Category</th>
+                                    <th>Bags</th>
+                                    <th style="text-align:right;">Net. Wt.</th>
+                                    <th style="text-align:right;">Gross Wt.</th>
+                                    <th style="text-align:right;">Total Net Wt.</th>
+                                    <th>Size Code</th>
+                                    <th style="text-align:right;">Rate</th>
+                                    <th style="text-align:right;">Amount</th>
+                                    <th style="text-align:right;">Disc %</th>
+                                    <th style="text-align:right;">Disc Value</th>
+                                    <th style="text-align:right;">Taxable Amt</th>
+                                    <th style="text-align:right;">CGST %</th>
+                                    <th style="text-align:right;">CGST Amt</th>
+                                    <th style="text-align:right;">SGST %</th>
+                                    <th style="text-align:right;">SGST Amt</th>
+                                    <th style="text-align:right;">IGST %</th>
+                                    <th style="text-align:right;">IGST Amt</th>
+
+
+                                </tr>
+                            </thead>
+
+                            <tbody id="prBody"></tbody>
+                        </table>
+                    </div>-->
+                    <!-- Existing buttons -->
+                    <!--<div class="bottom-btn">
+                                <button class="btn-blue" type="button" id="btnInvoNoDataOk"> OK</button>
+                                <button class="btn-white" type="button" id="btnInvoNoDataCancel"> Cancel</button>
+                            </div>
+
+                        </div>
+
+
+
+
+
+                    </div>-->
+                    <!-- Popup Notes -->
+                    <div id="Notes" class="popup-box" style=" width: 50%;">
+                        <div class="popup-header">
+                            <h2>Notes</h2>
+                            <button class="close-btn" type="button">X</button>
+                        </div>
+                        <div class="terms-code">
+                            <label>Terms Code</label>
+                            <select>
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                            </select>
+                            <button>Get Data</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="border main-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:10%;">Sl No</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td><input type="text" /></td><td><input type="text" /></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="bottom-btn">
+                            <button class="btn-blue">Save</button>
+                            <button class="btn-white close-btn" type="button">Cancel</button>
+                        </div>
+
+
+                    </div>
+                </div>
+            }
+
+        </div>
+    </div>
+
+    <script src="~/Controllers/Test/assets/js/jquery-ui.js"></script>
+    <script src="~/Controllers/Test/assets/js/custom.js"></script>
+
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            var Docno = $('#DOCNO').val();   // SLNO input id
+
+            if (Docno && $.trim(Docno) !== '') {
+
+                // Edit Mode
+                $('#statusText').text('Edit');
+                $("#PacketDate").prop("disabled", true);
+            } else {
+
+                // Add Mode
+                $('#statusText').text('Add');
+
+            }
+
+        });
+        $(document).ready(function () {
+
+            var status = $('#approvedVal').val();
+
+            console.log("STATUS RAW:", status); // debug
+
+            status = (status || "").trim().toUpperCase(); // 🔥 IMPORTANT
+
+            var text = "Unknown";
+
+            if (status === "Y") {
+                text = "Approved";
+            } else if (status === "N") {
+                text = "Pending";
+            } else if (status === "R") {
+                text = "Rejected";
+            }
+
+            $('#statusText2').text(text);
+        });
+    </script>
+
+    <script>
+
+        function LoadPacketTeaPurchaseDetails() {
+
+    var unit = $('#UNIT').val();
+            var Docdt = $('#DOCDT').val() || '';
+
+            var docno = $('#DOCNO').val() || '';
+            $('#linesLoader').css('display', 'flex');
+
+    $.ajax({
+        url: '@Url.Action("LoadPacketTeaPurchaseDetails", "PacketTeaPurchaseEntry")',
+        type: 'GET',
+        data: {
+
+             docno: docno,
+
+            unit: unit,
+            Docdt: Docdt
+        },
+        success: function (html) {
+            $('#mainTable tbody').html(html);
+
+
+            $("#mainTable tbody tr").each(function () {
+
+                var invNo = $(this).find("input[name*='.INVNO']").val();
+
+                if (invNo) {
+
+
+                        invNo: $.trim(invNo)
+
+
+                }
+
+            });
+        },
+        error: function (xhr) {
+
+            console.log(xhr.responseText);
+
+            $('#mainTable tbody').html(
+                '<tr>' +
+                '<td colspan="28" style="text-align:center;color:red;">' +
+                'Unable to load product details.' +
+                '</td>' +
+                '</tr>'
+            );
+        },
+
+        complete: function () {
+
+            // Hide loader after response/error
+            $('#linesLoader').hide();
+        }
+    });
+        }
+
+     // ✅ PAGE LOAD
+     $(document).ready(function () {
+         LoadPacketTeaPurchaseDetails();
+     });
+
+    </script>
+    <script>
+    function formatDateToYMD(date) {
+        var year = date.getFullYear();
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var day = String(date.getDate()).padStart(2, '0');
+
+        return year + '/' + month + '/' + day;
+    }
+
+    $(function () {
+
+        var $dateInputs = $("#PacketDate");
+        var activeInput = null;
+
+        // Destroy old datepicker
+        $dateInputs.each(function () {
+            var $el = $(this);
+
+            if ($el.data("datepicker")) {
+                $el.datepicker("destroy");
+            }
+
+            $el.removeClass("hasDatepicker");
+        });
+
+        function ensureOverlay() {
+            if (!$(".ui-datepicker-overlay").length) {
+                $("body").append('<div class="ui-datepicker-overlay"></div>');
+            }
+        }
+
+        // Get permission days
+        var prno = $('#Docno').val();
+        var permissionDate = 0;
+
+        if (prno && $.trim(prno) !== '') {
+            // Edit Mode
+            permissionDate = parseInt('@((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Eday)') || 0;
+        } else {
+            // Add Mode
+            permissionDate = parseInt('@((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Aday)') || 0;
+        }
+
+        var pDate = new Date();
+        pDate.setDate(pDate.getDate() - permissionDate);
+
+        console.log("Min Date:", formatDateToYMD(pDate));
+
+        $dateInputs.datepicker({
+            dateFormat: "dd/mm/yy",
+            minDate: pDate,
+            maxDate: 0,
+            showAnim: "",
+
+            beforeShow: function (input) {
+                activeInput = input;
+
+                ensureOverlay();
+                $(".ui-datepicker-overlay").show();
+                $("body").addClass("datepicker-open");
+
+                setTimeout(function () {
+                    $("#ui-datepicker-div")
+                        .addClass("force-block")
+                        .css({ zIndex: 99999 });
+                }, 0);
+            },
+
+            onChangeMonthYear: function () {
+                setTimeout(function () {
+                    $("#ui-datepicker-div")
+                        .addClass("force-block")
+                        .css({ zIndex: 99999 });
+                }, 0);
+            },
+
+            onClose: function () {
+                $(".ui-datepicker-overlay").hide();
+                $("#ui-datepicker-div").removeClass("force-block");
+                $("body").removeClass("datepicker-open");
+                activeInput = null;
+            }
+        });
+
+        // Overlay click closes calendar
+        $(document).on("click", ".ui-datepicker-overlay", function () {
+            if (activeInput) {
+                $(activeInput).datepicker("hide");
+            }
+        });
+
+        // Open calendar on textbox click
+        $("#PacketDate").on("click", function () {
+            $(this).datepicker("show");
+        });
+
+    });
+    </script>
+    <script>
+        // ── Manual typing max date validation (PurchaseDate) ──
+        $(document).on("blur", "#PacketDate", function () {
+            var $el = $(this);
+            var val = $el.val();
+            if (!val) return;
+
+            // Strict dd/mm/yyyy shape check first
+            if (!/^\d{2}\/\d{2}\/\d{4}$/.test(val)) {
+                $.confirm({
+                    title: 'Date Validation',
+                    type: 'red',
+                    content: 'Invalid date format. Please enter a valid date (dd/mm/yyyy).',
+                    buttons: { ok: function () { $el.val('').focus(); } }
+                });
+                return;
+            }
+
+            var typedDate;
+            try {
+                typedDate = $.datepicker.parseDate("dd/mm/yy", val);
+            } catch (e) {
+                $.confirm({
+                    title: 'Date Validation',
+                    type: 'red',
+                    content: 'Invalid date. Please enter a valid date.',
+                    buttons: { ok: function () { $el.val('').focus(); } }
+                });
+                return;
+            }
+
+            var maxDate = new Date();
+            maxDate.setHours(0, 0, 0, 0);
+            typedDate.setHours(0, 0, 0, 0);
+
+            if (typedDate > maxDate) {
+                $.confirm({
+                    title: 'Date Validation',
+                    type: 'red',
+                    content: 'Purchase Order Date cannot be greater than today.',
+                    buttons: { ok: function () { $el.val('').focus(); } }
+                });
+            }
+        });
+    </script>
+    <script>
+        $(document).on('click', '.vendor-code', function () {
+
+    var $input = $(this);
+
+    $('.inputpicker-wrapped-list').remove();
+
+    if ($input.data('inputpicker')) {
+        $input.inputpicker('show');
+        return;
+    }
+
+    $input.inputpicker({
+        url: '@Url.Action("GetVendor", "PacketTeaPurchaseEntry")',
+        fields: [
+            { name: 'CODE', text: 'CODE' },
+            { name: 'NAME', text: 'NAME' },
+            { name: 'GST_NO', text: 'GST NO' },
+            { name: 'CITY', text: 'CITY' },
+             { name: 'PIN', text: 'PIN' },
+            { name: 'STATE', text: 'STATE' },
+            { name: 'COUNTRY', text: 'COUNTRY' }
+        ],
+        fieldText: 'CODE',
+        fieldValue: 'CODE', 
+        headShow: true,
+        filterOpen: true,
+        autoOpen: true,
+        pagination: true,
+        pageField: 'p',
+        pageLimitField: 'limit',
+        pageLimit: 10,
+        pageCountField: 'count',
+        width: 'auto',
+        urlDelay: 1
+    });
+
+    // ✅ SELECT EVENT (FIXED)
+    $input.off('inputpicker.select').on('inputpicker.select', function (e, item) {
+
+        if (!item) return;
+
+        // 🔥 direct selector (NO tr)
+        $('.vendor-code').val(item.CODE);
+        $('.vendor-desc').val(item.NAME || '');
+
+        $(this).inputpicker('hide');
+    });
+
+});
+
+
+// ✅ CHANGE EVENT (FIXED)
+$(document).on('change', '.broker-code', function () {
+
+    var code = $(this).val();
+
+    if (!code) {
+        $('.vendor-desc').val('');
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("GetVendor", "PacketTeaPurchaseEntry")',
+        type: 'GET',
+        data: { q: code, limit: 1, p: 1 },
+        success: function (res) {
+
+            if (res && res.data && res.data.length > 0) {
+                $('.vendor-desc').val(res.data[0].NAME || '');
+            } else {
+                $('.vendor-desc').val('');
+            }
+        }
+    });
+    $(document).on('blur', '.vendor-code', function () {
+
+    var $input = $(this);
+    var code = $input.val().trim();
+
+    // small delay → allows inputpicker select to complete first
+    setTimeout(function () {
+
+        // ❌ if empty → clear desc
+        if (!code) {
+            $('.vendor-desc').val('');
+            return;
+        }
+
+        // 🔍 verify code from server
+        $.ajax({
+            url: '@Url.Action("GetVendor", "PacketTeaPurchaseEntry")',
+            type: 'GET',
+            data: { q: code, limit: 1, p: 1 },
+            success: function (res) {
+
+                // ❌ NO RESULT → CLEAR BOTH
+                if (!res || !res.data || res.data.length === 0) {
+
+                    $input.val('');                 // 🔥 clear code
+                    $('.vendor-desc').val('');       // 🔥 clear desc
+
+                }
+
+                // ✅ VALID → keep as is (already handled in change)
+            }
+        });
+
+    }, 200); // important delay
+
+});
+
+
+
+});
+    </script>
+
+    <script>
+$(document).on('click', '.broker-code', function () {
+
+    var $input = $(this);
+
+    $('.inputpicker-wrapped-list').remove();
+
+    if ($input.data('inputpicker')) {
+        $input.inputpicker('show');
+        return;
+    }
+
+    $input.inputpicker({
+        url: '@Url.Action("GetBroker", "PacketTeaPurchaseEntry")',
+        fields: [
+            { name: 'CODE', text: 'CODE' },
+            { name: 'NAME', text: 'NAME' }
+        ],
+        fieldText: 'CODE',
+        fieldValue: 'CODE',
+        headShow: true,
+        filterOpen: true,
+        autoOpen: true,
+        pagination: true,
+        pageField: 'p',
+        pageLimitField: 'limit',
+        pageLimit: 10,
+        pageCountField: 'count',
+        width: 'auto',
+        urlDelay: 1
+    });
+
+    // ✅ SELECT EVENT (FIXED)
+    $input.off('inputpicker.select').on('inputpicker.select', function (e, item) {
+
+        if (!item) return;
+
+        // 🔥 direct selector (NO tr)
+        $('.broker-code').val(item.CODE);
+        $('.broker-desc').val(item.NAME || '');
+
+        $(this).inputpicker('hide');
+    });
+
+});
+
+
+// ✅ CHANGE EVENT (FIXED)
+$(document).on('change', '.broker-code', function () {
+
+    var code = $(this).val();
+
+    if (!code) {
+        $('.broker-desc').val('');
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("GetBroker", "PacketTeaPurchaseEntry")',
+        type: 'GET',
+        data: { q: code, limit: 1, p: 1 },
+        success: function (res) {
+
+            if (res && res.data && res.data.length > 0) {
+                $('.broker-desc').val(res.data[0].NAME || '');
+            } else {
+                $('.broker-desc').val('');
+            }
+        }
+    });
+    $(document).on('blur', '.broker-code', function () {
+
+    var $input = $(this);
+    var code = $input.val().trim();
+
+    // small delay → allows inputpicker select to complete first
+    setTimeout(function () {
+
+        // ❌ if empty → clear desc
+        if (!code) {
+            $('.broker-desc').val('');
+            return;
+        }
+
+        // 🔍 verify code from server
+        $.ajax({
+            url: '@Url.Action("GetBroker", "PacketTeaPurchaseEntry")',
+            type: 'GET',
+            data: { q: code, limit: 1, p: 1 },
+            success: function (res) {
+
+                // ❌ NO RESULT → CLEAR BOTH
+                if (!res || !res.data || res.data.length === 0) {
+
+                    $input.val('');                 // 🔥 clear code
+                    $('.broker-desc').val('');       // 🔥 clear desc
+
+                }
+
+                // ✅ VALID → keep as is (already handled in change)
+            }
+        });
+
+    }, 200); // important delay
+
+});
+
+
+
+});
+    </script>
+
+    <script>
+$(document).on('click', '.trans-code', function () {
+
+    var $input = $(this);
+
+    $('.inputpicker-wrapped-list').remove();
+
+    if ($input.data('inputpicker')) {
+        $input.inputpicker('show');
+        return;
+    }
+
+    $input.inputpicker({
+        url: '@Url.Action("GetTransp", "PacketTeaPurchaseEntry")',
+        fields: [
+            { name: 'CODE', text: 'CODE' },
+            { name: 'NAME', text: 'NAME' }
+        ],
+        fieldText: 'CODE',
+        fieldValue: 'CODE',
+        headShow: true,
+        filterOpen: true,
+        autoOpen: true,
+        pagination: true,
+        pageField: 'p',
+        pageLimitField: 'limit',
+        pageLimit: 10,
+        pageCountField: 'count',
+        width: 'auto',
+        urlDelay: 1
+    });
+
+    // ✅ SELECT EVENT (FIXED)
+    $input.off('inputpicker.select').on('inputpicker.select', function (e, item) {
+
+        if (!item) return;
+
+        // 🔥 direct selector (NO tr)
+        $('.trans-code').val(item.CODE);
+        $('.trans-desc').val(item.NAME || '');
+
+        $(this).inputpicker('hide');
+    });
+
+});
+
+
+// ✅ CHANGE EVENT (FIXED)
+        $(document).on('change', '.trans-code', function () {
+
+    var code = $(this).val();
+
+    if (!code) {
+        $('.trans-desc').val('');
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("GetTransp", "PacketTeaPurchaseEntry")',
+        type: 'GET',
+        data: { q: code, limit: 1, p: 1 },
+        success: function (res) {
+
+            if (res && res.data && res.data.length > 0) {
+                $('.trans-desc').val(res.data[0].NAME || '');
+            } else {
+                $('.trans-desc').val('');
+            }
+        }
+    });
+    $(document).on('blur', '.trans-code', function () {
+
+    var $input = $(this);
+    var code = $input.val().trim();
+
+    // small delay → allows inputpicker select to complete first
+    setTimeout(function () {
+
+        // ❌ if empty → clear desc
+        if (!code) {
+            $('.trans-desc').val('');
+            return;
+        }
+
+        // 🔍 verify code from server
+        $.ajax({
+            url: '@Url.Action("GetTransp", "PacketTeaPurchaseEntry")',
+            type: 'GET',
+            data: { q: code, limit: 1, p: 1 },
+            success: function (res) {
+
+                // ❌ NO RESULT → CLEAR BOTH
+                if (!res || !res.data || res.data.length === 0) {
+
+                    $input.val('');                 // 🔥 clear code
+                    $('.trans-desc').val('');       // 🔥 clear desc
+
+                }
+
+                // ✅ VALID → keep as is (already handled in change)
+            }
+        });
+
+    }, 200); // important delay
+
+});
+
+});
+    </script>
+
+</body>
+</html>
+
+
+

@@ -363,9 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 /PacketTea/Web.config
 /PacketTea/PacketTea.csproj
-/PacketTea/Web.config
-/PacketTea/PacketTea.csproj
-/PacketTea/PacketTea.csproj
-/PacketTea/PacketTea.csproj
 /PacketTea/PacketTea.csproj.user
-/PacketTea/PacketTea.csproj
+/PacketTea/web.config.disabled_bak

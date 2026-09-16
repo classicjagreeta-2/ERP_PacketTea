@@ -1,0 +1,905 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title Packet Tea - @System.Configuration.ConfigurationManager.AppSettings["DatabaseType"]</title>
+
+    <!-- HTML5 Shim and Respond.js IE10 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 10]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+      <![endif]-->
+    <!-- Meta -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="#">
+    <meta name="keywords" content="flat ui, admin Admin , Responsive, Landing, Bootstrap, App, Template, Mobile, iOS, Android, apple, creative app">
+    <meta name="author" content="#">
+    <!-- Favicon icon -->
+    <link rel="icon" href="~/Content/libraries/assets/images/faviconcc.ico" type="image/x-icon">
+    <!-- Google font-->
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600,800" rel="stylesheet">
+    <!-- Required Fremwork -->
+    <link rel="stylesheet" type="text/css" href="~/Content/libraries/bower_components/bootstrap/css/bootstrap.min.css">
+    <!-- themify-icons line icon -->
+    <link rel="stylesheet" type="text/css" href="~/Content/libraries/assets/icon/themify-icons/themify-icons.css">
+    <!-- ico font -->
+    <link rel="stylesheet" type="text/css" href="~/Content/libraries/assets/icon/icofont/css/icofont.css">
+    <!-- feather Awesome -->
+    <link rel="stylesheet" type="text/css" href="~/Content/libraries/assets/icon/feather/css/feather.css">
+    <!-- Data Table Css -->
+    <link href="~/Content/libraries/bower_components/datatables.net-bs4/css/dataTables.bootstrap4.min.css" rel="stylesheet" />
+    <link href="~/Content/libraries/bower_components/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css" rel="stylesheet" />
+    <link href="~/Content/libraries/assets/pages/data-table/css/buttons.dataTables.min.css" rel="stylesheet" />
+    <!-- Style.css -->
+    <link rel="stylesheet" type="text/css" href="~/Content/libraries/assets/css/jquery.mCustomScrollbar.css">
+    <link rel="stylesheet" type="text/css" href="~/Content/PagedList.css" />
+    <link rel="stylesheet" type="text/css" href="~/Content/libraries/assets/css/style.css">
+    <!-- Custom.css -->
+    <link rel="stylesheet" href="~/Content/Site.css" />
+    <link href="~/Content/libraries/assets/css/font-awesome.min.css" rel="stylesheet" />
+    <link href="~/libraries/msg/jquery-confirm.min.css" rel="stylesheet" />
+    @*<link href="~/Areas/ReportArea/ReportArea/Content/themes/base/minified/jquery-ui.min.css" rel="stylesheet" />*@
+    <style>
+        .error {
+            color: #cc0033;
+            display: inline-block;
+            font-size: 12px;
+            line-height: 15px;
+            margin: 5px 0 0;
+            display: flex; /* Instead of inline-block */
+            position: relative; /* Relative to parent */
+            /* background-color: #FFBABA;*/
+            /*background-image: url('https://i.imgur.com/GnyDvKN.png');*/
+        }
+
+        #mCSB_1_container > ul.pcoded-submenu:not(:has(.pcoded-hasmenu)) {
+            display: none !important;
+        }
+    </style>
+    @*SB*@
+    <!-- Required Jquery -->
+    <script type="text/javascript" src="~/Content/libraries/bower_components/jquery/js/jquery.min.js"></script>
+    <script type="text/javascript" src="~/Content/libraries/bower_components/jquery-ui/js/jquery-ui.min.js"></script>
+    <script src="~/Content/libraries/assets/pages/form-validation/validate.js"></script>
+    <script src="~/Content/libraries/assets/pages/form-validation/form-validation.js"></script>
+    <script src="~/Scripts/jquery.validate.min.js"></script>
+    <script src="~/libraries/Calender/js/additional-methods.min.js"></script>
+    <script src="~/Scripts/jquery.unobtrusive-ajax.min.js"></script>
+    <script type="text/javascript" src="~/Content/libraries/bower_components/popper.js/js/popper.min.js"></script>
+    <script type="text/javascript" src="~/Content/libraries/bower_components/bootstrap/js/bootstrap.min.js"></script>
+    <!-- jquery slimscroll js -->
+    <script type="text/javascript" src="~/Content/libraries/bower_components/jquery-slimscroll/js/jquery.slimscroll.js"></script>
+    <!-- modernizr js -->
+    <script type="text/javascript" src="~/Content/libraries/bower_components/modernizr/js/modernizr.js"></script>
+    <script type="text/javascript" src="~/Content/libraries/bower_components/modernizr/js/css-scrollbars.js"></script>
+    <!-- Chart js -->
+    <script type="text/javascript" src="~/Content/libraries/bower_components/chart.js/js/Chart.js"></script>
+    <!-- amchart js -->
+    <script type="text/javascript" src="~/Content/libraries/assets/pages/widget/amchart/amcharts.js"></script>
+    <script type="text/javascript" src="~/Content/libraries/assets/pages/widget/amchart/serial.js"></script>
+    <script type="text/javascript" src="~/Content/libraries/assets/pages/widget/amchart/light.js"></script>
+    <!-- data-table js -->
+    @*<script src="..\Content\libraries\bower_components\datatables.net\js\jquery.dataTables.min.js"></script>
+        <script src="..\Content\libraries\bower_components\datatables.net-buttons\js\dataTables.buttons.min.js"></script>
+        <script src="..\Content\libraries\assets\pages\data-table\js\jszip.min.js"></script>
+        <script src="..\Content\libraries\assets\pages\data-table\js\pdfmake.min.js"></script>
+        <script src="..\Content\libraries\assets\pages\data-table\js\vfs_fonts.js"></script>
+        <script src="..\Content\libraries\bower_components\datatables.net-buttons\js\buttons.print.min.js"></script>
+        <script src="..\Content\libraries\bower_components\datatables.net-buttons\js\buttons.html5.min.js"></script>
+        <script src="..\Content\libraries\bower_components\datatables.net-bs4\js\dataTables.bootstrap4.min.js"></script>
+        <script src="..\Content\libraries\bower_components\datatables.net-responsive\js\dataTables.responsive.min.js"></script>
+        <script src="..\Content\libraries\bower_components\datatables.net-responsive-bs4\js\responsive.bootstrap4.min.js"></script>*@
+    <!-- i18next.min.js -->
+    @*<script type="text/javascript" src="..\Content\libraries\bower_components\i18next\js\i18next.min.js"></script>
+        <script type="text/javascript" src="..\Content\libraries\bower_components\i18next-xhr-backend\js\i18nextXHRBackend.min.js"></script>
+        <script type="text/javascript" src="..\Content\libraries\bower_components\i18next-browser-languagedetector\js\i18nextBrowserLanguageDetector.min.js"></script>
+        <script type="text/javascript" src="..\Content\libraries\bower_components\jquery-i18next\js\jquery-i18next.min.js"></script>*@
+    <!-- Custom js -->
+    <script type="text/javascript" src="~/Content/libraries/assets/js/SmoothScroll.js"></script>
+    <script src="~/Content/libraries/assets/pages/data-table/js/data-table-custom.js"></script>
+    <script type="text/javascript" src="~/Content/libraries/assets/js/pcoded.min.js"></script>
+    <script type="text/javascript" src="~/Content/libraries/assets/js/jquery.mCustomScrollbar.concat.min.js"></script>
+    <script type="text/javascript" src="~/Content/libraries/assets/js/vartical-layout.min.js"></script>
+    @*<script type="text/javascript" src="~/Content/libraries/assets/pages/dashboard/analytic-dashboard.min.js"></script>*@ @*testing the issue task is cancelled issue*@
+    <script type="text/javascript" src="~/Content/libraries/assets/js/script.js"></script>
+    <script src="~/libraries/msg/jquery-confirm.min.js"></script>
+    @*Icon*@
+    <script type="module" src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"></script>
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async="" src="https://www.googletagmanager.com/gtag/js?id=UA-23581568-13"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    @*<script src="~/libraries/js/plugins/forms/select2-cascade.js"></script>*@
+
+    @*<script src="~/Scripts/jquery.cookie.min.js"></script>*@
+    @Scripts.Render("~/bundles/modernizr")
+    <script src="~/Scripts/jquery.userTimeout.js"></script>
+    <script src="~/Content/libraries/assets/pages/sessionTimeout/jquery.sessionTimeout.js"></script>
+    <script src="~/Content/libraries/assets/pages/sessionTimeout/jquery.timeago.js"></script>
+    <script src="~/libraries/bower_components/jquery-ui/js/jquery-ui.min.js"></script>
+
+    @*<script src="~/Content/libraries/assets/pages/session-idle-Timeout/session-idle-Timeout-custom.js"></script>
+        <script src="~/Content/libraries/assets/js/vartical-layout.min.js"></script>*@
+    <script src="~/Content/libraries/assets/js/pcoded.min.js"></script>
+
+    <script type="text/javascript">
+
+        jQuery(window).bind('beforeunload', function (event) {
+            event.stopPropagation();
+            event.returnValue = "Attention !\nVous n'avez pas sauver vos paramètres.\nSi vous appuyer sur OK, vous perdrez les informations en cours d'utilisation...\n\nLa fenêtre est sur le point de se fermer";
+            return event.returnValue;
+        });
+
+        $(document).ready(function () {
+            jQuery(function ($) {
+                $(window).scroll(function fix_element() {
+                    $('#target').css(
+                        $(window).scrollTop() > 100
+                            ? { 'position': 'fixed', 'top': '60px' }
+                            : { 'position': 'relative', 'top': 'auto' }
+                    );
+                    return fix_element;
+                }());
+            });
+
+            $(window).on('beforeunload', function () {
+                return '';
+            });
+
+            function disableBack() {
+                window.history.forward()
+            }
+            window.onload = disableBack();
+            window.onpageshow = function (e) {
+                if (e.persisted)
+                    disableBack();
+            }
+        });
+
+        $(document).ready(function () {
+            $("form").validate();
+        });
+
+        $('document').ready(function () {
+            var loadTime = new Date(),
+                sessionDuration = 60000000, // in sec
+                promptDuration = 2000,
+                countDown;
+
+            setInterval(function () {
+                // use the wonderful timeago plugin to display when the page was originaly opened.
+                var timepassed = $.timeago(loadTime);
+                $('#idletime').text(timepassed);
+            }, 1000);
+
+            // print the log of plugin events
+            $(document).bind("eventLogged.sessionTimeout", function () {
+                //debugger;
+                // the plugin event log is returned as an array
+                // break it out to multiple lines then update the status field
+                if (console && console.log) {
+                    var m = $.fn.sessionTimeout("printLog").length - 1;
+                    console.log($.fn.sessionTimeout("printLog")[m]);
+                }
+                // write the log into the status text area
+                $("#status").val($.fn.sessionTimeout("printLog").join("\n"));
+            });
+
+            $(document).bind('ping.sessionTimeout', function () {
+                //debugger;
+                // log the ping event
+                var t = new Date();
+                // reset the countdown
+                clearTimeout(countDown);
+                // Countdown to session timeout
+                countDown = window.setInterval(function () {
+                    (timeRemaining -= 1000);
+                    if (timeRemaining >= 0) {
+
+                        // update the display with the time remaining
+                        $('#counter , #remaining').text(timeRemaining / 1000 + " sec.");
+                    }
+                }, 1000);
+            });
+
+            $(document).bind('create.sessionTimeout', function () {
+                //debugger;
+                // when autoping is true
+                // the session will never expire, so the modal window
+                // will never close. So we can close here instead
+                ///$("#dialog-session").dialog('close');
+                // display the session duration
+                $('#duration').text(sessionDuration / 1000 + ' sec.');
+                // reset the countdown
+                clearTimeout(countDown);
+                // get the current session duration
+                // you could also use $.fn.sessionTimeout('duration');
+                // but you'd get an extra console.log entry in the demo
+                timeRemaining = sessionDuration;
+                // Countdown to session timeout
+                countDown = window.setInterval(function () {
+                    (timeRemaining -= 1000);
+                    if (timeRemaining >= 0) {
+                        // update the display with the time remaining
+                        $('#counter , #remaining').text(timeRemaining / 1000 + " sec.");
+                    }
+                }, 1000);
+            });
+
+            $(document).bind('destroy.sessionTimeout', function () {
+                debugger;
+                // delete the coundown timer when we destroy the plugin
+                clearTimeout(countDown);
+            });
+
+            // setup the sessionTimeout plugin
+            $.fn.sessionTimeout({
+                autoping: false,
+                timeout: sessionDuration,
+                resource: "../src/spacer.gif",
+                promptfor: promptDuration,
+                beforetimeout: function () {
+                    debugger;
+                    // when session times out
+                    // open a dialog box
+                    $.confirm({
+                        theme: 'supervan', // 'material', 'bootstrap'
+                        title: 'Logout?',
+                        content: 'Your time is out, you will be automatically logged out.',
+                        buttons: {
+                            confirm: {
+                                text: 'Stay login',
+                                action: function () {
+                                    $.fn.sessionTimeout();
+                                }
+                            },
+                            cancel: {
+                                text: 'Relogin',
+                                action: function () {
+                                    window.location = "/";
+                                    /* $.alert('The user was logged out');*/
+                                }
+                            }
+                        }
+                    });
+
+                },
+                ontimeout: function () {
+                    debugger;
+                    ///$( "#dialog-session" ).dialog('close');
+                }
+            });
+
+            $('#btnInit').click(function () {
+                debugger;
+                $.fn.sessionTimeout('init');
+            });
+            $('#btnPing').click(function () {
+                debugger;
+                $.fn.sessionTimeout('ping');
+            });
+            $('#btnDestroy').click(function () {
+                debugger;
+                $.fn.sessionTimeout('destroy');
+            });
+        });
+    </script>
+
+    @*<script type="text/javascript">
+            $('document').ready(function () {
+                 var d = new Date();
+                var toDate = d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate();
+                var expiresTime = new Date(toDate + " " + "@Session["expiresTime"]").getTime();
+                var latestTime = new Date().getTime();
+
+                var loadTime = new Date(),
+                    sessionDuration = (expiresTime - latestTime), //parseInt("@Session["expiresMin"]"), //60000, // in sec
+                    promptDuration = 5000,
+                    countDown;
+
+                setInterval(function () {
+                    // use the wonderful timeago plugin to display when the page was originaly opened.
+                    var timepassed = $.timeago(loadTime);
+                    $('#idletime').text(timepassed);
+                }, 1000);
+
+
+                // print the log of plugin events
+                $(document).bind("eventLogged.sessionTimeout", function () {
+                    debugger;
+                    // the plugin event log is returned as an array
+                    // break it out to multiple lines then update the status field
+                    if (console && console.log) {
+                        var m = $.fn.sessionTimeout("printLog").length - 1;
+                        console.log($.fn.sessionTimeout("printLog")[m]);
+                    }
+                    // write the log into the status text area
+                    $("#status").val($.fn.sessionTimeout("printLog").join("\n"));
+                });
+
+                $(document).bind('ping.sessionTimeout', function () {
+                    debugger;
+                    // log the ping event
+                    var t = new Date();
+                    // reset the countdown
+                    clearTimeout(countDown);
+                    // Countdown to session timeout
+                    countDown = window.setInterval(function () {
+                        (timeRemaining -= 1000);
+                        if (timeRemaining >= 0) {
+                            // update the display with the time remaining
+                            $('#counter , #remaining').text(timeRemaining / 1000 + " sec.");
+                        }
+                    }, 1000);
+                });
+
+                $(document).bind('create.sessionTimeout', function () {
+                    debugger;
+                    // when autoping is true
+                    // the session will never expire, so the modal window
+                    // will never close. So we can close here instead
+                    ///$("#dialog-session").dialog('close');
+                    // display the session duration
+                    $('#duration').text(sessionDuration / 1000 + ' sec.');
+                    // reset the countdown
+                    clearTimeout(countDown);
+                    // get the current session duration
+                    // you could also use $.fn.sessionTimeout('duration');
+                    // but you'd get an extra console.log entry in the demo
+                    timeRemaining = sessionDuration;
+                    // Countdown to session timeout
+                    countDown = window.setInterval(function () {
+                        (timeRemaining -= 1000);
+                        if (timeRemaining >= 0) {
+                            // update the display with the time remaining
+                            $('#counter , #remaining').text(timeRemaining / 1000 + " sec.");
+                        }
+                    }, 1000);
+                });
+
+                $(document).bind('destroy.sessionTimeout', function () {
+                    debugger;
+                    // delete the coundown timer when we destroy the plugin
+                    clearTimeout(countDown);
+                });
+
+                // setup the sessionTimeout plugin
+                $.fn.sessionTimeout({
+                    autoping: false,
+                    timeout: sessionDuration,
+                    resource: "../src/spacer.gif",
+                    promptfor: promptDuration,
+                    beforetimeout: function () {
+                        debugger;
+                        if (sessionDuration == 0) {
+                            alert(sessionDuration);
+                        }
+                        // when session times out
+                        // open a dialog box
+                         $.confirm({
+                             theme: 'supervan', // 'material', 'bootstrap'
+                             title: 'Logout?',
+                             content: 'Your time is out, you will be automatically logged out.  $.fn.sessionTimeout',
+                             buttons: {
+                                 confirm: {
+                                     text: 'Stay login',
+                                     action: function () {
+                                         $.post("@Url.Action("Refreshtoken", "Auth")", function (data) {
+                                             debugger;
+                                             sessionDuration = data.expirestime;
+                                             var dddd = promptDuration;
+                                             $.fn.sessionTimeout();
+                                         }).done(function () {
+
+                                         }).fail(function () {
+                                             //alert("error");
+                                         }).always(function () {
+                                             //alert("finished");
+                                         });
+                                     }
+                                 },
+                                 cancel: {
+                                     text: 'Relogin',
+                                     action: function () {
+                                         window.location = "/";
+                                            /* $.alert('The user was logged out');*/
+                                         }
+                                 }
+                             }
+                         });
+
+                        //$("#dialog-session").dialog({
+                        //    resizable: false,
+                        //    modal: true,
+                        //    buttons: {
+                        //        "Extend my session": function () {
+                        //            // if user clicks continue
+                        //            // ping the server with sessionTimeout
+                        //            // and restart the countdown
+                        //            $.fn.sessionTimeout();
+                        //            ///$(this).dialog("close");
+                        //        }
+                        //    }
+                        //});
+                    },
+                    ontimeout: function () {
+                        debugger;
+                        ///$("#dialog-session").dialog('close');
+
+                    }
+                });
+
+                $('#btnInit').click(function () {
+                    debugger;
+                    $.fn.sessionTimeout('init');
+                });
+                $('#btnPing').click(function () {
+                    debugger;
+                    $.fn.sessionTimeout('ping');
+                });
+                $('#btnDestroy').click(function () {
+                    debugger;
+                    $.fn.sessionTimeout('destroy');
+                });
+            });
+        </script>*@
+
+
+    <script type="text/javascript">
+            function OnBegin() {
+                // Disable the button and hide the other image here
+                // or you can hide the whole div like below
+                //$('#logbtn').hide();
+                alert("onBegin");
+            }
+            function OnSuccess() {
+                // Disable the button and hide the other image here
+                // or you can hide the whole div like below
+                //$('#logbtn').hide();
+                alert("OnSuccess");
+            }
+            function OnFailure() {
+                // Disable the button and hide the other image here
+                // or you can hide the whole div like below
+                //$('#logbtn').hide();
+                alert("OnFailure");
+            }
+
+        function timeoutSession() {
+            debugger;
+            let now = new Date();
+            //var toDate = now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate();
+            var toDate = (new Date()).toISOString().split('T')[0];
+            let selectedDate = new Date(toDate + "T" + "@Session["expiresTime"]");
+            if (selectedDate <= now) {
+                alert(`Invalid time. Please select a future date and time.`);
+                return;
+            }
+            let timeUntilAlarm = selectedDate - now;
+            var interVal = setTimeout(() => {
+                confirm();
+                //alert("Time to wake up!");
+            }, timeUntilAlarm);
+        }
+
+        function ResetSession() {
+                //Redirect to refresh Session.
+                window.location = window.location.href;
+        }
+
+        @*function confirm() {
+            $.removeCookie('_cc_timeout');
+            $.cookie('_cc_timeout', 'false');
+            $.confirm({
+                theme: 'supervan', // 'material', 'bootstrap'
+                title: 'Logout?',
+                content: 'Your time is out, you will be automatically logged out.',
+                buttons: {
+                    confirm: {
+                        text: 'Stay login',
+                        action: function () {
+                            $.post("@Url.Action("Refreshtoken", "Auth")", function (data) {
+                                debugger;
+                                timeoutSession();
+                            }).done(function () {
+
+                            }).fail(function () {
+                                //alert("error");
+                            }).always(function () {
+                                //alert("finished");
+                            });
+                        }
+                    },
+                    cancel: {
+                        text: 'Relogin',
+                        action: function () {
+                            window.location = "/";
+                               /* $.alert('The user was logged out');*/
+                            }
+                    }
+                }
+            });
+        }*@
+
+    </script>
+
+    <style>
+        .round_profile_image {
+            width: 100%;
+            height: 100%;
+            -o-object-fit: contain;
+            object-fit: contain;
+            border-radius: 50%;
+        }
+
+        tbody div {
+            overflow: scroll !important;
+            height: 100px;
+        }
+    </style>
+</head>
+<body>
+    @*<div>
+            <ul>
+                <li>This page was loaded: <strong><span id="idletime">...</span></strong></li>
+                <li>Session Duration: <strong><span id="duration">...</span></strong></li>
+                <li>Session Time Remaining: <strong><span id="counter">0</span></strong></li>
+            </ul>
+        </div>*@
+    <div id="dialog-session" title="Session Timeout">  </div>
+
+    <!-- Pre-loader start -->
+    <div class="theme-loader" id="loading">
+        <div class="ball-scale">
+            <div class='contain'>
+                <div class="ring">
+                    <div class="frame"></div>
+                </div>
+                <div class="ring">
+                    <div class="frame"></div>
+                </div>
+                <div class="ring">
+                    <div class="frame"></div>
+                </div>
+                <div class="ring">
+                    <div class="frame"></div>
+                </div>
+                <div class="ring">
+                    <div class="frame"></div>
+                </div>
+                <div class="ring">
+                    <div class="frame"></div>
+                </div>
+                <div class="ring">
+                    <div class="frame"></div>
+                </div>
+                <div class="ring">
+                    <div class="frame"></div>
+                </div>
+                <div class="ring">
+                    <div class="frame"></div>
+                </div>
+                <div class="ring">
+                    <div class="frame"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        $(document).ready(function () {
+
+            function OnBegin() {
+                // Disable the button and hide the other image here
+                // or you can hide the whole div like below
+                //$('#logbtn').hide();
+                alert("onBegin");
+            }
+            function OnSuccess() {
+                // Disable the button and hide the other image here
+                // or you can hide the whole div like below
+                //$('#logbtn').hide();
+                alert("OnSuccess");
+            }
+            function OnFailure() {
+                // Disable the button and hide the other image here
+                // or you can hide the whole div like below
+                //$('#logbtn').hide();
+                alert("OnFailure");
+            }
+
+            //debugger;
+            $(function () {
+                $('[data-toggle="tooltip"]').tooltip()
+            })
+            $('.theme-loader').fadeOut('slow', function () {
+                debugger;
+                // $(this).remove();
+            });
+        });
+
+    </script>
+    <!-- Pre-loader end -->
+    @*@Html.Action("GetMenuData", "Home")*@
+    @*@Html.Partial("/Views/Shared/_NavMenu.cshtml")*@
+
+    <div id="pcoded" class="pcoded">
+        <div class="pcoded-overlay-box"></div>
+        <div class="pcoded-container navbar-wrapper">
+            <nav class="navbar header-navbar pcoded-header">
+                <div class="navbar-wrapper">
+
+                    <div class="navbar-logo" style="background-color: white;" logo-theme="theme1">
+                        <a class="mobile-menu" id="mobile-collapse" href="#!">
+                            <i class="feather icon-menu icon-toggle-right"></i>
+                        </a>
+                        <a href="/">
+                            <img class="img-fluid" style="width: 150px;" src="~/Content/libraries/assets/images/logo.png" alt="Theme-Logo">
+                        </a>
+                        <a class="mobile-options">
+                            <i class="feather icon-more-horizontal"></i>
+                        </a>
+                    </div>
+
+                    <div class="navbar-container container-fluid">
+                        <ul class="nav-left">
+                            <li>
+                                <a href="#!" onclick="javascript:toggleFullScreen()">
+                                    <i class="feather icon-maximize full-screen"></i>
+                                </a>
+                            </li>
+                            @*<li><label>Current Unit:</label></li>
+                                <li>
+                                    @{
+                                        var unitlist = (IEnumerable<SelectListItem>)Session["unitList"];
+                                        @Html.DropDownList("Unit", unitlist, new { @class = "col-sm-12", @id = "unit", @required = "required", onchange = "document.forms[0].submit();" })
+                                    }
+                                </li>*@
+                        </ul>
+                        <ul class="nav-right">
+                            <li class="header-notification b-r-default">
+                                <div class="dropdown-primary dropdown">
+                                    <div class="displayChatbox dropdown-toggle" data-toggle="dropdown">
+                                        <i class="feather icon-map-pin"></i>
+                                        <span style="background: #eee; font-weight: bold; ">@Session["currentCompany"]</span>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="user-profile header-notification">
+                                <div class="dropdown-primary dropdown show">
+                                    <div class="dropdown-toggle" data-toggle="dropdown" aria-expanded="true">
+                                        <span>@PacketTea.Utility.SessionHelper.GetUser().getUserName</span>
+                                        <i class="feather icon-chevron-down"></i>
+                                    </div>
+                                    <ul class="show-notification profile-notification dropdown-menu" data-dropdown-in="fadeIn" data-dropdown-out="fadeOut">
+                                        <li>
+                                            <a href="@Url.Action("Index","Setting")">
+                                                <i class="feather icon-settings"></i> Settings
+                                            </a>
+                                        </li>
+                                        <li>
+
+                                            <a href="@Url.Action("Login","Auth")">
+                                                <i class="feather icon-log-out"></i> Logout
+                                            </a>
+                                        </li>
+                                    </ul>
+
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+            <div id="sidebar" class="users p-chat-user showChat" style="display: none;">
+                @{
+                    var companyList = Session["companyList"] as IEnumerable<SelectListItem>;
+                    var locationList = Session["locationList"] as IEnumerable<SelectListItem>;
+                    var financialYearList = Session["financialYearList"] as IEnumerable<SelectListItem>;
+                    var SelectedCompany = Session["SelectedCompany"] as string;
+                    var SelectedLocation = Session["SelectedLocation"] as string;
+                    var SelectedfinancialYear = Session["SelectedfinancialYear"] as string;
+
+                }
+                <div class="had-container">
+                    <div class="card card_main p-fixed users-main">
+                        <div class="user-box">
+                            <div class="chat-inner-header">
+                                <div class="back_chatBox">
+                                    <div class="right-icon-control">
+                                        Company Selection
+                                        @*<input type="text" class="form-control  search-text" placeholder="Search Friend" id="search-friends">
+                                            <div class="form-icon">
+                                                <i class="icofont icofont-search"></i>
+                                            </div>*@
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slimScrollDiv" style="position: relative; overflow: hidden; width: auto; height: 471px;">
+                                <div class="main-friend-list" style="overflow: hidden; width: auto; height: 471px;">
+                                    @using (Html.BeginForm("CompanySelectionNav", "Module", FormMethod.Post))
+                                    {
+                                        //var asas  =HttpContext.Current..Headers["Referer"].ToString().GetViewFromUrl();
+                                        //var viewUrl = Request.UrlReferrer.ToString();
+                                        //var actionResultName = viewUrl.Substring(viewUrl.LastIndexOf('/'));
+                                        //var viewNameWithoutExtension = actionResultName.TrimStart('/');
+                                        <div class="media userlist-box" data-id="1" data-status="online" data-username="Company" data-toggle="tooltip" data-placement="left" title="" data-original-title="Company">
+                                            @Html.Hidden("viewname", HttpContext.Current.Request.Path.ToString())
+                                            <div class="media-body">
+                                                <div class="f-13 chat-header">Company</div>
+                                                @if (companyList != null)
+                                                {
+                                                    @Html.DropDownList("CompanyName", new SelectList(companyList, "Value", "Text", SelectedCompany), // value that should be set selected of dropdown
+                                                                       new
+                                                                       {
+                                                                           @class = "form-control js-dropdown",
+                                                                           @required = "required",
+                                                                           onchange = "document.forms[0].submit();"
+                                                                       })
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="media userlist-box" data-id="2" data-status="online" data-username="Location" data-toggle="tooltip" data-placement="left" title="" data-original-title="Location">
+                                            <div class="media-body">
+                                                <div class="f-13 chat-header">Location</div>
+                                                @if (locationList != null)
+                                                {
+                                                    @Html.DropDownList("LocationName", new SelectList(locationList, "Value", "Text", SelectedLocation), // value that should be set selected of dropdown
+                                                         new
+                                                         {
+                                                             @class = "form-control js-dropdown",
+                                                             @required = "required",
+                                                             onchange = "document.forms[0].submit();"
+                                                         })
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="media userlist-box" data-id="3" data-status="online" data-username="financialYear" data-toggle="tooltip" data-placement="left" title="" data-original-title="Financial Year">
+                                            <div class="media-body">
+                                                <div class="f-13 chat-header">Financial Year</div>
+                                                @if (financialYearList != null)
+                                                {
+                                                    @Html.DropDownList("FinancialYear", new SelectList(financialYearList, "Value", "Text", SelectedfinancialYear), // value that should be set selected of dropdown
+                                                           new
+                                                           {
+                                                               @class = "form-control js-dropdown",
+                                                               @required = "required",
+                                                               onchange = "document.forms[0].submit();"
+                                                           })
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div><div class="slimScrollBar" style="background: rgb(27, 139, 249); width: 7px; position: absolute; top: 0px; opacity: 0.4; display: none; border-radius: 7px; z-index: 99; right: 1px; height: 471px;"></div><div class="slimScrollRail" style="width: 7px; height: 100%; position: absolute; top: 0px; display: none; border-radius: 7px; background: rgb(51, 51, 51); opacity: 0.2; z-index: 90; right: 1px;"></div>
+                                <div>
+                                    <ul>
+                                        <li>This page was loaded: <strong><span id="idletime">...</span></strong></li>
+                                        <li>Session Duration: <strong><span id="duration">...</span></strong></li>
+                                        <li>Session Time Remaining: <strong><span id="counter">0</span></strong></li>
+                                    </ul>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Sidebar inner chat start-->
+            @*<div class="showChat_inner">
+                    <div class="media chat-inner-header">
+                        <a class="back_chatBox">
+                            <i class="feather icon-chevron-left"></i> Josephin Doe
+                        </a>
+                    </div>
+                    <div class="media chat-messages">
+                        <a class="media-left photo-table" href="#!">
+                            <img class="media-object img-radius img-radius m-t-5" src="libraries/assets/images/avatar-3.jpg" alt="Generic placeholder image">
+                        </a>
+                        <div class="media-body chat-menu-content">
+                            <div class="">
+                                <p class="chat-cont">I'm just looking around. Will you tell me something about yourself?</p>
+                                <p class="chat-time">8:20 a.m.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="media chat-messages">
+                        <div class="media-body chat-menu-reply">
+                            <div class="">
+                                <p class="chat-cont">I'm just looking around. Will you tell me something about yourself?</p>
+                                <p class="chat-time">8:20 a.m.</p>
+                            </div>
+                        </div>
+                        <div class="media-right photo-table">
+                            <a href="#!">
+                                <img class="media-object img-radius img-radius m-t-5" src="libraries/assets/images/avatar-4.jpg" alt="Generic placeholder image">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="chat-reply-box p-b-20">
+                        <div class="right-icon-control">
+                            <input type="text" class="form-control search-text" placeholder="Share Your Thoughts">
+                            <div class="form-icon">
+                                <i class="feather icon-navigation"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>*@
+            <!-- Sidebar inner chat end-->
+            <div class="pcoded-main-container">
+                <div class="pcoded-wrapper">
+                    <nav class="pcoded-navbar">
+                        @if (Session["MenuList"] != null)
+                        {
+                            <div class="pcoded-inner-navbar main-menu mCustomScrollbar _mCS_1" id="" style="height: calc(100% - 80px);">
+                                <div id="mCSB_1" class="mCustomScrollBox mCS-light mCSB_vertical_horizontal mCSB_inside" style="max-height: none;" tabindex="0">
+                                    <div id="mCSB_1_container_wrapper">
+                                        <div id="mCSB_1_container" class="mCSB_container" style="left: 0px; width: 100%;" dir="ltr">
+                                            @(new HtmlString(Convert.ToString(Session["MenuList"])))
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="mCSB_1_scrollbar_vertical" class="mCSB_scrollTools mCSB_1_scrollbar mCS-light mCSB_scrollTools_vertical">
+                                <div class="mCSB_draggerContainer">
+                                    <div id="mCSB_1_dragger_vertical" class="mCSB_dragger" style="position: absolute; min-height: 30px; display: block; height: 11px; max-height: 176px; top: 0px;">
+                                        <div class="mCSB_dragger_bar" style="line-height: 30px;"></div>
+                                    </div>
+                                    <div class="mCSB_draggerRail">
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </nav>
+                    <div class="pcoded-content">
+                        <div class="pcoded-inner-content">
+                            @*<div class="main-body">*@
+                            @Html.Partial("_Notification")
+                            @*@if (TempData["toastrSuccess"] != null)
+                                {
+                                    <div class="alert alert-success alert-dismissible fade show" role="alert"><strong>@TempData["toastrSuccess"]</strong></div>
+                                }
+                                @if (TempData["toastrError"] != null)
+                                {
+                                    <div class="alert alert-danger" role="alert"><strong>@TempData["toastrError"]</strong></div>
+                                }*@
+                            @RenderBody()
+                            <div id="styleSelectorx">
+                            </div>
+                            @*</div>*@
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @RenderSection("scripts", required: false)
+
+    <script>
+
+
+        //$(document).ready(function () {
+        //    function disableBack() {
+        //        window.history.forward()
+        //        /* window.history.back();*/
+        //    }
+        //    window.onload = disableBack();
+        //    window.onpageshow = function (e) {
+        //        if (e.persisted)
+        //            disableBack();
+        //    }
+        //});
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'UA-23581568-13');
+    </script>
+</body>
+</html>

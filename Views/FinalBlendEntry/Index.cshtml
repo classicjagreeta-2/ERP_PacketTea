@@ -1,0 +1,417 @@
+@using PacketTea.Utility
+@model List<PacketTea.Models.PT.T_TEA_BLEND>
+
+@{
+    ViewBag.Title = "Final Blend Entry";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
+    var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
+}
+
+@{
+    // Sortable column header. Sorting is server-side (see the API GetByPage's sortBy/sortDir),
+    // so a header sorts the WHOLE filtered result set, not just the rows on the current page.
+    // Clicking the active column flips direction; any other column starts ascending.
+    // Written as a plain Func returning MvcHtmlString rather than a Razor helper block: every label
+    // passed in below is a literal, so nothing here needs HTML-encoding.
+    Func<string, string, MvcHtmlString> SortTh = (key, label) =>
+    {
+        var cur = (string)(ViewBag.SortBy ?? "");
+        var dir = (string)(ViewBag.SortDir ?? "");
+        var active = string.Equals(cur, key, StringComparison.OrdinalIgnoreCase);
+        var next = (active && dir == "asc") ? "desc" : "asc";
+        var thClass = active ? "sortable is-sorted" : "sortable";
+        var up = (active && dir == "asc") ? "feather icon-arrow-up on" : "feather icon-arrow-up";
+        var down = (active && dir != "asc") ? "feather icon-arrow-down on" : "feather icon-arrow-down";
+        return MvcHtmlString.Create(
+            "<th class=\"" + thClass + "\" data-sort=\"" + key + "\" data-dir=\"" + next +
+            "\" title=\"Sort by " + label + "\"><span class=\"th-label\">" + label +
+            "</span><span class=\"sort-arrows\"><i class=\"" + up + "\"></i><i class=\"" +
+            down + "\"></i></span></th>");
+    };
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <style>
+        /* Matches ERP_Inventory's Purchase Order list. The shared purchase-order.css this
+           page already links styles .general-container, .action-btns (white bar with a 1px
+           #ddd border and dividers between items), table.border.main-table and
+           .table-responsive thead th (#404e68, sticky). This view used to override all of
+           that with its own theme -- navy #2c3958 headers, a borderless toolbar, zebra rows,
+           a rounded white card, wider cell padding -- which is exactly why it did not look
+           like Purchase Order. Those overrides are gone; only Purchase Order's own two extra
+           rules, the sort-arrow styling, and the PacketTea-only sub-grid / New-row styles
+           remain below. */
+        .table.table-sm td, .table.table-sm th { padding: 0.6rem; }
+        tbody div { overflow: unset !important; height: auto !important; max-height: none !important; }
+        .btn-link { font-weight: 500; color: black; border-radius: 0; }
+
+        /* Row metrics pinned to Purchase Order's, so all three list screens are identical
+           and cannot drift on cascade order. That screen resolves to 12px/1.3 text in a
+           6px-padded cell (shared purchase-order.css: "table tr th, table tr td
+           {padding:6px}" over "html,body {font-size:12px; line-height:1.3}") -- about a
+           30px row. Nothing in a cell may exceed that: the expand control is a bare
+           <i class="fa fa-plus"> exactly like _POList.cshtml's .toggle-details, NOT a
+           <button>, and the row checkbox is the plain .row-check rather than the 18px
+           .checkbox-round -- both of those were making these rows noticeably taller. */
+        table.main-table th, table.main-table td {
+            padding: 6px; font-size: 12px; line-height: 1.3;
+            height: 30px; box-sizing: border-box; vertical-align: middle;
+        }
+        table.main-table td .row-expand-btn { font-size: 12px; line-height: 1.3; }
+        table.main-table td .row-check { margin: 0; vertical-align: middle; }
+
+        /* Sortable headers. Purchase Order renders the same paired up/down arrows but as a
+           dead <a href="#">; here they drive a real server-side sort, so the pair is tinted
+           to show which column is active and which way it is going. */
+        .table-responsive thead th.sortable { cursor: pointer; user-select: none; }
+        .table-responsive thead th.sortable:hover { background-color: #4b5b7a; }
+        .table-responsive thead th.is-sorted { background-color: #4b5b7a; }
+        th.sortable .sort-arrows { margin-left: 6px; white-space: nowrap; }
+        th.sortable .sort-arrows i { font-size: 12px; color: rgba(255,255,255,.45); vertical-align: middle; }
+        th.sortable .sort-arrows i.on { color: #fff; }
+
+        /* PacketTea-only: item-line sub-grid shown inside the "+" expand row, themed to
+           match the main grid's header rather than introducing a second palette. */
+        table.detail-sub-table { width: 100%; border-collapse: collapse; }
+        table.detail-sub-table th, table.detail-sub-table td { border: 1px solid #ddd; padding: 6px; white-space: nowrap; }
+        table.detail-sub-table thead th { background-color: #404e68; color: #fff; font-weight: bold; }
+
+        /* PacketTea-only: the "New" inline row -- pick Unit + Packet Type here first, then
+           the pencil (enabled only once both are chosen) opens the entry screen with both
+           locked in. Same pattern as ERP_Inventory's Purchase_Requisition list. */
+        tr.new-entry-row td { background-color: #eef3ff; vertical-align: middle; }
+        tr.new-entry-row select { border: 1px solid #ccc; border-radius: 4px; padding: 4px 6px; width: 100%; }
+        tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
+        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: #404e68; }
+    </style>
+</head>
+<body>
+
+    <div class="general-container">
+        <div class="action-btns">
+            <ul>
+                <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                <li>
+                    <a href="javascript:void(0)" id="btnNew">
+                        <i class="fa fa-plus"></i> New
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="editBtn">
+                        <i class="fa fa-pencil"></i> Edit
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="viewBtn">
+                        <i class="fa fa-eye"></i> View
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="deleteBtn">
+                        <i class="fa fa-trash-o"></i> Delete
+                    </a>
+                </li>
+                <li style="margin-left:auto">
+                    <label class="btn btn-inverse pull-right" style="margin: 10px;">LIST</label>
+                </li>
+            </ul>
+        </div>
+
+        <div class="title-heading">Final Blend Entry</div>
+
+        <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
+            <div style="position: relative; width: 250px;">
+                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No / Final Blend No"
+                       style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
+                <i class="fa fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333;"></i>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="border main-table" id="blendTable">
+                <thead>
+                    <tr>
+                        <th style="width:26px;"></th>
+                        <th style="width:26px;"></th>
+                        @SortTh("DOCNO", "Doc No")
+                        @SortTh("DOCDT", "Date")
+                        @SortTh("MASTER_BLEND_NO", "Master Blend No")
+                        @SortTh("MASTER_BLEND_DATE", "Master Blend Date")
+                        @SortTh("BLEND_NO", "Final Blend No")
+                        @SortTh("PARTY", "Party")
+                        @SortTh("BLEND_DESCN", "Blend Details")
+                        @SortTh("WAREHOUSE", "Warehouse")
+                        @SortTh("ALLOCATION", "Allocation")
+                        @SortTh("BLEND_MARK", "Blend Mark")
+                        @SortTh("BLEND_GRADE", "Blend Grade")
+                        @SortTh("BLEND_CHEST", "No of Chest")
+                        @SortTh("BLEND_CHEST_WT", "Net WT/Chest")
+                        @SortTh("BLEND_CHEST_GROSSWT", "Gross WT/Chest")
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Count > 0)
+                    {
+                        var rowIndex = 0;
+                        foreach (var row in Model)
+                        {
+                            rowIndex++;
+                            var detailId = "rowDetail" + rowIndex;
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="row-check"
+                                           value="@row.DOCNO"
+                                           data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")"
+                                           data-blendtype="@row.BLEND_TYPE" />
+                                </td>
+                                <td style="text-align:center;">
+                                    <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show more details" style="cursor:pointer;"></i>
+                                </td>
+                                <td>@row.DOCNO</td>
+                                <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
+                                <td>@row.MasterBlendNo</td>
+                                <td>@(string.IsNullOrEmpty(row.MasterBlendDate) ? "" : DateTime.Parse(row.MasterBlendDate).ToString("dd/MM/yyyy"))</td>
+                                <td>
+                                    <a href="@Url.Action("InsertOrUpdate", "FinalBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
+                                </td>
+                                <td>@row.PartyName</td>
+                                <td>@row.BLEND_DESCN</td>
+                                <td>@row.WarehouseName</td>
+                                <td>@row.AllocationName</td>
+                                <td>@row.BlendMarkName</td>
+                                <td>@row.BlendGradeName</td>
+                                <td class="text-right">@row.BLEND_CHEST</td>
+                                <td class="text-right">@row.BLEND_CHEST_WT</td>
+                                <td class="text-right">@row.BLEND_CHEST_GROSSWT</td>
+                            </tr>
+                            <tr class="row-detail" id="@detailId" style="display:none;"
+                                data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
+                                <td colspan="16" style="background:#f8f9fc;padding:10px 12px;">
+                                    <!-- Just the item-lines sub-grid -- matches Attendance Entry's own
+                                         "+" expand (straight to the detail table, no label/value summary
+                                         line above it), and Master Blend No/Export Ref No/Transporter/
+                                         Ship Mark/Notes/Special Instructions aren't shown here any more
+                                         (Master Blend No is already its own column on the main row). -->
+                                    <div style="overflow-x:auto;">
+                                        <table class="detail-sub-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:34px;">Sl</th>
+                                                    <th>Mark/Garden</th>
+                                                    <th>Inv No</th>
+                                                    <th>Pack Date</th>
+                                                    <th>Grade</th>
+                                                    <th style="text-align:right;">Bag</th>
+                                                    <th style="text-align:right;">Qty</th>
+                                                    <th style="text-align:right;">Sam. Qty</th>
+                                                    <th style="text-align:right;">Rate</th>
+                                                    <th style="text-align:right;">Amount</th>
+                                                    <th>Warehouse</th>
+                                                    <th>DO No</th>
+                                                    <th>Transporter</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="detail-items-body">
+                                                <tr><td colspan="13" style="text-align:center;color:#666;">Loading...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="16" style="text-align:center;">No records found</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @{
+            int pageSize = (int)ViewBag.PageSize;
+            int rowCount = (int)ViewBag.RowCount;
+            int currentPage = (int)ViewBag.Page;
+            int pageCount = pageSize > 0 ? (int)Math.Ceiling(rowCount / (double)pageSize) : 1;
+        }
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;flex-wrap:wrap;gap:8px;">
+            <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
+                <span style="color:#666;font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
+                <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(function () {
+            var searchTimer;
+            $('#searchInput').on('input', function () {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(reload, 400);
+            });
+
+            // The Packet Type filter dropdown that used to sit here is gone -- Packet Type
+            // is now only picked in the "New" inline row, so the list shows every blend
+            // type (still scoped to CurrentUnit) instead of one type at a time.
+            // Sort state rides along with every navigation (search, paging) so changing the
+            // search text or turning the page keeps the column you sorted by.
+            var SORT_BY = '@(ViewBag.SortBy ?? "")', SORT_DIR = '@(ViewBag.SortDir ?? "")';
+            function reload(page, sortBy, sortDir) {
+                var by = (sortBy === undefined) ? SORT_BY : sortBy;
+                var dir = (sortDir === undefined) ? SORT_DIR : sortDir;
+                window.location.href = '@Url.Action("Index", "FinalBlendEntry")'
+                    + '?searchString=' + encodeURIComponent($('#searchInput').val())
+                    + '&page=' + (page || 1)
+                    + '&sortBy=' + encodeURIComponent(by || '')
+                    + '&sortDir=' + encodeURIComponent(dir || '');
+            }
+
+            // Re-sorting always returns to page 1 -- staying on page 4 of the old order
+            // shows an arbitrary slice of the new one.
+            $('#blendTable').on('click', 'thead th.sortable', function () {
+                reload(1, $(this).data('sort'), $(this).data('dir'));
+            });
+
+            $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
+            $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
+
+            $('#blendTable').on('click', '.row-expand-btn', function () {
+                var $btn = $(this);
+                var $detail = $('#' + $btn.data('target'));
+                var opening = !$detail.is(':visible');
+                $detail.toggle(opening);
+                $btn.toggleClass('fa-plus', !opening).toggleClass('fa-minus', opening);
+
+                if (opening) {
+                    var $body = $detail.find('.detail-items-body');
+                    $.get('@Url.Action("GetRowDetail", "FinalBlendEntry")', {
+                        docno: $detail.data('docno'),
+                        docdt: $detail.data('docdt'),
+                        blendType: $detail.data('blendtype')
+                    }).done(function (r) {
+                        if (!r || !r.success) {
+                            $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
+                            return;
+                        }
+                        var items = r.details || [];
+                        if (items.length === 0) {
+                            $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">No item lines</td></tr>');
+                            return;
+                        }
+                        $body.empty();
+                        items.forEach(function (d, i) {
+                            var packDate = d.PACK_DATE ? new Date(d.PACK_DATE).toLocaleDateString('en-GB') : '';
+                            $('<tr>').append(
+                                '<td>' + (d.SLNO != null ? d.SLNO : (i + 1)) + '</td>',
+                                '<td>' + (d.MarkName || d.MARK || '') + '</td>',
+                                '<td>' + (d.INVNO || '') + '</td>',
+                                '<td>' + packDate + '</td>',
+                                '<td>' + (d.GradeName || d.GRADE || '') + '</td>',
+                                '<td style="text-align:right;">' + (d.BAG_CHEST || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.SAMPLE_QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.RATE || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.AMOUNT || 0) + '</td>',
+                                '<td>' + (d.WAREHOUSE || '') + '</td>',
+                                '<td>' + (d.DONO || '') + '</td>',
+                                '<td>' + (d.TransporterName || '') + '</td>'
+                            ).appendTo($body);
+                        });
+                    }).fail(function () {
+                        $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
+                    });
+                }
+            });
+
+            // "New" inline row -- see the CSS comment above for the rationale; same
+            // pattern as Master Blend Entry's own list page (navigates in the same tab).
+            var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
+            var PACKET_TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(blendTypes));
+
+            function buildNewRow() {
+                var unitOpts = '<option value="">Select Unit</option>' +
+                    UNIT_LIST.map(function (u) { return '<option value="' + u.CODE + '">' + u.CODE + ' - ' + (u.NAME || '') + '</option>'; }).join('');
+                var typeOpts = '<option value="">Select Packet Type</option>' +
+                    Object.keys(PACKET_TYPES).map(function (k) { return '<option value="' + k + '">' + PACKET_TYPES[k] + ' (' + k + ')</option>'; }).join('');
+                return '<tr id="newUnitRow" class="new-entry-row">' +
+                    '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Final Blend Entry"></i></td>' +
+                    '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
+                    '<td colspan="2"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
+                    '<td colspan="10"></td>' +
+                    '</tr>';
+            }
+
+            function refreshGoNewState() {
+                var ready = !!$('#newRowUnit').val() && !!$('#newRowPacketType').val();
+                $('.go-new').toggleClass('is-ready', ready);
+            }
+
+            $('#btnNew').on('click', function () {
+                if ($('#newUnitRow').length) return;
+                $('#blendTable tbody').prepend(buildNewRow());
+                refreshGoNewState();
+            });
+
+            $('#blendTable').on('change', '#newRowUnit, #newRowPacketType', refreshGoNewState);
+
+            $('#blendTable').on('click', '.go-new', function () {
+                var unit = $('#newRowUnit').val(), packetType = $('#newRowPacketType').val();
+                if (!unit) { alert('Please select Unit first'); return; }
+                if (!packetType) { alert('Please select Packet Type first'); return; }
+                window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
+                    + '?unit=' + encodeURIComponent(unit)
+                    + '&blendType=' + encodeURIComponent(packetType);
+            });
+
+            // Row selection is now checkboxes (not a radio group, see the row-check markup
+            // above) so more than one can be ticked at once -- Edit/View/Delete all still
+            // only make sense against exactly one row, so guard the same way Master Blend
+            // Entry's list page does.
+            function getSingleChecked(action) {
+                var $c = $('.row-check:checked');
+                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
+                return $c;
+            }
+
+            $('#editBtn').on('click', function () {
+                var $c = getSingleChecked('edit');
+                if (!$c) return;
+                window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
+                    + '?docno=' + encodeURIComponent($c.val())
+                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
+                    + '&blendType=' + encodeURIComponent($c.data('blendtype'));
+            });
+
+            $('#viewBtn').on('click', function () {
+                var $c = getSingleChecked('view');
+                if (!$c) return;
+                window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
+                    + '?docno=' + encodeURIComponent($c.val())
+                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
+                    + '&blendType=' + encodeURIComponent($c.data('blendtype'))
+                    + '&view=true';
+            });
+
+            $('#deleteBtn').on('click', function () {
+                var $c = getSingleChecked('delete');
+                if (!$c) return;
+                if (!confirm('Are you sure you want to delete Final Blend No against Doc No ' + $c.val() + ' ?')) return;
+
+                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "FinalBlendEntry")' })
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
+                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
+                    .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
+                    .appendTo('body').submit();
+            });
+        });
+    </script>
+</body>
+</html>
