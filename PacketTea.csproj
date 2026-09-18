@@ -236,6 +236,8 @@
     <Compile Include="Controllers\TEA\BlendEntryController.cs" />
     <Compile Include="Controllers\TEA\FinalBlendEntryController.cs" />
     <Compile Include="Controllers\TEA\MasterBlendEntryController.cs" />
+    <Compile Include="Controllers\TEA\AwrEntryController.cs" />
+    <Compile Include="Controllers\TEA\TeaSampleDrawEntryController.cs" />
     <Compile Include="Controllers\TEA\PackingController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaInvoiceController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaPurchaseEntryController.cs" />
@@ -279,6 +281,10 @@
     <Compile Include="Models\PT\T_BLEND_PACKING.cs" />
     <Compile Include="Models\PT\T_TEA_BLEND.cs" />
     <Compile Include="Models\PT\T_TEA_BLEND_DET.cs" />
+    <Compile Include="Models\PT\T_AWR.cs" />
+    <Compile Include="Models\PT\T_AWR_PT_DATA.cs" />
+    <Compile Include="Models\PT\T_SAMPLE_DRAW.cs" />
+    <Compile Include="Models\PT\T_SAMPLE_DRAW_PT_DATA.cs" />
     <Compile Include="Models\PT\T_TEA_PURCHASE.cs" />
     <Compile Include="Models\PT\UNBL.cs" />
     <Compile Include="Models\PT\UNBLPLT.cs" />
@@ -5314,6 +5320,10 @@
     <Content Include="Views\PacketTeaPurchaseEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\MasterBlendEntry\Index.cshtml" />
     <Content Include="Views\MasterBlendEntry\InsertOrUpdate.cshtml" />
+    <Content Include="Views\AwrEntry\Index.cshtml" />
+    <Content Include="Views\AwrEntry\InsertOrUpdate.cshtml" />
+    <Content Include="Views\TeaSampleDrawEntry\Index.cshtml" />
+    <Content Include="Views\TeaSampleDrawEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\FinalBlendEntry\Index.cshtml" />
     <Content Include="Views\FinalBlendEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\Packing\Index.cshtml" />

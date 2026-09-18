@@ -1,0 +1,464 @@
+@model PacketTea.Models.PT.T_SAMPLE_DRAW_PT_DATA
+@using Newtonsoft.Json
+@{
+    ViewBag.Title = "Tea Sample Draw Entry";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var awrTypes = (Dictionary<string, string>)ViewBag.AwrTypes;
+    bool isEdit = ViewBag.IsEdit ?? false;
+    bool lockedFromList = ViewBag.LockedFromList ?? false;
+    bool isView = ViewBag.IsView ?? false;
+    var first = Model.T_SAMPLE_DRAW.FirstOrDefault();
+    string unit = (string)(ViewBag.NewUnit ?? first?.UNIT ?? "");
+    string awrType = (string)(ViewBag.NewAwrType ?? first?.TRAN_CODE ?? "");
+    string docno = first?.DOCNO ?? "";
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <script src="~/libraries/assetspo/js/custom.js"></script>
+    <style>
+        input[readonly] { background-color: #f3f4f7; color: #555; }
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
+        #gridTable th, #gridTable td { white-space: nowrap; }
+        #gridTable td input { min-width: 90px; }
+        #gridTable td input.f-bagchest, #gridTable td input.f-netwt, #gridTable td input.f-drawqty,
+        input[type="number"] { text-align: right; }
+        #gridTable td input.f-invno[readonly] { background-color: #f3f4f7; color: #555; cursor: default; }
+        .popup-box.picker-box { width: 420px; display: none; }
+        .popup-box.picker-box.wide { width: 700px; max-width: 90vw; }
+        .popup-box .picker-body { max-height: 36vh; overflow-y: auto; margin-top: 8px; }
+        .popup-box .picker-body .stock-empty { margin: 10px 4px 2px; font-size: 12px; color: #666; }
+        .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; }
+        .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
+        .popup-box .picker-body tr:hover td { background: #eef3ff; }
+        .stock-filters { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
+        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
+        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <input type="hidden" id="isEdit" value="@(isEdit ? "1" : "0")" />
+
+    <div class="general-container">
+        <div class="purchase-details">
+            <div class="header-content">
+                <div class="action-btns">
+                    <ul>
+                        <li><a href="@Url.Action("Index", "TeaSampleDrawEntry")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                        <li><button type="button" id="btnSave"><i class="fa fa-floppy-o"></i> Save</button></li>
+                        <li><a href="@Url.Action("Index", "TeaSampleDrawEntry")"><i class="fa fa-times"></i> Cancel</a></li>
+                        <li style="margin-left:auto">
+                            <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
+                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+                <div class="header-details">
+                    <div class="left">
+                        <div class="order-code">
+                            <div class="txt"><div class="title-heading">Tea Sample Draw Entry</div></div>
+                        </div>
+                        <div class="title-heading">DOC NO. : @docno</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-container compact-accordion">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Unit / Type</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Unit</label>
+                                <input type="text" id="UNIT_disp" value="@unit" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Type <span>(*)</span></label>
+                                <select id="AWR_TYPE" @((isEdit || lockedFromList) ? "disabled" : "")>
+                                    @foreach (var t in awrTypes)
+                                    {
+                                        <option value="@t.Key" selected="@(t.Key == awrType)">@t.Value (@t.Key)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-container">
+
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Header</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Doc No</label>
+                                <input type="text" id="DOCNO" value="@docno" readonly placeholder="(auto)" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Doc Date <span>(*)</span></label>
+                                <input type="date" id="DOCDT" value="@(first?.DOCDT?.ToString("yyyy-MM-dd"))"
+                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Sale Centre <span>(*)</span></label>
+                                <input type="text" id="SALE_CENTRE" data-picker="salescentre" value="@(first?.SALE_CENTRE)" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Sale Centre Name</label>
+                                <input type="text" id="SALE_CENTRE_disp" readonly />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Broker</label>
+                                <input type="text" id="BROK_CODE" data-picker="broker" value="@(first?.BROK_CODE)" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Broker Name</label>
+                                <input type="text" id="BROK_CODE_disp" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Party</label>
+                                <input type="text" id="PCODE" data-picker="party" value="@(first?.PCODE)" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Party Name</label>
+                                <input type="text" id="PCODE_disp" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Warehouse</label>
+                                <input type="text" id="WAREHOUSE" data-picker="warehouse" value="@(first?.WAREHOUSE)" placeholder="Code" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion">
+                    <div class="accordion-header"><span class="txt">Lines</span></div>
+                    <div class="accordion-body active" style="display:block;">
+                        <div class="action-btns">
+                            <ul>
+                                <li><a href="javascript:void(0)" id="btnSelectStock"><i class="fa fa-search"></i> Select Data</a></li>
+                                <li><a href="javascript:void(0)" id="btnRemoveRows"><i class="fa fa-trash-o"></i> Remove Selected</a></li>
+                            </ul>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="border" id="gridTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
+                                        <th style="width:30px;">Sl</th>
+                                        <th>Inv No <span style="color:red;">(*)</span></th>
+                                        <th>AWR No</th>
+                                        <th style="width:110px;">Pack Date</th>
+                                        <th>Grade</th>
+                                        <th>Mark</th>
+                                        <th style="width:75px;text-align:right;">Bag/Chest</th>
+                                        <th style="width:85px;text-align:right;">Net Wt</th>
+                                        <th style="width:85px;text-align:right;">Draw Qty <span style="color:red;">(*)</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gridBody"></tbody>
+                                <tfoot>
+                                    <tr class="total">
+                                        <td colspan="7" style="text-align:right;">Total</td>
+                                        <td id="ftBag" style="text-align:right;"></td>
+                                        <td id="ftDraw" style="text-align:right;"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="popup-overlay" id="pickerOverlay"></div>
+    <div class="popup-box picker-box" id="genericPicker">
+        <div class="popup-header">
+            <h2 id="pickerTitle">Select</h2>
+            <button type="button" class="close-btn" onclick="closePicker()">X</button>
+        </div>
+        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
+        <div class="picker-body" id="pickerBody"></div>
+    </div>
+
+    <div class="popup-box picker-box wide" id="stockPicker">
+        <div class="popup-header">
+            <h2>Select Data (Available AWR Stock)</h2>
+            <button type="button" class="close-btn" onclick="closeStockPicker()">X</button>
+        </div>
+        <div class="stock-filters">
+            <input type="text" id="stockMarkFilter" placeholder="Mark code" />
+            <input type="text" id="stockGradeFilter" placeholder="Grade code" />
+            <button type="button" id="btnStockFilter" class="btn-blue" style="width:auto;padding:5px 14px;">Refresh</button>
+            <button type="button" id="btnStockSelectAll" class="btn-white" style="width:auto;padding:5px 14px;">Select All</button>
+            <button type="button" id="btnStockDeselectAll" class="btn-white" style="width:auto;padding:5px 14px;">De-Select All</button>
+        </div>
+        <div class="picker-body" id="stockBody"></div>
+        <div style="text-align:right;padding-top:10px;">
+            <button type="button" class="btn-blue" id="btnStockOk" style="width:auto;padding:5px 16px;">OK</button>
+            <button type="button" class="btn-white" onclick="closeStockPicker()" style="width:auto;padding:5px 16px;">Cancel</button>
+        </div>
+    </div>
+
+    <div class="popup-overlay" id="appAlertOverlay"></div>
+    <div class="popup-box alert-box" id="appAlertBox">
+        <div class="popup-header"><h2 id="appAlertTitle">Notice</h2></div>
+        <div class="alert-message" id="appAlertMessage"></div>
+        <div class="alert-actions">
+            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
+        </div>
+    </div>
+
+<script>
+    function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
+    function showAlert(message, onOk) {
+        $('#appAlertTitle').text('Notice');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').hide();
+        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    }
+    function handleLookupFail(jqXHR) {
+        if (jqXHR.status === 440) {
+            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Your session has expired. Please log in again.',
+                function () { window.location.reload(); });
+        } else {
+            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Could not load data. Please try again.');
+        }
+    }
+    $('#pickerOverlay, #genericPicker, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+
+    var IS_EDIT = $('#isEdit').val() === '1';
+    var FY_MIN = '@ViewBag.FyStart';
+    var FY_MAX = '@ViewBag.FyEnd';
+
+    function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
+    function round2(v) { return Math.round(num(v) * 100) / 100; }
+    function fmtDate(iso) {
+        if (!iso) return '';
+        var d = new Date(iso);
+        if (isNaN(d)) return '';
+        return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
+    }
+
+    var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_SAMPLE_DRAW));
+    var rowSeq = 0;
+    rows.forEach(function (r) { r._cid = ++rowSeq; });
+
+    function renderGrid() {
+        var $tb = $('#gridBody').empty();
+        var totBag = 0, totDraw = 0;
+        rows.forEach(function (r, idx) {
+            r.SRLNO = idx + 1;
+            totBag += num(r.BAG_CHEST); totDraw += num(r.DRAW_QTY);
+            var tr = $('<tr data-cid="' + r._cid + '"></tr>');
+            tr.append('<td><input type="checkbox" class="rowChk" /></td>');
+            tr.append('<td>' + r.SRLNO + '</td>');
+            tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" placeholder="Via Select Data" readonly /></td>');
+            tr.append('<td><input type="text" class="f-awrno" value="' + (r.AWR_NO || '') + '" readonly /></td>');
+            tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-mark" value="' + (r.MarkName || r.MARK || '') + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-bagchest" value="' + round2(r.BAG_CHEST).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-netwt" value="' + round2(r.NET_WT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-drawqty" value="' + round2(r.DRAW_QTY).toFixed(2) + '" /></td>');
+            $tb.append(tr);
+        });
+        $('#ftBag').text(round2(totBag).toFixed(2));
+        $('#ftDraw').text(round2(totDraw).toFixed(2));
+    }
+
+    function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
+
+    $('#gridBody').on('input change', '.f-drawqty', function () {
+        var $tr = $(this).closest('tr');
+        var r = findRow($tr.data('cid'));
+        if (!r) return;
+        r.DRAW_QTY = num($(this).val());
+        var totBag = 0, totDraw = 0;
+        rows.forEach(function (x) { totBag += num(x.BAG_CHEST); totDraw += num(x.DRAW_QTY); });
+        $('#ftBag').text(round2(totBag).toFixed(2));
+        $('#ftDraw').text(round2(totDraw).toFixed(2));
+    });
+    $('#gridBody').on('blur', '.f-drawqty', function () { $(this).val(round2($(this).val()).toFixed(2)); });
+
+    $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
+    $('#btnRemoveRows').on('click', function () {
+        var cids = $('.rowChk:checked').map(function () { return $(this).closest('tr').data('cid'); }).get();
+        if (!cids.length) { showAlert('Select at least one row to remove.'); return; }
+        rows = rows.filter(function (r) { return cids.indexOf(r._cid) === -1; });
+        renderGrid();
+    });
+
+    var pickerConfig = {
+        salescentre: { url: '@Url.Action("GetSalesCentre", "TeaSampleDrawEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SALE_CENTRE' },
+        broker: { url: '@Url.Action("GetBroker", "TeaSampleDrawEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'BROK_CODE' },
+        party: { url: '@Url.Action("GetParty", "TeaSampleDrawEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCODE' },
+        warehouse: { url: '@Url.Action("GetWarehouse", "TeaSampleDrawEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['DESTI', 'Destination']], target: 'WAREHOUSE' }
+    };
+    var activePicker = null, pickerXhr = null, pickerReqSeq = 0;
+    $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
+    function openPicker(key, $input) {
+        activePicker = { key: key, input: $input };
+        $('#pickerTitle').text('Select ' + key);
+        $('#pickerSearch').val('');
+        $('#pickerBody').empty().removeData('rows');
+        $('#pickerOverlay, #genericPicker').fadeIn(120);
+        loadPickerData('');
+        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
+    }
+    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+    function loadPickerData(term) {
+        var cfg = pickerConfig[activePicker.key];
+        var myReq = ++pickerReqSeq;
+        if (pickerXhr) { pickerXhr.abort(); }
+        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
+            if (myReq !== pickerReqSeq) return;
+            data = data || [];
+            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+            data.forEach(function (row, i) {
+                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
+                    var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
+                    return '<td>' + (v == null ? '' : v) + '</td>';
+                }).join('') + '</tr>';
+            });
+            html += '</tbody></table>';
+            $('#pickerBody').html(html);
+            $('#pickerBody').data('rows', data);
+        }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
+    }
+    $('#pickerBody').on('click', 'tr[data-i]', function () {
+        var data = $('#pickerBody').data('rows');
+        var row = data[$(this).data('i')];
+        var cfg = pickerConfig[activePicker.key];
+        var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
+        var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
+        $('#' + cfg.target).val(code);
+        $('#' + cfg.target + '_disp').val(name || '');
+        closePicker();
+    });
+
+    function openStockPicker() { $('#pickerOverlay, #stockPicker').fadeIn(120); loadStock(); }
+    $('#btnSelectStock').on('click', openStockPicker);
+    function closeStockPicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+    $('#btnStockFilter').on('click', loadStock);
+    var stockFilterTimer;
+    $('#stockMarkFilter, #stockGradeFilter').on('input', function () {
+        clearTimeout(stockFilterTimer);
+        stockFilterTimer = setTimeout(loadStock, 350);
+    });
+
+    function loadStock() {
+        var awrType = $('#AWR_TYPE').val();
+        $.getJSON('@Url.Action("GetAvailableAwrStock", "TeaSampleDrawEntry")', {
+            awrType: awrType, mark: $('#stockMarkFilter').val(), grade: $('#stockGradeFilter').val()
+        }, function (data) {
+            data = data || [];
+            var html = '<table><thead><tr><th></th><th>Inv No</th><th>AWR No</th><th>Mark</th><th>Grade</th><th>Pack Date</th><th style="text-align:right;">Bag/Chest</th><th style="text-align:right;">Available Net Wt</th></tr></thead><tbody>';
+            data.forEach(function (r, i) {
+                html += '<tr data-i="' + i + '"><td><input type="checkbox" class="stockChk" /></td><td>' + (r.invno || '') + '</td><td>' + (r.awrNo || '') + '</td><td>' + (r.markDescn || r.mark || '') + '</td>' +
+                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td style="text-align:right;">' + round2(r.bagChest).toFixed(2) + '</td><td style="text-align:right;">' + round2(r.netWt).toFixed(2) + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            if (!data.length) {
+                html += '<p class="stock-empty">No AWR-received stock available for Type "' + awrType + '".</p>';
+            }
+            $('#stockBody').html(html);
+            $('#stockBody').data('rows', data);
+        }).fail(handleLookupFail);
+    }
+    $('#btnStockSelectAll').on('click', function () { $('#stockBody .stockChk').prop('checked', true); });
+    $('#btnStockDeselectAll').on('click', function () { $('#stockBody .stockChk').prop('checked', false); });
+
+    // Draw Qty auto-calc (M_AUCTION_SAMPLING rate-table lookup) -- fetched once per
+    // pulled lot, matching the legacy form's "computed at pull-time" behavior
+    // (see TeaSampleDrawController.GetDrawQty). Left editable afterward.
+    $('#btnStockOk').on('click', function () {
+        var data = $('#stockBody').data('rows') || [];
+        var docDate = $('#DOCDT').val();
+        var saleCentre = $('#SALE_CENTRE').val();
+        $('#stockBody .stockChk:checked').each(function () {
+            var i = $(this).closest('tr').data('i');
+            var s = data[i];
+            var dup = rows.some(function (r) { return r.INVNO === s.invno && r.GRADE === s.grade && r.MARK === s.mark && (r.PACK_DATE || '').substring(0, 10) === (s.packDate || '').substring(0, 10); });
+            if (dup) return;
+            var newRow = {
+                _cid: ++rowSeq,
+                MARK: s.mark, MarkName: s.markDescn || '',
+                INVNO: s.invno, AWR_NO: s.awrNo, AWR_DATE: s.awrDate, PACK_DATE: s.packDate, GRADE: s.grade,
+                BAG_CHEST: s.bagChest, NET_WT: s.netWt, DRAW_QTY: 0
+            };
+            rows.push(newRow);
+            if (saleCentre && s.grade) {
+                $.getJSON('@Url.Action("GetDrawQty", "TeaSampleDrawEntry")', {
+                    saleCentre: saleCentre, bagChest: s.bagChest, grade: s.grade, docDate: docDate
+                }, function (r) {
+                    newRow.DRAW_QTY = (r && r.drawQty) || 0;
+                    renderGrid();
+                });
+            }
+        });
+        renderGrid();
+        closeStockPicker();
+    });
+
+    $('#btnSave').on('click', function () {
+        if (!$('#DOCDT').val()) { showAlert('Doc Date cannot be blank'); return; }
+        if (!$('#SALE_CENTRE').val()) { showAlert('Sale Centre cannot be blank'); return; }
+        var validRows = rows.filter(function (r) { return r.INVNO; });
+        if (!validRows.length) { showAlert('First row must have an Invoice No.'); return; }
+        if (validRows.some(function (r) { return !(num(r.NET_WT) > 0); })) { showAlert('Net Wt must be greater than zero for every line.'); return; }
+        if (validRows.some(function (r) { return num(r.DRAW_QTY) === 0; })) { showAlert('Draw Qty cannot be zero.'); return; }
+        for (var i = 0; i < validRows.length; i++) {
+            if (num(validRows[i].DRAW_QTY) > num(validRows[i].NET_WT)) {
+                showAlert('Draw Qty can\'t exceed available Net Wt for invoice ' + validRows[i].INVNO + '.');
+                return;
+            }
+        }
+
+        var payload = { T_SAMPLE_DRAW: validRows.map(function (r) {
+            return {
+                ID: r.ID || 0,
+                UNIT: '@unit',
+                TRAN_CODE: $('#AWR_TYPE').val(),
+                DOCNO: '@docno',
+                DOCDT: $('#DOCDT').val(),
+                SALE_CENTRE: $('#SALE_CENTRE').val(),
+                BROK_CODE: $('#BROK_CODE').val(),
+                PCODE: $('#PCODE').val(),
+                WAREHOUSE: $('#WAREHOUSE').val(),
+                INVNO: r.INVNO, AWR_NO: r.AWR_NO, AWR_DATE: r.AWR_DATE, PACK_DATE: r.PACK_DATE, GRADE: r.GRADE, MARK: r.MARK,
+                BAG_CHEST: num(r.BAG_CHEST), NET_WT: num(r.NET_WT), DRAW_QTY: num(r.DRAW_QTY)
+            };
+        }) };
+
+        $.ajax({
+            url: '@Url.Action("Save", "TeaSampleDrawEntry")', type: 'POST', contentType: 'application/json', data: JSON.stringify(payload)
+        }).done(function (resp) {
+            if (resp.success) {
+                showAlert('Saved successfully.', function () { window.location.href = '@Url.Action("Index", "TeaSampleDrawEntry")'; });
+            } else {
+                showAlert(resp.message || 'Save failed.');
+            }
+        }).fail(handleLookupFail);
+    });
+
+    renderGrid();
+</script>
+</body>
+</html>

@@ -175,7 +175,11 @@
                                    the key. Falls back to the doc number if the referenced
                                    blend can no longer be resolved. *@
                                 <td>@(string.IsNullOrEmpty(row.MasterBlendNo) ? row.BlendDocNo : row.MasterBlendNo)</td>
-                                <td>@(string.IsNullOrEmpty(row.BlendDocDate) ? "" : DateTime.Parse(row.BlendDocDate).ToString("dd/MM/yyyy"))</td>
+                                @* DateTime.TryParse, not .Parse -- a handful of legacy rows carry a
+                                   BlendDocDate string the current culture can't parse (e.g. an Oracle
+                                   default-format date), which crashed the whole list with a raw
+                                   FormatException instead of just leaving that one cell blank. *@
+                                <td>@(DateTime.TryParse(row.BlendDocDate, out var blendDocDate) ? blendDocDate.ToString("dd/MM/yyyy") : "")</td>
                                 <td>@row.PartyName</td>
                                 <td>@row.ShipMark</td>
                                 <td>@row.SaleCentreName</td>

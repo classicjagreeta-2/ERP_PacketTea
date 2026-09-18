@@ -135,7 +135,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Blend Date</label>
-                                <input type="text" id="MasterBlendDate" value="@(string.IsNullOrEmpty(head.BlendDocDate) ? "" : DateTime.Parse(head.BlendDocDate).ToString("dd/MM/yyyy"))" readonly />
+                                <input type="text" id="MasterBlendDate" value="@(DateTime.TryParse(head.BlendDocDate, out var masterBlendDate) ? masterBlendDate.ToString("dd/MM/yyyy") : "")" readonly />
                             </div>
                         </div>
 
@@ -147,7 +147,10 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Party</label>
-                                <input type="text" id="PCODE" data-picker="party" value="@head.PCODE" placeholder="Code" style="cursor:pointer;" />
+                                @* Read-only, no picker: T_BLEND_PACKING has no party column, so a
+                                   party picked here was silently dropped on save and the Final
+                                   Blend's party reappeared on reopen. *@
+                                <input type="text" id="PCODE" value="@head.PCODE" readonly />
                             </div>
                             <div class="form-col-20">
                                 <label>Party Name</label>
@@ -235,7 +238,7 @@
                                         <th>Alloc Code</th>
                                         <th>Allocation</th>
                                         <th>Item</th>
-                                        <th style="width:60px;">MRP</th>
+                                        <th style="width:60px;text-align:right;">MRP</th>
                                     </tr>
                                 </thead>
                                 <tbody id="gridBody"></tbody>
@@ -338,6 +341,19 @@
             .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
             .replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
+    // Every picker search box used to fire one AJAX call per keystroke with nothing
+    // shown in between -- typing a 4-letter code queued 4 round trips and the list
+    // looked frozen/blank until the last one won the abort race. Debounce so only
+    // the pause-after-typing triggers a call, and show a "Searching..." row
+    // immediately so the picker never looks stuck.
+    function debounce(fn, wait) {
+        var t;
+        return function () {
+            var args = arguments, ctx = this;
+            clearTimeout(t);
+            t = setTimeout(function () { fn.apply(ctx, args); }, wait);
+        };
+    }
 
     function renderGrid() {
         var $tb = $('#gridBody').empty();
@@ -382,10 +398,12 @@
                 '<button type="button" class="grid-pick-btn f-alloc-btn" title="Search allocation">&hellip;</button></td>');
             tr.append('<td><input type="text" class="f-allocname" value="' + esc(r.AllocationName) + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-itcd" value="' + esc(r.ITCD) + '" /></td>');
-            // maxlength matches the live FACT_*.T_BLEND_PACKING.MRP column, which is
-            // only 4 chars wide (confirmed via ORA-12899 on save) -- the docs DDL's
-            // VARCHAR2(20) does not reflect the actual production schema.
-            tr.append('<td><input type="text" class="f-mrp" maxlength="4" value="' + esc(r.MRP) + '" /></td>');
+            // Numeric input (like Rate/Amount) rather than free text, so letters can't
+            // be typed in at all -- and right-aligned via the input[type=number] rule
+            // above. Column was widened to VARCHAR2(10) (see T_BLEND_PACKING_ddl.sql)
+            // specifically so a 2-decimal MRP fits; fmt2 renders it the same way
+            // Rate/Amount always have.
+            tr.append('<td><input type="number" step="0.01" class="f-mrp" value="' + fmt2(r.MRP) + '" /></td>');
             $tb.append(tr);
         });
         $('#ftBag').text(round2(totBag));
@@ -413,7 +431,11 @@
         r.SZ_CODE = $tr.find('.f-szcode').val();
         r.ALLOCATION = $tr.find('.f-alloc').val();
         r.ITCD = $tr.find('.f-itcd').val();
-        r.MRP = $tr.find('.f-mrp').val();
+        // MRP is a string server-side (T_BLEND_PACKING.MRP is VARCHAR2, not a number
+        // column) -- keep it a formatted string here too. Sending a bare JS number
+        // would serialize as a JSON number, which the API's strict JSON binder can't
+        // convert into that string property and the whole save would fail.
+        r.MRP = fmt2($tr.find('.f-mrp').val());
 
         var netWt = num($tr.find('.f-net').val());
         r.BAG_CHEST = num($tr.find('.f-bag').val());
@@ -447,11 +469,11 @@
         renderTotalsOnly();
     });
 
-    // Rate/Qty: snap the displayed value to 2 decimal places once the user leaves the
-    // field (same as Master/Final Blend Entry) -- the live input/change handler above
-    // already keeps r.RATE/r.QTY/r.AMOUNT numerically correct on every keystroke; this
-    // only tidies up what's shown.
-    $('#gridBody').on('blur', '.f-rate, .f-qty', function () {
+    // Rate/Qty/MRP: snap the displayed value to 2 decimal places once the user leaves
+    // the field (same as Master/Final Blend Entry) -- the live input/change handler
+    // above already keeps r.RATE/r.QTY/r.MRP/r.AMOUNT numerically correct on every
+    // keystroke; this only tidies up what's shown.
+    $('#gridBody').on('blur', '.f-rate, .f-qty, .f-mrp', function () {
         $(this).val(round2($(this).val()).toFixed(2));
     });
 
@@ -488,7 +510,6 @@
         chestsize: { url: '@Url.Action("GetChestSize", "Packing")', cols: [['SZ_CODE', 'Code'], ['SZ_DESC', 'Description']] },
         allocation: { url: '@Url.Action("GetAllocation", "Packing")', cols: [['CODE', 'Code'], ['DESCN', 'Description']] },
         salescentre: { url: '@Url.Action("GetSalesCentre", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SaleCentre' },
-        party: { url: '@Url.Action("GetParty", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCODE', dispTarget: 'PartyName' }
     };
     var activePicker = null;
     var pickerXhr = null, pickerReqSeq = 0;
@@ -541,14 +562,17 @@
         $('#pickerBody').empty().removeData('rows');
         $('#pickerOverlay, #genericPicker').fadeIn(120);
         loadPickerData('');
-        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
+        $('#pickerSearch').off('input').on('input', debouncedLoadPickerData);
     }
     function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+
+    var debouncedLoadPickerData = debounce(function () { loadPickerData($(this).val()); }, 300);
 
     function loadPickerData(term) {
         var cfg = pickerConfig[activePicker.key];
         var myReq = ++pickerReqSeq;
         if (pickerXhr) { pickerXhr.abort(); }
+        $('#pickerBody').html('<div style="padding:10px;color:#888;">Searching...</div>');
         pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
             if (myReq !== pickerReqSeq) return;
             data = data || [];
@@ -587,15 +611,20 @@
         $('#pickerOverlay, #blendPicker').fadeIn(120);
         $('#blendPickerSearch').val('');
         loadBlendList('');
-        $('#blendPickerSearch').off('input').on('input', function () { loadBlendList($(this).val()); });
+        $('#blendPickerSearch').off('input').on('input', debouncedLoadBlendList);
     }
     function closeBlendPicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+
+    var debouncedLoadBlendList = debounce(function () { loadBlendList($(this).val()); }, 300);
 
     $('#MasterBlendNo').on('click focus', function () { openBlendPicker('header'); });
     $('#gridBody').on('click', '.f-blend-btn', function () { openBlendPicker($(this).closest('tr').data('cid')); });
 
+    var blendListXhr = null;
     function loadBlendList(term) {
-        $.getJSON('@Url.Action("GetFinalBlendList", "Packing")', { blendType: $('#BLEND_TYPE').val(), search: term }, function (data) {
+        if (blendListXhr) { blendListXhr.abort(); }
+        $('#blendPickerBody').html('<div style="padding:10px;color:#888;">Searching...</div>');
+        blendListXhr = $.getJSON('@Url.Action("GetFinalBlendList", "Packing")', { blendType: $('#BLEND_TYPE').val(), search: term }, function (data) {
             data = data || [];
             var html = '<table><thead><tr><th>Blend No</th><th>Doc No</th><th>Blend Qty</th><th>Packed Qty</th><th>Remaining</th><th>Rate</th></tr></thead><tbody>';
             data.forEach(function (b, i) {

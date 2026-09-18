@@ -181,7 +181,10 @@
                                 <td>@row.DOCNO</td>
                                 <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
                                 <td>@row.MasterBlendNo</td>
-                                <td>@(string.IsNullOrEmpty(row.MasterBlendDate) ? "" : DateTime.Parse(row.MasterBlendDate).ToString("dd/MM/yyyy"))</td>
+                                @* DateTime.TryParse, not .Parse -- see Packing/Index.cshtml's comment
+                                   on the same pattern: an unparseable legacy date string must not
+                                   crash the whole list. *@
+                                <td>@(DateTime.TryParse(row.MasterBlendDate, out var masterBlendDate) ? masterBlendDate.ToString("dd/MM/yyyy") : "")</td>
                                 <td>
                                     <a href="@Url.Action("InsertOrUpdate", "FinalBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
                                 </td>

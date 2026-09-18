@@ -1,0 +1,494 @@
+@model PacketTea.Models.PT.T_AWR_PT_DATA
+@using Newtonsoft.Json
+@{
+    ViewBag.Title = "AWR Entry";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var awrTypes = (Dictionary<string, string>)ViewBag.AwrTypes;
+    bool isEdit = ViewBag.IsEdit ?? false;
+    bool lockedFromList = ViewBag.LockedFromList ?? false;
+    bool isView = ViewBag.IsView ?? false;
+    var first = Model.T_AWR.FirstOrDefault();
+    string unit = (string)(ViewBag.NewUnit ?? first?.UNIT ?? "");
+    string awrType = (string)(ViewBag.NewAwrType ?? first?.TRAN_TYPE ?? "");
+    string docno = first?.DOCNO ?? "";
+    string awrNo = first?.AWR_NO ?? "";
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <script src="~/libraries/assetspo/js/custom.js"></script>
+    <style>
+        input[readonly] { background-color: #f3f4f7; color: #555; }
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
+        #gridTable th, #gridTable td { white-space: nowrap; }
+        #gridTable td input { min-width: 90px; }
+        /* Every numeric field, grid and header alike, right-aligned and 2 decimals
+           (see round2().toFixed(2) in renderGrid()) -- same convention as Master
+           Blend Entry / Packing / FinalBlendEntry's InsertOrUpdate pages. */
+        #gridTable td input.f-bagchest, #gridTable td input.f-netwt, #gridTable td input.f-tnetwt,
+        #gridTable td input.f-tgrosswt, #gridTable td input.f-bagrcvd, #gridTable td input.f-netrcvd,
+        #gridTable td input.f-grossrcvd, input[type="number"] { text-align: right; }
+        #gridTable td input.f-invno[readonly] { background-color: #f3f4f7; color: #555; cursor: default; }
+        .popup-box.picker-box { width: 420px; display: none; }
+        .popup-box.picker-box.wide { width: 700px; max-width: 90vw; }
+        .popup-box .picker-body { max-height: 36vh; overflow-y: auto; margin-top: 8px; }
+        .popup-box .picker-body .stock-empty { margin: 10px 4px 2px; font-size: 12px; color: #666; }
+        .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; }
+        .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
+        .popup-box .picker-body tr:hover td { background: #eef3ff; }
+        .stock-filters { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
+        .action-btns li a.is-disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
+        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <input type="hidden" id="isEdit" value="@(isEdit ? "1" : "0")" />
+
+    <div class="general-container">
+        <div class="purchase-details">
+            <div class="header-content">
+                <div class="action-btns">
+                    <ul>
+                        <li><a href="@Url.Action("Index", "AwrEntry")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                        <li><button type="button" id="btnSave"><i class="fa fa-floppy-o"></i> Save</button></li>
+                        <li><a href="@Url.Action("Index", "AwrEntry")"><i class="fa fa-times"></i> Cancel</a></li>
+                        <li style="margin-left:auto">
+                            <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
+                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+                <div class="header-details">
+                    <div class="left">
+                        <div class="order-code">
+                            <div class="txt"><div class="title-heading">AWR Entry</div></div>
+                        </div>
+                        <div class="title-heading">DOC NO. : @docno</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unit / AWR Type -- relabelled from "Unit / Blend Type" per the request. -->
+            <div class="accordion-container compact-accordion">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Unit / AWR Type</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Unit</label>
+                                <input type="text" id="UNIT_disp" value="@unit" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>AWR Type <span>(*)</span></label>
+                                <select id="AWR_TYPE" @((isEdit || lockedFromList) ? "disabled" : "")>
+                                    @foreach (var t in awrTypes)
+                                    {
+                                        <option value="@t.Key" selected="@(t.Key == awrType)">@t.Value (@t.Key)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-container">
+
+                <!-- Header -->
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Header</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>AWR No <span>(*)</span></label>
+                                <input type="text" id="AWR_NO" value="@awrNo" @(isEdit ? "readonly" : "") />
+                            </div>
+                            <div class="form-col-20">
+                                <label>AWR Date <span>(*)</span></label>
+                                <input type="date" id="AWR_DATE" value="@(first?.AWR_DATE.ToString("yyyy-MM-dd"))"
+                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Arrival Date</label>
+                                <input type="date" id="ARRIVAL_DATE" value="@(first?.ARRIVAL_DATE?.ToString("yyyy-MM-dd"))"
+                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Warehouse <span>(*)</span></label>
+                                <input type="text" id="WAREHOUSE" data-picker="warehouse" value="@(first?.WAREHOUSE)" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Warehouse Name</label>
+                                <input type="text" id="WAREHOUSE_disp" value="@(first?.WarehouseName)" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Sales Centre <span>(*)</span></label>
+                                <input type="text" id="SALE_CENTRE" data-picker="salescentre" value="@(first?.SALE_CENTRE)" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Sales Centre Name</label>
+                                <input type="text" id="SALE_CENTRE_disp" value="@(first?.SaleCentreName)" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Source</label>
+                                <select id="SOURCE_MODE">
+                                    <option value="Purchase">Purchase</option>
+                                    <option value="Transfer">Inter Transfer</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lines -->
+                <div class="accordion">
+                    <div class="accordion-header"><span class="txt">Lines</span></div>
+                    <div class="accordion-body active" style="display:block;">
+                        <div class="action-btns">
+                            <ul>
+                                <li><a href="javascript:void(0)" id="btnSelectStock"><i class="fa fa-search"></i> Select Despatch Data</a></li>
+                                <li><a href="javascript:void(0)" id="btnAddRow"><i class="fa fa-plus"></i> Add Row</a></li>
+                                <li><a href="javascript:void(0)" id="btnRemoveRows"><i class="fa fa-trash-o"></i> Remove Selected</a></li>
+                            </ul>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="border" id="gridTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
+                                        <th style="width:30px;">Sl</th>
+                                        <th>Inv No <span style="color:red;">(*)</span></th>
+                                        <th style="width:110px;">Pack Date</th>
+                                        <th>Grade</th>
+                                        <th>Mark</th>
+                                        <th style="width:75px;text-align:right;">Bag/Chest</th>
+                                        <th style="width:85px;text-align:right;">Net Wt</th>
+                                        <th style="width:85px;text-align:right;">Total Net Wt</th>
+                                        <th style="width:85px;text-align:right;">Total Gross Wt</th>
+                                        <th style="width:85px;text-align:right;">Bag Rcvd <span style="color:red;">(*)</span></th>
+                                        <th style="width:85px;text-align:right;">Net Rcvd</th>
+                                        <th style="width:85px;text-align:right;">Gross Rcvd</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gridBody"></tbody>
+                                <tfoot>
+                                    <tr class="total">
+                                        <td colspan="6" style="text-align:right;">Total</td>
+                                        <td id="ftBag" style="text-align:right;"></td>
+                                        <td></td>
+                                        <td id="ftTNet" style="text-align:right;"></td>
+                                        <td id="ftTGross" style="text-align:right;"></td>
+                                        <td id="ftBagRcvd" style="text-align:right;"></td>
+                                        <td id="ftNetRcvd" style="text-align:right;"></td>
+                                        <td id="ftGrossRcvd" style="text-align:right;"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="popup-overlay" id="pickerOverlay"></div>
+
+    <div class="popup-box picker-box" id="genericPicker">
+        <div class="popup-header">
+            <h2 id="pickerTitle">Select</h2>
+            <button type="button" class="close-btn" onclick="closePicker()">X</button>
+        </div>
+        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
+        <div class="picker-body" id="pickerBody"></div>
+    </div>
+
+    <div class="popup-box picker-box wide" id="stockPicker">
+        <div class="popup-header">
+            <h2>Select Despatch Data</h2>
+            <button type="button" class="close-btn" onclick="closeStockPicker()">X</button>
+        </div>
+        <div class="stock-filters">
+            <button type="button" id="btnStockFilter" class="btn-blue" style="width:auto;padding:5px 14px;">Refresh</button>
+            <button type="button" id="btnStockSelectAll" class="btn-white" style="width:auto;padding:5px 14px;">Select All</button>
+            <button type="button" id="btnStockDeselectAll" class="btn-white" style="width:auto;padding:5px 14px;">De-Select All</button>
+        </div>
+        <div class="picker-body" id="stockBody"></div>
+        <div style="text-align:right;padding-top:10px;">
+            <button type="button" class="btn-blue" id="btnStockOk" style="width:auto;padding:5px 16px;">OK</button>
+            <button type="button" class="btn-white" onclick="closeStockPicker()" style="width:auto;padding:5px 16px;">Cancel</button>
+        </div>
+    </div>
+
+    <div class="popup-overlay" id="appAlertOverlay"></div>
+    <div class="popup-box alert-box" id="appAlertBox">
+        <div class="popup-header"><h2 id="appAlertTitle">Notice</h2></div>
+        <div class="alert-message" id="appAlertMessage"></div>
+        <div class="alert-actions">
+            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
+        </div>
+    </div>
+
+<script>
+    function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
+    function showAlert(message, onOk) {
+        $('#appAlertTitle').text('Notice');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').hide();
+        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    }
+    function handleLookupFail(jqXHR) {
+        if (jqXHR.status === 440) {
+            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Your session has expired. Please log in again.',
+                function () { window.location.reload(); });
+        } else {
+            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Could not load data. Please try again.');
+        }
+    }
+    $('#pickerOverlay, #genericPicker, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+
+    var IS_EDIT = $('#isEdit').val() === '1';
+    var FY_MIN = '@ViewBag.FyStart';
+    var FY_MAX = '@ViewBag.FyEnd';
+
+    function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
+    function round2(v) { return Math.round(num(v) * 100) / 100; }
+    function toIso(dmy) { return dmy || null; }
+    function fmtDate(iso) {
+        if (!iso) return '';
+        var d = new Date(iso);
+        if (isNaN(d)) return '';
+        return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
+    }
+
+    var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_AWR));
+    var rowSeq = 0;
+    rows.forEach(function (r) { r._cid = ++rowSeq; });
+
+    function renderGrid() {
+        var $tb = $('#gridBody').empty();
+        var totBag = 0, totNet = 0, totTNet = 0, totTGross = 0, totBagRcvd = 0, totNetRcvd = 0, totGrossRcvd = 0;
+        rows.forEach(function (r, idx) {
+            r.SRLNO = idx + 1;
+            totBag += num(r.BAG_CHEST); totNet += num(r.NET_WT);
+            totTNet += num(r.TNET_WT); totTGross += num(r.TGROSS_WT);
+            totBagRcvd += num(r.BAG_RCVD); totNetRcvd += num(r.NET_RCVD); totGrossRcvd += num(r.GROSS_RCVD);
+            var tr = $('<tr data-cid="' + r._cid + '"></tr>');
+            tr.append('<td><input type="checkbox" class="rowChk" /></td>');
+            tr.append('<td>' + r.SRLNO + '</td>');
+            tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" placeholder="Via Select Despatch Data" readonly /></td>');
+            tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-mark" value="' + (r.MarkName || r.MARK || '') + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-bagchest" value="' + round2(r.BAG_CHEST).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-netwt" value="' + round2(r.NET_WT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-tnetwt" value="' + round2(r.TNET_WT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-tgrosswt" value="' + round2(r.TGROSS_WT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-bagrcvd" value="' + round2(r.BAG_RCVD).toFixed(2) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-netrcvd" value="' + round2(r.NET_RCVD).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-grossrcvd" value="' + round2(r.GROSS_RCVD).toFixed(2) + '" readonly /></td>');
+            $tb.append(tr);
+        });
+        $('#ftBag').text(round2(totBag).toFixed(2));
+        $('#ftTNet').text(round2(totTNet).toFixed(2));
+        $('#ftTGross').text(round2(totTGross).toFixed(2));
+        $('#ftBagRcvd').text(round2(totBagRcvd).toFixed(2));
+        $('#ftNetRcvd').text(round2(totNetRcvd).toFixed(2));
+        $('#ftGrossRcvd').text(round2(totGrossRcvd).toFixed(2));
+    }
+
+    function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
+
+    // Bag Received recompute -- verbatim from the spec PDF's AWR calculation
+    // section: proportional received-weight allocation.
+    // TNetWtRcvd = NetWt(per-bag) * BagRcvd ; TGrossWtRcvd = TGrossWt * BagRcvd / BagChest.
+    $('#gridBody').on('input change', '.f-bagrcvd', function () {
+        var $tr = $(this).closest('tr');
+        var r = findRow($tr.data('cid'));
+        if (!r) return;
+        r.BAG_RCVD = num($(this).val());
+        var bagChest = num(r.BAG_CHEST);
+        var netWtPerBag = bagChest > 0 ? num(r.TNET_WT) / bagChest : 0;
+        r.NET_RCVD = round2(netWtPerBag * r.BAG_RCVD);
+        r.GROSS_RCVD = bagChest > 0 ? round2(num(r.TGROSS_WT) * r.BAG_RCVD / bagChest) : 0;
+        $tr.find('.f-netrcvd').val(r.NET_RCVD.toFixed(2));
+        $tr.find('.f-grossrcvd').val(r.GROSS_RCVD.toFixed(2));
+        renderTotalsOnly();
+    });
+    $('#gridBody').on('blur', '.f-bagrcvd', function () { $(this).val(round2($(this).val()).toFixed(2)); });
+
+    function renderTotalsOnly() {
+        var totBag = 0, totTNet = 0, totTGross = 0, totBagRcvd = 0, totNetRcvd = 0, totGrossRcvd = 0;
+        rows.forEach(function (r) {
+            totBag += num(r.BAG_CHEST); totTNet += num(r.TNET_WT); totTGross += num(r.TGROSS_WT);
+            totBagRcvd += num(r.BAG_RCVD); totNetRcvd += num(r.NET_RCVD); totGrossRcvd += num(r.GROSS_RCVD);
+        });
+        $('#ftBag').text(round2(totBag).toFixed(2));
+        $('#ftTNet').text(round2(totTNet).toFixed(2));
+        $('#ftTGross').text(round2(totTGross).toFixed(2));
+        $('#ftBagRcvd').text(round2(totBagRcvd).toFixed(2));
+        $('#ftNetRcvd').text(round2(totNetRcvd).toFixed(2));
+        $('#ftGrossRcvd').text(round2(totGrossRcvd).toFixed(2));
+    }
+
+    $('#btnAddRow').on('click', function () {
+        rows.push({ _cid: ++rowSeq, BAG_CHEST: 0, NET_WT: 0, TNET_WT: 0, TGROSS_WT: 0, BAG_RCVD: 0, NET_RCVD: 0, GROSS_RCVD: 0 });
+        renderGrid();
+    });
+    $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
+    $('#btnRemoveRows').on('click', function () {
+        var cids = $('.rowChk:checked').map(function () { return $(this).closest('tr').data('cid'); }).get();
+        if (!cids.length) { showAlert('Select at least one row to remove.'); return; }
+        rows = rows.filter(function (r) { return cids.indexOf(r._cid) === -1; });
+        renderGrid();
+    });
+
+    // Generic single-select picker (Warehouse/Sales Centre)
+    var pickerConfig = {
+        warehouse: { url: '@Url.Action("GetWarehouse", "AwrEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['DESTI', 'Destination']], target: 'WAREHOUSE' },
+        salescentre: { url: '@Url.Action("GetSalesCentre", "AwrEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SALE_CENTRE' }
+    };
+    var activePicker = null, pickerXhr = null, pickerReqSeq = 0;
+    $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
+    function openPicker(key, $input, onSelect) {
+        activePicker = { key: key, input: $input, onSelect: onSelect };
+        $('#pickerTitle').text('Select ' + key);
+        $('#pickerSearch').val('');
+        $('#pickerBody').empty().removeData('rows');
+        $('#pickerOverlay, #genericPicker').fadeIn(120);
+        loadPickerData('');
+        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
+    }
+    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+    function loadPickerData(term) {
+        var cfg = pickerConfig[activePicker.key];
+        var myReq = ++pickerReqSeq;
+        if (pickerXhr) { pickerXhr.abort(); }
+        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
+            if (myReq !== pickerReqSeq) return;
+            data = data || [];
+            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+            data.forEach(function (row, i) {
+                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
+                    var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
+                    return '<td>' + (v == null ? '' : v) + '</td>';
+                }).join('') + '</tr>';
+            });
+            html += '</tbody></table>';
+            $('#pickerBody').html(html);
+            $('#pickerBody').data('rows', data);
+        }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
+    }
+    $('#pickerBody').on('click', 'tr[data-i]', function () {
+        var data = $('#pickerBody').data('rows');
+        var row = data[$(this).data('i')];
+        var cfg = pickerConfig[activePicker.key];
+        var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
+        var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
+        $('#' + cfg.target).val(code);
+        $('#' + cfg.target + '_disp').val(name || '');
+        closePicker();
+    });
+
+    // Select Despatch Data (Purchase / Inter Transfer toggle)
+    function openStockPicker() { $('#pickerOverlay, #stockPicker').fadeIn(120); loadStock(); }
+    $('#btnSelectStock').on('click', openStockPicker);
+    function closeStockPicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+    $('#btnStockFilter, #SOURCE_MODE').on('click change', loadStock);
+
+    function loadStock() {
+        var awrType = $('#AWR_TYPE').val();
+        var mode = $('#SOURCE_MODE').val();
+        $.getJSON('@Url.Action("GetDespatchData", "AwrEntry")', { awrType: awrType, mode: mode }, function (data) {
+            data = data || [];
+            var html = '<table><thead><tr><th></th><th>Inv No</th><th>Mark</th><th>Grade</th><th>Pack Date</th><th style="text-align:right;">Bag/Chest</th><th style="text-align:right;">Net Wt</th></tr></thead><tbody>';
+            data.forEach(function (r, i) {
+                html += '<tr data-i="' + i + '"><td><input type="checkbox" class="stockChk" /></td><td>' + (r.invno || '') + '</td><td>' + (r.markDescn || r.mark || '') + '</td>' +
+                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td style="text-align:right;">' + round2(r.bagChest).toFixed(2) + '</td><td style="text-align:right;">' + round2(r.netWt).toFixed(2) + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            if (!data.length) {
+                html += '<p class="stock-empty">No un-received ' + mode.toLowerCase() + ' lines available for AWR Type "' + awrType + '".</p>';
+            }
+            $('#stockBody').html(html);
+            $('#stockBody').data('rows', data);
+        }).fail(handleLookupFail);
+    }
+    $('#btnStockSelectAll').on('click', function () { $('#stockBody .stockChk').prop('checked', true); });
+    $('#btnStockDeselectAll').on('click', function () { $('#stockBody .stockChk').prop('checked', false); });
+
+    $('#btnStockOk').on('click', function () {
+        var data = $('#stockBody').data('rows') || [];
+        $('#stockBody .stockChk:checked').each(function () {
+            var i = $(this).closest('tr').data('i');
+            var s = data[i];
+            var dup = rows.some(function (r) { return r.INVNO === s.invno && r.GRADE === s.grade && r.MARK === s.mark && (r.PACK_DATE || '').substring(0, 10) === (s.packDate || '').substring(0, 10); });
+            if (dup) return;
+            rows.push({
+                _cid: ++rowSeq,
+                MARK: s.mark, MarkName: s.markDescn || '',
+                INVNO: s.invno, PACK_DATE: s.packDate, GRADE: s.grade,
+                BAG_CHEST: s.bagChest, NET_WT: s.netWt, TNET_WT: s.tnetWt || s.netWt, TGROSS_WT: s.tgrossWt || 0,
+                GP_NO: s.gpNo, GP_DATE: s.gpDate,
+                BAG_RCVD: 0, NET_RCVD: 0, GROSS_RCVD: 0
+            });
+        });
+        renderGrid();
+        closeStockPicker();
+    });
+
+    $('#btnSave').on('click', function () {
+        if (!$('#AWR_NO').val()) { showAlert('AWR No cannot be blank'); return; }
+        if (!$('#AWR_DATE').val()) { showAlert('AWR Date cannot be blank'); return; }
+        if (!$('#WAREHOUSE').val()) { showAlert('Warehouse cannot be blank'); return; }
+        if (!$('#SALE_CENTRE').val()) { showAlert('Sales Centre cannot be blank'); return; }
+        var validRows = rows.filter(function (r) { return r.INVNO; });
+        if (!validRows.length) { showAlert('Without Invoice Detail, Record Can Not be Saved.'); return; }
+        if (validRows.some(function (r) { return !(num(r.BAG_RCVD) > 0); })) { showAlert('Bag Received must be entered for every line.'); return; }
+
+        var payload = { T_AWR: validRows.map(function (r) {
+            return {
+                ID: r.ID || 0,
+                UNIT: '@unit',
+                TRAN_TYPE: $('#AWR_TYPE').val(),
+                DOCNO: '@docno',
+                AWR_NO: $('#AWR_NO').val(),
+                AWR_DATE: $('#AWR_DATE').val(),
+                ARRIVAL_DATE: $('#ARRIVAL_DATE').val() || null,
+                WAREHOUSE: $('#WAREHOUSE').val(),
+                SALE_CENTRE: $('#SALE_CENTRE').val(),
+                INVNO: r.INVNO, PACK_DATE: r.PACK_DATE, GRADE: r.GRADE, MARK: r.MARK,
+                BAG_CHEST: num(r.BAG_CHEST), NET_WT: num(r.NET_WT), TNET_WT: num(r.TNET_WT), TGROSS_WT: num(r.TGROSS_WT),
+                BAG_RCVD: num(r.BAG_RCVD), NET_RCVD: num(r.NET_RCVD), GROSS_RCVD: num(r.GROSS_RCVD),
+                GP_NO: r.GP_NO, GP_DATE: r.GP_DATE
+            };
+        }) };
+
+        $.ajax({
+            url: '@Url.Action("Save", "AwrEntry")', type: 'POST', contentType: 'application/json', data: JSON.stringify(payload)
+        }).done(function (resp) {
+            if (resp.success) {
+                showAlert('Saved successfully.', function () { window.location.href = '@Url.Action("Index", "AwrEntry")'; });
+            } else {
+                showAlert(resp.message || 'Save failed.');
+            }
+        }).fail(handleLookupFail);
+    });
+
+    renderGrid();
+</script>
+</body>
+</html>
