@@ -3,13 +3,13 @@
 @{
     ViewBag.Title = "AWR Entry";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var awrTypes = (Dictionary<string, string>)ViewBag.AwrTypes;
+    var awrTypes = (Dictionary<string, string>)ViewBag.AWRTypes;
     bool isEdit = ViewBag.IsEdit ?? false;
     bool lockedFromList = ViewBag.LockedFromList ?? false;
     bool isView = ViewBag.IsView ?? false;
     var first = Model.T_AWR.FirstOrDefault();
     string unit = (string)(ViewBag.NewUnit ?? first?.UNIT ?? "");
-    string awrType = (string)(ViewBag.NewAwrType ?? first?.TRAN_TYPE ?? "");
+    string awrType = (string)(ViewBag.NewAWRType ?? first?.TRAN_TYPE ?? "");
     string docno = first?.DOCNO ?? "";
     string awrNo = first?.AWR_NO ?? "";
 }
@@ -57,9 +57,9 @@
             <div class="header-content">
                 <div class="action-btns">
                     <ul>
-                        <li><a href="@Url.Action("Index", "AwrEntry")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                        <li><a href="@Url.Action("Index", "AWREntry")"><i class="fa fa-arrow-left"></i> Back</a></li>
                         <li><button type="button" id="btnSave"><i class="fa fa-floppy-o"></i> Save</button></li>
-                        <li><a href="@Url.Action("Index", "AwrEntry")"><i class="fa fa-times"></i> Cancel</a></li>
+                        <li><a href="@Url.Action("Index", "AWREntry")"><i class="fa fa-times"></i> Cancel</a></li>
                         <li style="margin-left:auto">
                             <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
                                 Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
@@ -358,8 +358,8 @@
 
     // Generic single-select picker (Warehouse/Sales Centre)
     var pickerConfig = {
-        warehouse: { url: '@Url.Action("GetWarehouse", "AwrEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['DESTI', 'Destination']], target: 'WAREHOUSE' },
-        salescentre: { url: '@Url.Action("GetSalesCentre", "AwrEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SALE_CENTRE' }
+        warehouse: { url: '@Url.Action("GetWarehouse", "AWREntry")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['DESTI', 'Destination']], target: 'WAREHOUSE' },
+        salescentre: { url: '@Url.Action("GetSalesCentre", "AWREntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SALE_CENTRE' }
     };
     var activePicker = null, pickerXhr = null, pickerReqSeq = 0;
     $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
@@ -412,7 +412,7 @@
     function loadStock() {
         var awrType = $('#AWR_TYPE').val();
         var mode = $('#SOURCE_MODE').val();
-        $.getJSON('@Url.Action("GetDespatchData", "AwrEntry")', { awrType: awrType, mode: mode }, function (data) {
+        $.getJSON('@Url.Action("GetDespatchData", "AWREntry")', { awrType: awrType, mode: mode }, function (data) {
             data = data || [];
             var html = '<table><thead><tr><th></th><th>Inv No</th><th>Mark</th><th>Grade</th><th>Pack Date</th><th style="text-align:right;">Bag/Chest</th><th style="text-align:right;">Net Wt</th></tr></thead><tbody>';
             data.forEach(function (r, i) {
@@ -478,10 +478,10 @@
         }) };
 
         $.ajax({
-            url: '@Url.Action("Save", "AwrEntry")', type: 'POST', contentType: 'application/json', data: JSON.stringify(payload)
+            url: '@Url.Action("Save", "AWREntry")', type: 'POST', contentType: 'application/json', data: JSON.stringify(payload)
         }).done(function (resp) {
             if (resp.success) {
-                showAlert('Saved successfully.', function () { window.location.href = '@Url.Action("Index", "AwrEntry")'; });
+                showAlert('Saved successfully.', function () { window.location.href = '@Url.Action("Index", "AWREntry")'; });
             } else {
                 showAlert(resp.message || 'Save failed.');
             }

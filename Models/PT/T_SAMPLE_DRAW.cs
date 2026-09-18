@@ -34,5 +34,9 @@ namespace PacketTea.Models.PT
         // Display-only fields returned by the API alongside the raw row.
         public string MarkName { get; set; }
         public string GradeName { get; set; }
+        public string SaleCentreName { get; set; }
+        public string BrokerName { get; set; }
+        public string PartyName { get; set; }
+        public string WarehouseName { get; set; }
     }
 }

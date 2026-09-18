@@ -12,33 +12,33 @@ using static PacketTea.Helpers;
 namespace Finance.Controllers.TEA
 {
     // "Tea Sample Draw Entry" -- ported from VB6 trn_sample_draw.frm, Packet
-    // Tea (PT) transaction sub-type only. Modeled 1:1 on AwrEntryController /
+    // Tea (PT) transaction sub-type only. Modeled 1:1 on AWREntryController /
     // MasterBlendEntryController.
     public class TeaSampleDrawEntryController : Controller
     {
-        public static readonly Dictionary<string, string> AwrTypes = AwrEntryController.AwrTypes;
+        public static readonly Dictionary<string, string> AWRTypes = AWREntryController.AWRTypes;
 
-        private static readonly Dictionary<string, string> AwrTypeUnit = new Dictionary<string, string>
+        private static readonly Dictionary<string, string> AWRTypeUnit = new Dictionary<string, string>
         {
             { "PT", "GORA" }, { "TT", "JSTI" }, { "WT", "JSTI" }, { "BT", "BGCH" }, { "ST", "TTSI" }, { "TB", "JSTI" },
         };
 
         private string CurrentUnit => SessionHelper.GetUser()?.CurentUnit ?? "";
         private string CurrentLoca => SessionHelper.GetUser()?.Loca ?? "";
-        private string UnitForAwrType(string awrType) =>
+        private string UnitForAWRType(string awrType) =>
             !string.IsNullOrEmpty(CurrentUnit) ? CurrentUnit :
-            (awrType != null && AwrTypeUnit.TryGetValue(awrType, out var u) ? u : "");
+            (awrType != null && AWRTypeUnit.TryGetValue(awrType, out var u) ? u : "");
 
-        private async Task<Dictionary<string, string>> GetAllowedAwrTypesAsync()
+        private async Task<Dictionary<string, string>> GetAllowedAWRTypesAsync()
         {
-            var response = await Services.GetAsync<List<string>>("/api/TeaSampleDraw/GetAllowedAwrTypes");
+            var response = await Services.GetAsync<List<string>>("/api/TeaSampleDraw/GetAllowedAWRTypes");
             if (!response.IsSuccessStatusCode || response.Data == null)
-                return AwrTypes;
-            return AwrTypes.Where(t => response.Data.Contains(t.Key))
+                return AWRTypes;
+            return AWRTypes.Where(t => response.Data.Contains(t.Key))
                             .ToDictionary(t => t.Key, t => t.Value);
         }
 
-        // Same pattern as AwrEntryController.GetUnitsForUserAsync -- backs the list
+        // Same pattern as AWREntryController.GetUnitsForUserAsync -- backs the list
         // page's "New" inline row Unit picker.
         private async Task<List<UnitOption>> GetUnitsForUserAsync()
         {
@@ -56,8 +56,8 @@ namespace Finance.Controllers.TEA
             ViewBag.SortDir = sortDir;
             ViewBag.PageSize = pageSize;
             ViewBag.Page = page ?? 1;
-            ViewBag.AwrType = awrType;
-            ViewBag.AwrTypes = await GetAllowedAwrTypesAsync();
+            ViewBag.AWRType = awrType;
+            ViewBag.AWRTypes = await GetAllowedAWRTypesAsync();
             ViewBag.UnitList = await GetUnitsForUserAsync();
 
             var response = await Services.GetAsync<PageModel<dynamic>>(
@@ -84,8 +84,8 @@ namespace Finance.Controllers.TEA
         // GET: TeaSampleDrawEntry/InsertOrUpdate
         public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string awrType = "", string unit = "", bool view = false)
         {
-            var allowedAwrTypes = await GetAllowedAwrTypesAsync();
-            ViewBag.AwrTypes = allowedAwrTypes;
+            var allowedAWRTypes = await GetAllowedAWRTypesAsync();
+            ViewBag.AWRTypes = allowedAWRTypes;
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(awrType);
             ViewBag.IsView = view;
 
@@ -104,13 +104,13 @@ namespace Finance.Controllers.TEA
 
             if (string.IsNullOrEmpty(docno))
             {
-                var effectiveAwrType = !string.IsNullOrEmpty(awrType) ? awrType :
-                    allowedAwrTypes.ContainsKey("PT") ? "PT" :
-                    allowedAwrTypes.Keys.FirstOrDefault() ?? "PT";
+                var effectiveAWRType = !string.IsNullOrEmpty(awrType) ? awrType :
+                    allowedAWRTypes.ContainsKey("PT") ? "PT" :
+                    allowedAWRTypes.Keys.FirstOrDefault() ?? "PT";
                 var model = new T_SAMPLE_DRAW_PT_DATA { T_SAMPLE_DRAW = new List<T_SAMPLE_DRAW>() };
                 ViewBag.IsEdit = false;
-                ViewBag.NewUnit = !string.IsNullOrEmpty(unit) ? unit : UnitForAwrType(effectiveAwrType);
-                ViewBag.NewAwrType = effectiveAwrType;
+                ViewBag.NewUnit = !string.IsNullOrEmpty(unit) ? unit : UnitForAWRType(effectiveAWRType);
+                ViewBag.NewAWRType = effectiveAWRType;
                 return View(model);
             }
 
@@ -129,7 +129,7 @@ namespace Finance.Controllers.TEA
             var editModel = new T_SAMPLE_DRAW_PT_DATA { T_SAMPLE_DRAW = wrapper.rows ?? new List<T_SAMPLE_DRAW>() };
             ViewBag.IsEdit = true;
             ViewBag.NewUnit = editModel.T_SAMPLE_DRAW.FirstOrDefault()?.UNIT;
-            ViewBag.NewAwrType = editModel.T_SAMPLE_DRAW.FirstOrDefault()?.TRAN_CODE ?? awrType;
+            ViewBag.NewAWRType = editModel.T_SAMPLE_DRAW.FirstOrDefault()?.TRAN_CODE ?? awrType;
             return View(editModel);
         }
 
@@ -153,6 +153,11 @@ namespace Finance.Controllers.TEA
         [HttpPost]
         public async Task<JsonResult> Save(T_SAMPLE_DRAW_PT_DATA model)
         {
+            // Same fix as AWREntryController.Save -- LOCA is never posted by the client, so
+            // stamp it from the session here rather than trusting/requiring the client.
+            foreach (var r in model?.T_SAMPLE_DRAW ?? new List<T_SAMPLE_DRAW>())
+                r.LOCA = CurrentLoca;
+
             var response = await Services.PostAsync<dynamic>("/api/TeaSampleDraw/SaveOrUpdate", model);
             return Json(new
             {
@@ -181,7 +186,7 @@ namespace Finance.Controllers.TEA
         private ActionResult JsonExact(object data) =>
             Content(JsonConvert.SerializeObject(data), "application/json");
 
-        // Same fix as AwrEntryController.JsonExactOrSessionExpired -- only a real 401 from the
+        // Same fix as AWREntryController.JsonExactOrSessionExpired -- only a real 401 from the
         // API means the session actually expired. Every other failure used to be mislabeled
         // "session expired" too, hiding the real error.
         private ActionResult JsonExactOrSessionExpired<T>(ResponseApiModel<T> r)
@@ -233,9 +238,9 @@ namespace Finance.Controllers.TEA
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetAvailableAwrStock(string awrType, string mark = "", string grade = "")
+        public async Task<ActionResult> GetAvailableAWRStock(string awrType, string mark = "", string grade = "")
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaSampleDraw/GetAvailableAwrStock?awrType={awrType}&mark={mark}&grade={grade}");
+            var r = await Services.GetAsync<dynamic>($"/api/TeaSampleDraw/GetAvailableAWRStock?awrType={awrType}&mark={mark}&grade={grade}");
             return JsonExactOrSessionExpired(r);
         }
 

@@ -3,13 +3,13 @@
 @{
     ViewBag.Title = "Tea Sample Draw Entry";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var awrTypes = (Dictionary<string, string>)ViewBag.AwrTypes;
+    var awrTypes = (Dictionary<string, string>)ViewBag.AWRTypes;
     bool isEdit = ViewBag.IsEdit ?? false;
     bool lockedFromList = ViewBag.LockedFromList ?? false;
     bool isView = ViewBag.IsView ?? false;
     var first = Model.T_SAMPLE_DRAW.FirstOrDefault();
     string unit = (string)(ViewBag.NewUnit ?? first?.UNIT ?? "");
-    string awrType = (string)(ViewBag.NewAwrType ?? first?.TRAN_CODE ?? "");
+    string awrType = (string)(ViewBag.NewAWRType ?? first?.TRAN_CODE ?? "");
     string docno = first?.DOCNO ?? "";
 }
 
@@ -115,7 +115,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Sale Centre Name</label>
-                                <input type="text" id="SALE_CENTRE_disp" readonly />
+                                <input type="text" id="SALE_CENTRE_disp" value="@(first?.SaleCentreName)" readonly />
                             </div>
                         </div>
                         <div class="form-row">
@@ -125,7 +125,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Broker Name</label>
-                                <input type="text" id="BROK_CODE_disp" readonly />
+                                <input type="text" id="BROK_CODE_disp" value="@(first?.BrokerName)" readonly />
                             </div>
                             <div class="form-col-20">
                                 <label>Party</label>
@@ -133,11 +133,17 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Party Name</label>
-                                <input type="text" id="PCODE_disp" readonly />
+                                <input type="text" id="PCODE_disp" value="@(first?.PartyName)" readonly />
                             </div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-col-20">
                                 <label>Warehouse</label>
                                 <input type="text" id="WAREHOUSE" data-picker="warehouse" value="@(first?.WAREHOUSE)" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Warehouse Name</label>
+                                <input type="text" id="WAREHOUSE_disp" value="@(first?.WarehouseName)" readonly />
                             </div>
                         </div>
                     </div>
@@ -365,7 +371,7 @@
 
     function loadStock() {
         var awrType = $('#AWR_TYPE').val();
-        $.getJSON('@Url.Action("GetAvailableAwrStock", "TeaSampleDrawEntry")', {
+        $.getJSON('@Url.Action("GetAvailableAWRStock", "TeaSampleDrawEntry")', {
             awrType: awrType, mark: $('#stockMarkFilter').val(), grade: $('#stockGradeFilter').val()
         }, function (data) {
             data = data || [];

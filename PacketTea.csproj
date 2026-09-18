@@ -236,7 +236,7 @@
     <Compile Include="Controllers\TEA\BlendEntryController.cs" />
     <Compile Include="Controllers\TEA\FinalBlendEntryController.cs" />
     <Compile Include="Controllers\TEA\MasterBlendEntryController.cs" />
-    <Compile Include="Controllers\TEA\AwrEntryController.cs" />
+    <Compile Include="Controllers\TEA\AWREntryController.cs" />
     <Compile Include="Controllers\TEA\TeaSampleDrawEntryController.cs" />
     <Compile Include="Controllers\TEA\PackingController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaInvoiceController.cs" />
@@ -5320,8 +5320,8 @@
     <Content Include="Views\PacketTeaPurchaseEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\MasterBlendEntry\Index.cshtml" />
     <Content Include="Views\MasterBlendEntry\InsertOrUpdate.cshtml" />
-    <Content Include="Views\AwrEntry\Index.cshtml" />
-    <Content Include="Views\AwrEntry\InsertOrUpdate.cshtml" />
+    <Content Include="Views\AWREntry\Index.cshtml" />
+    <Content Include="Views\AWREntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\TeaSampleDrawEntry\Index.cshtml" />
     <Content Include="Views\TeaSampleDrawEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\FinalBlendEntry\Index.cshtml" />

@@ -3,7 +3,7 @@
 @{
     ViewBag.Title = "Tea Sample Draw Entry";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var awrTypes = (Dictionary<string, string>)ViewBag.AwrTypes;
+    var awrTypes = (Dictionary<string, string>)ViewBag.AWRTypes;
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
 }
 
@@ -259,11 +259,11 @@
                 return '<tr id="newTypeRow" class="new-entry-row">' +
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Tea Sample Draw Entry"></i></td>' +
                     '<td colspan="3"><select id="newRowUnit">' + unitOpts + '</select></td>' +
-                    '<td colspan="4"><select id="newRowAwrType">' + typeOpts + '</select></td>' +
+                    '<td colspan="4"><select id="newRowAWRType">' + typeOpts + '</select></td>' +
                     '</tr>';
             }
             function refreshGoNewState() {
-                var ready = !!$('#newRowUnit').val() && !!$('#newRowAwrType').val();
+                var ready = !!$('#newRowUnit').val() && !!$('#newRowAWRType').val();
                 $('.go-new').toggleClass('is-ready', ready);
             }
             $('#btnNew').on('click', function () {
@@ -271,9 +271,9 @@
                 $('#drawTable tbody').prepend(buildNewRow());
                 refreshGoNewState();
             });
-            $('#drawTable').on('change', '#newRowUnit, #newRowAwrType', refreshGoNewState);
+            $('#drawTable').on('change', '#newRowUnit, #newRowAWRType', refreshGoNewState);
             $('#drawTable').on('click', '.go-new', function () {
-                var unit = $('#newRowUnit').val(), awrType = $('#newRowAwrType').val();
+                var unit = $('#newRowUnit').val(), awrType = $('#newRowAWRType').val();
                 if (!unit) { alert('Please select Unit first'); return; }
                 if (!awrType) { alert('Please select Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "TeaSampleDrawEntry")'

@@ -125,10 +125,17 @@ namespace PacketTea.Models
         {
             try
             {
+                // refreshToken was hardcoded to "" here, which the API's /Users/Refresh
+                // silently rejects (no Data comes back), so this always returned false and
+                // let the original 401 propagate as a hard "session expired" instead of
+                // transparently refreshing -- even though the user's login session was
+                // otherwise still perfectly valid. AuthController.Refreshtoken() (the
+                // explicit "refresh" action, already working) sends a fresh GUID instead;
+                // matching that is what makes this auto-refresh path actually succeed.
                 var request = new
                 {
                     accessToken = SessionHelper.GetUser().getToken,
-                    refreshToken = ""
+                    refreshToken = Guid.NewGuid().ToString()
                 };
                 var Return = await Services.PostAsync<UserModels>("/Users/Refresh", request);
                 if (Return != null)
