@@ -1,0 +1,334 @@
+@model List<Finance.Controllers.TEA.PurNoteRow>
+
+@{
+    string tranName = (string)ViewBag.TranName;
+    string tran = (string)ViewBag.Tran;
+    string listAction = (string)ViewBag.ListAction;
+    ViewBag.Title = tranName;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var types = (Dictionary<string, string>)ViewBag.Types ?? new Dictionary<string, string>();
+    var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
+    string curType = (string)(ViewBag.Type ?? "");
+    Func<string, string> adjName = q => q == "Y" ? "Quantity Return" : q == "A" ? "Short Adjustment" : "Rate Difference";
+}
+
+@{
+    Func<string, string, bool, MvcHtmlString> SortTh = (key, label, right) =>
+    {
+        var cur = (string)(ViewBag.SortBy ?? "");
+        var dir = (string)(ViewBag.SortDir ?? "");
+        var active = string.Equals(cur, key, StringComparison.OrdinalIgnoreCase);
+        var next = (active && dir == "asc") ? "desc" : "asc";
+        var thClass = active ? "sortable is-sorted" : "sortable";
+        var up = (active && dir == "asc") ? "feather icon-arrow-up on" : "feather icon-arrow-up";
+        var down = (active && dir != "asc") ? "feather icon-arrow-down on" : "feather icon-arrow-down";
+        return MvcHtmlString.Create(
+            "<th class=\"" + thClass + "\" data-sort=\"" + key + "\" data-dir=\"" + next + "\"" + (right ? " style=\"text-align:right;\"" : "") +
+            " title=\"Sort by " + label + "\"><span class=\"th-label\">" + label +
+            "</span><span class=\"sort-arrows\"><i class=\"" + up + "\"></i><i class=\"" +
+            down + "\"></i></span></th>");
+    };
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <style>
+        .table.table-sm td, .table.table-sm th { padding: 0.6rem; }
+        tbody div { overflow: unset !important; height: auto !important; max-height: none !important; }
+        table.main-table th, table.main-table td {
+            padding: 6px; font-size: 12px; line-height: 1.3;
+            height: 30px; box-sizing: border-box; vertical-align: middle;
+        }
+        table.main-table td .row-expand-btn { font-size: 12px; line-height: 1.3; }
+        table.main-table td .row-check { margin: 0; vertical-align: middle; }
+        table.main-table td.num, table.detail-sub-table td.num, table.detail-sub-table th.num { text-align: right; }
+        .table-responsive thead th.sortable { cursor: pointer; user-select: none; }
+        .table-responsive thead th.sortable:hover { background-color: #4b5b7a; }
+        .table-responsive thead th.is-sorted { background-color: #4b5b7a; }
+        th.sortable .sort-arrows { margin-left: 6px; white-space: nowrap; }
+        th.sortable .sort-arrows i { font-size: 12px; color: rgba(255,255,255,.45); vertical-align: middle; }
+        th.sortable .sort-arrows i.on { color: #fff; }
+        table.detail-sub-table { width: 100%; border-collapse: collapse; }
+        table.detail-sub-table th, table.detail-sub-table td { border: 1px solid #ddd; padding: 6px; white-space: nowrap; }
+        table.detail-sub-table thead th { background-color: #404e68; color: #fff; font-weight: bold; }
+        tr.new-entry-row td { background-color: #eef3ff; vertical-align: middle; }
+        tr.new-entry-row select { border: 1px solid #ccc; border-radius: 4px; padding: 4px 6px; width: 100%; }
+        tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
+        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: #404e68; }
+        .list-filters { display: flex; justify-content: flex-end; gap: 10px; width: 100%; margin-bottom: 15px; flex-wrap: wrap; }
+        .list-filters select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="general-container">
+        <div class="action-btns">
+            <ul>
+                <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                <li><a href="javascript:void(0)" id="btnNew"><i class="fa fa-plus"></i> New</a></li>
+                <li><a href="javascript:void(0)" id="editBtn"><i class="fa fa-pencil"></i> Edit</a></li>
+                <li><a href="javascript:void(0)" id="viewBtn"><i class="fa fa-eye"></i> View</a></li>
+                <li><a href="javascript:void(0)" id="deleteBtn"><i class="fa fa-trash-o"></i> Delete</a></li>
+                <li><a href="javascript:void(0)" id="linesBtn"><i class="fa fa-list"></i> Lines</a></li>
+                <li style="margin-left:auto"><label class="btn btn-inverse pull-right" style="margin: 10px;">LIST</label></li>
+            </ul>
+        </div>
+
+        <div class="title-heading">@tranName</div>
+
+        <div class="list-filters">
+            <select id="typeFilter" title="Type">
+                <option value="">All Types</option>
+                @foreach (var t in types)
+                {
+                    <option value="@t.Key" selected="@(t.Key == curType)">@t.Value (@t.Key)</option>
+                }
+            </select>
+            <div style="position: relative; width: 280px;">
+                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No / Party / Bill No / Date"
+                       style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
+                <i class="fa fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333;"></i>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="border main-table" id="noteTable">
+                <thead>
+                    <tr>
+                        <th style="width:26px;"></th>
+                        <th style="width:26px;"></th>
+                        @SortTh("DOCNO", "Doc No", false)
+                        @SortTh("DOCDT", "Doc Date", false)
+                        <th>Type</th>
+                        @SortTh("PARTY", "Party", false)
+                        @SortTh("BLNO", "Bill No", false)
+                        <th>Bill Date</th>
+                        <th>Pur Centre</th>
+                        <th>Adjustment</th>
+                        <th>A/C Voucher No</th>
+                        @SortTh("TOTAL", "Total Amount", true)
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Count > 0)
+                    {
+                        var rowIndex = 0;
+                        foreach (var row in Model)
+                        {
+                            rowIndex++;
+                            var detailId = "rowDetail" + rowIndex;
+                            var dt = row.DOCDT?.ToString("yyyy-MM-dd");
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="row-check" value="@row.DOCNO" data-docdt="@dt" data-unit="@row.UNIT" data-irn="@(string.IsNullOrEmpty(row.IRN) ? "" : "Y")" />
+                                </td>
+                                <td style="text-align:center;">
+                                    <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show lines" style="cursor:pointer;"></i>
+                                </td>
+                                <td><a href="@Url.Action("InsertOrUpdate", "TeaPurchaseNote", new { tran, unit = row.UNIT, docno = row.DOCNO, docdt = dt, view = true })">@row.DOCNO</a></td>
+                                <td>@(row.DOCDT?.ToString("dd/MM/yyyy"))</td>
+                                <td>@row.TYPE_NAME (@row.SALE_TYPE)</td>
+                                <td>@row.PCD - @row.PARTY_NAME</td>
+                                <td>@row.BLNO</td>
+                                <td>@(row.BLDT?.ToString("dd/MM/yyyy"))</td>
+                                <td>@row.SALE_CENTRE_NAME</td>
+                                <td>@adjName(row.QTY_RETURN)</td>
+                                <td>@row.JV_DOCNO</td>
+                                <td class="num">@((row.TOTAL_AMT ?? 0).ToString("0.00"))</td>
+                            </tr>
+                            <tr class="row-detail" id="@detailId" style="display:none;" data-docno="@row.DOCNO" data-docdt="@dt" data-unit="@row.UNIT">
+                                <td colspan="12" style="background:#f8f9fc;padding:10px 12px;">
+                                    <div style="overflow-x:auto;">
+                                        <table class="detail-sub-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:34px;">Sl</th>
+                                                    <th>Inv No</th>
+                                                    <th>Grade</th>
+                                                    <th>Mark</th>
+                                                    <th class="num">Bags</th>
+                                                    <th class="num">Return Qty</th>
+                                                    <th class="num">Rate</th>
+                                                    <th class="num">Amount</th>
+                                                    <th class="num">GST</th>
+                                                    <th class="num">Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="detail-items-body">
+                                                <tr><td colspan="10" style="text-align:center;color:#666;">Loading...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="12" style="text-align:center;">No records found</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @{
+            int pageSize = (int)ViewBag.PageSize;
+            int rowCount = (int)ViewBag.RowCount;
+            int currentPage = (int)ViewBag.Page;
+            int pageCount = pageSize > 0 ? (int)Math.Ceiling(rowCount / (double)pageSize) : 1;
+        }
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;flex-wrap:wrap;gap:8px;">
+            <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
+                <span style="color:#666;font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
+                <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(function () {
+            var TRAN = '@tran';
+            function f2(v) { v = parseFloat(v); return (isNaN(v) ? 0 : v).toFixed(2); }
+            function esc(s) { return $('<div>').text(s == null ? '' : s).html(); }
+
+            var searchTimer;
+            $('#searchInput').on('input', function () {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(function () { reload(1); }, 400);
+            });
+            $('#typeFilter').on('change', function () { reload(1); });
+
+            var SORT_BY = '@(ViewBag.SortBy ?? "")', SORT_DIR = '@(ViewBag.SortDir ?? "")';
+            function reload(page, sortBy, sortDir) {
+                var by = (sortBy === undefined) ? SORT_BY : sortBy;
+                var dir = (sortDir === undefined) ? SORT_DIR : sortDir;
+                window.location.href = '@Url.Action(listAction, "TeaPurchaseNote")'
+                    + '?searchString=' + encodeURIComponent($('#searchInput').val())
+                    + '&type=' + encodeURIComponent($('#typeFilter').val() || '')
+                    + '&page=' + (page || 1)
+                    + '&sortBy=' + encodeURIComponent(by || '')
+                    + '&sortDir=' + encodeURIComponent(dir || '');
+            }
+            $('#noteTable').on('click', 'thead th.sortable', function () { reload(1, $(this).data('sort'), $(this).data('dir')); });
+            $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
+            $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
+
+            function openDetail($btn) {
+                var $detail = $('#' + $btn.data('target'));
+                $detail.show();
+                $btn.removeClass('fa-plus').addClass('fa-minus');
+                var $body = $detail.find('.detail-items-body');
+                $.get('@Url.Action("GetRowDetail", "TeaPurchaseNote")', {
+                    tran: TRAN, unit: $detail.data('unit'), docno: $detail.data('docno'), docdt: $detail.data('docdt')
+                }).done(function (r) {
+                    var items = (r && r.lines) || [];
+                    if (!items.length) { $body.html('<tr><td colspan="10" style="text-align:center;color:#666;">No lines</td></tr>'); return; }
+                    $body.empty();
+                    items.forEach(function (d) {
+                        var gst = (parseFloat(d.CGST_AMT) || 0) + (parseFloat(d.SGST_AMT) || 0) + (parseFloat(d.IGST_AMT) || 0);
+                        $('<tr>').append(
+                            '<td>' + esc(d.SRLNO) + '</td>',
+                            '<td>' + esc(d.INVNO) + '</td>',
+                            '<td>' + esc(d.GRADE_NAME || d.GRADE) + '</td>',
+                            '<td>' + esc(d.MARK_NAME || d.MARK) + '</td>',
+                            '<td class="num">' + f2(d.BAG_CHEST) + '</td>',
+                            '<td class="num">' + f2(d.BILL_QTY) + '</td>',
+                            '<td class="num">' + f2(d.RATE) + '</td>',
+                            '<td class="num">' + f2(d.AMT) + '</td>',
+                            '<td class="num">' + f2(gst) + '</td>',
+                            '<td class="num">' + f2(d.TOT_AMT) + '</td>'
+                        ).appendTo($body);
+                    });
+                }).fail(function (x) {
+                    $body.html('<tr><td colspan="10" style="text-align:center;color:#666;">' + esc((x.responseJSON && x.responseJSON.message) || 'Unable to load lines.') + '</td></tr>');
+                });
+            }
+            function closeDetail($btn) {
+                $('#' + $btn.data('target')).hide();
+                $btn.removeClass('fa-minus').addClass('fa-plus');
+            }
+            $('#noteTable').on('click', '.row-expand-btn', function () {
+                var $btn = $(this);
+                if ($('#' + $btn.data('target')).is(':visible')) closeDetail($btn); else openDetail($btn);
+            });
+            $('#linesBtn').on('click', function () {
+                var $checked = $('.row-check:checked');
+                var $btns = $checked.length ? $checked.closest('tr').find('.row-expand-btn') : $('#noteTable .row-expand-btn');
+                var anyClosed = $btns.filter('.fa-plus').length > 0;
+                $btns.each(function () { anyClosed ? openDetail($(this)) : closeDetail($(this)); });
+            });
+
+            // "New" row: Unit (USER_SCHEMA_LINK) + Type (purchase type), as Master Blend Entry.
+            var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
+            var TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(types));
+            function buildNewRow() {
+                var unitOpts = '<option value="">Select Unit</option>' +
+                    UNIT_LIST.map(function (u) { return '<option value="' + esc(u.CODE) + '">' + esc(u.CODE) + ' - ' + esc(u.NAME || '') + '</option>'; }).join('');
+                var typeOpts = '<option value="">Select Type</option>' +
+                    Object.keys(TYPES).map(function (k) { return '<option value="' + esc(k) + '">' + esc(TYPES[k]) + ' (' + esc(k) + ')</option>'; }).join('');
+                return '<tr id="newTypeRow" class="new-entry-row">' +
+                    '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open @tranName"></i></td>' +
+                    '<td colspan="4"><select id="newRowUnit">' + unitOpts + '</select></td>' +
+                    '<td colspan="6"><select id="newRowType">' + typeOpts + '</select></td>' +
+                    '</tr>';
+            }
+            function refreshGoNewState() {
+                $('.go-new').toggleClass('is-ready', !!$('#newRowUnit').val() && !!$('#newRowType').val());
+            }
+            $('#btnNew').on('click', function () {
+                if ($('#newTypeRow').length) return;
+                if (!Object.keys(TYPES).length) { alert('You have no rights to any purchase type.'); return; }
+                $('#noteTable tbody').prepend(buildNewRow());
+                if (UNIT_LIST.length === 1) $('#newRowUnit').val(UNIT_LIST[0].CODE);
+                if (Object.keys(TYPES).length === 1) $('#newRowType').val(Object.keys(TYPES)[0]);
+                refreshGoNewState();
+            });
+            $('#noteTable').on('change', '#newRowUnit, #newRowType', refreshGoNewState);
+            $('#noteTable').on('click', '.go-new', function () {
+                var unit = $('#newRowUnit').val(), type = $('#newRowType').val();
+                if (!unit) { alert('Please select Unit first'); return; }
+                if (!type) { alert('Please select Type first'); return; }
+                window.location.href = '@Url.Action("InsertOrUpdate", "TeaPurchaseNote")'
+                    + '?tran=' + TRAN + '&unit=' + encodeURIComponent(unit) + '&type=' + encodeURIComponent(type);
+            });
+
+            function getSingleChecked(action) {
+                var $c = $('.row-check:checked');
+                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
+                return $c;
+            }
+            function openDoc($c, view) {
+                window.location.href = '@Url.Action("InsertOrUpdate", "TeaPurchaseNote")'
+                    + '?tran=' + TRAN
+                    + '&unit=' + encodeURIComponent($c.data('unit'))
+                    + '&docno=' + encodeURIComponent($c.val())
+                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
+                    + (view ? '&view=true' : '');
+            }
+            $('#editBtn').on('click', function () {
+                var $c = getSingleChecked('edit'); if (!$c) return;
+                if ($c.data('irn')) { alert('E-Invoice has been Generated for this, can\'t edit.'); return; }
+                openDoc($c, false);
+            });
+            $('#viewBtn').on('click', function () { var $c = getSingleChecked('view'); if ($c) openDoc($c, true); });
+            $('#deleteBtn').on('click', function () {
+                var $c = getSingleChecked('delete'); if (!$c) return;
+                if ($c.data('irn')) { alert('E-Invoice has been Generated for this, can\'t delete.'); return; }
+                if (!confirm('Are you sure to Cancel @tranName ' + $c.val() + ' ?\nIts accounts voucher will be removed too.')) return;
+                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "TeaPurchaseNote")' })
+                    .append($('<input>', { type: 'hidden', name: 'tran', value: TRAN }))
+                    .append($('<input>', { type: 'hidden', name: 'unit', value: $c.data('unit') }))
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
+                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
+                    .appendTo('body').submit();
+            });
+        });
+    </script>
+</body>
+</html>
