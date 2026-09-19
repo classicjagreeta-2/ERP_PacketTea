@@ -25,6 +25,11 @@ namespace PacketTea.Models.PT
         public DateTime? MFGDT { get; set; }
         public string BATCHNO { get; set; }
 
+        public string BLNO { get; set; }
+        public decimal? DISC { get; set; }
+        public string FLAG { get; set; }
+        public string CSTCD { get; set; }
+
         public decimal? Mretu { get; set; }
         public decimal? SHT { get; set; }
         public decimal? BKG { get; set; }

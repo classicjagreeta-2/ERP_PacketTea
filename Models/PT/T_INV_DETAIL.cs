@@ -1,25 +1,19 @@
-using System;
-
 namespace PacketTea.Models.PT
 {
     // Mirrors ClassicERPCoreAPI.Models.PacketTea.PacketTea_OtherModel.TRN_INV_DETAIL.
+    // RATE/AMT are what the grid shows: for a tax-inclusive document the rate the
+    // user typed, not the stored tax-exclusive base (the API derives that on save).
     public class T_INV_DETAIL
     {
-        public int ID { get; set; }
-
-        public string DOC_YEAR { get; set; }
-        public string LOCA { get; set; }
-        public string UNIT { get; set; }
-        public string DOCTYPE { get; set; }
-        public string DOCNO { get; set; }
-        public DateTime? DOCDT { get; set; }
         public decimal? SRLNO { get; set; }
-
         public string ITCD { get; set; }
-        public string DESCN { get; set; }
+        public string ITDESC1 { get; set; }
+        public string ITDESC2 { get; set; }
+        public string ITDESC3 { get; set; }
+        public string ITDESC4 { get; set; }
+        public string UNIT_DESC { get; set; }       // UOM
         public string HSN_CODE { get; set; }
         public decimal? QTY { get; set; }
-        public string UOM { get; set; }
         public decimal? RATE { get; set; }
         public decimal? AMT { get; set; }
 
@@ -34,8 +28,9 @@ namespace PacketTea.Models.PT
         public decimal? GCESS_AMT { get; set; }
         public decimal? TCS_RATE { get; set; }
         public decimal? TCS_AMT { get; set; }
+        public decimal? TOT_AMT { get; set; }
 
-        // Display-only field returned by the API alongside the raw row.
-        public string ItemName { get; set; }
+        // Display-only field returned by the API alongside the row.
+        public string ITEM_NAME { get; set; }
     }
 }

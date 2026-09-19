@@ -14,6 +14,9 @@ namespace PacketTea.Models.PT
         public DateTime? DATE_ORA { get; set; }
         public string BLNO { get; set; }
         public DateTime? BLDT { get; set; }
+        // The table stores the bill date in EDATE (API entity MRETU_HED.EDATE);
+        // sent to the API on save, BLDT stays the screen-side name.
+        public DateTime? EDATE => BLDT;
         public string PCD { get; set; }
         public string TPT { get; set; }
         public string VEH { get; set; }
@@ -22,6 +25,8 @@ namespace PacketTea.Models.PT
         public string INVNO { get; set; }
         public string RET_TYPE { get; set; }
         public string IRN { get; set; }
+        public decimal? TRIP_NO { get; set; }
+        public string TRIP_UNIT { get; set; }
 
         public string USER_ORA { get; set; }
         public DateTime? ENTDT { get; set; }

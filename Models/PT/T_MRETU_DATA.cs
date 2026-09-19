@@ -12,5 +12,8 @@ namespace PacketTea.Models.PT
         // Quantity-vs-Net-Weight toggle ("QTY" default or "WT") -- see
         // ClassicERPCoreAPI's MRETU_DATA.OptFlag for what this drives.
         public string OptFlag { get; set; } = "QTY";
+
+        // 0 = current year, 1 = last year, 2 = before last year (VB6 ChkLastYr/chkLLYr).
+        public int BillYearBack { get; set; }
     }
 }

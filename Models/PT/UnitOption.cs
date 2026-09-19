@@ -7,5 +7,6 @@ namespace PacketTea.Models.PT
     {
         public string CODE { get; set; }
         public string NAME { get; set; }
+        public string STATE { get; set; }   // GST state code (Sales UNIT master); only some screens fill it
     }
 }

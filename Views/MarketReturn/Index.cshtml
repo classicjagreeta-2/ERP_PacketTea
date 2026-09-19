@@ -125,7 +125,7 @@
                                 <td>@(string.IsNullOrEmpty(row.irn) ? "" : "Generated")</td>
                             </tr>
                             <tr class="row-detail" id="@detailId" style="display:none;" data-docno="@row.docno" data-unit="@row.unit">
-                                <td colspan="11" style="background:#f8f9fc;padding:10px 12px;">
+                                <td colspan="12" style="background:#f8f9fc;padding:10px 12px;">
                                     <div style="overflow-x:auto;">
                                         <table class="detail-sub-table">
                                             <thead>
@@ -144,7 +144,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody class="detail-items-body">
-                                                <tr><td colspan="11" style="text-align:center;color:#666;">Loading...</td></tr>
+                                                <tr><td colspan="12" style="text-align:center;color:#666;">Loading...</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -154,7 +154,7 @@
                     }
                     else
                     {
-                        <tr><td colspan="11" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="12" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -221,12 +221,12 @@
                     unit: $detail.data('unit')
                 }).done(function (r) {
                     if (!r || !r.success) {
-                        $body.html('<tr><td colspan="11" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
+                        $body.html('<tr><td colspan="12" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
                         return;
                     }
                     var items = r.details || [];
                     if (items.length === 0) {
-                        $body.html('<tr><td colspan="11" style="text-align:center;color:#666;">No item lines</td></tr>');
+                        $body.html('<tr><td colspan="12" style="text-align:center;color:#666;">No item lines</td></tr>');
                         return;
                     }
                     $body.empty();
@@ -247,7 +247,7 @@
                         ).appendTo($body);
                     });
                 }).fail(function () {
-                    $body.html('<tr><td colspan="11" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
+                    $body.html('<tr><td colspan="12" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
                 });
             }
             function closeDetail($btn) {

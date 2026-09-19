@@ -127,21 +127,6 @@
                                 <input type="date" id="DATE_ORA" value="@(head.DATE_ORA?.ToString("yyyy-MM-dd"))" />
                             </div>
                             <div class="form-col-20">
-                                <label>Bill No <span>(*)</span></label>
-                                <input type="text" id="BLNO" value="@head.BLNO" />
-                            </div>
-                            <div class="form-col-20">
-                                <label>&nbsp;</label>
-                                <button type="button" id="btnPickBill" style="width:100%;">Pick / Load Bill</button>
-                            </div>
-                            <div class="form-col-20">
-                                <label>Bill Date <span>(*)</span></label>
-                                <input type="date" id="BLDT" value="@(head.BLDT?.ToString("yyyy-MM-dd"))" readonly />
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-col-20">
                                 <label>Party <span>(*)</span></label>
                                 <input type="text" id="PCD" data-picker="party" value="@head.PCD" placeholder="Code" />
                             </div>
@@ -149,6 +134,30 @@
                                 <label>Party Name</label>
                                 <input type="text" id="PCD_disp" value="@head.PartyName" readonly />
                             </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Bill No <span>(*)</span></label>
+                                <div style="display:flex;gap:4px;">
+                                    <input type="text" id="BLNO" value="@head.BLNO" style="flex:1;" />
+                                    <button type="button" id="btnBillHelp" title="Select a bill of this party" style="width:auto;padding:0 10px;"><i class="fa fa-search"></i></button>
+                                </div>
+                            </div>
+                            <div class="form-col-20">
+                                <label>Bill Date <span>(*)</span></label>
+                                <input type="date" id="BLDT" value="@(head.BLDT?.ToString("yyyy-MM-dd"))" readonly />
+                            </div>
+                            <div class="form-col-40">
+                                <label>Bill of</label>
+                                <div style="padding-top:6px;" class="optflag-row">
+                                    <label><input type="checkbox" id="chkLastYr" style="width:auto;" /> Last Year</label>
+                                    <label><input type="checkbox" id="chkLLYr" style="width:auto;" /> Before Last Year</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
                             <div class="form-col-20">
                                 <label>Transporter <span>(*)</span></label>
                                 <input type="text" id="TPT" data-picker="transporter" value="@head.TPT" placeholder="Code" />
@@ -176,6 +185,14 @@
                                 <label>Veh Type</label>
                                 <input type="text" id="VTYPE" value="@head.VTYPE" />
                             </div>
+                            <div class="form-col-20">
+                                <label>Trip No.</label>
+                                <input type="text" id="TRIP_NO" value="@head.TRIP_NO" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Trip Unit</label>
+                                <input type="text" id="TRIP_UNIT" value="@head.TRIP_UNIT" readonly />
+                            </div>
                         </div>
 
                         <div class="form-row optflag-row">
@@ -197,7 +214,6 @@
                     <div class="accordion-body active" style="display:block;">
                         <div class="action-btns">
                             <ul>
-                                <li><a href="javascript:void(0)" id="btnSelectBillLines"><i class="fa fa-search"></i> Select Data</a></li>
                                 <li><a href="javascript:void(0)" id="btnAddRow"><i class="fa fa-plus"></i> Add Row</a></li>
                                 <li><a href="javascript:void(0)" id="btnRemoveRows"><i class="fa fa-trash-o"></i> Remove Selected</a></li>
                             </ul>
@@ -270,19 +286,6 @@
         <div class="picker-body" id="pickerBody"></div>
     </div>
 
-    <!-- "Select Data" -- pick lines from the referenced Bill No -->
-    <div class="popup-box picker-box wide" id="billPicker">
-        <div class="popup-header">
-            <h2>Select Data (Lines from Bill No)</h2>
-            <button type="button" class="close-btn" onclick="closeBillPicker()">X</button>
-        </div>
-        <div class="picker-body" id="billBody"></div>
-        <div style="text-align:right;padding-top:10px;">
-            <button type="button" class="btn-blue" id="btnBillOk" style="width:auto;padding:5px 16px;">OK</button>
-            <button type="button" class="btn-white" onclick="closeBillPicker()" style="width:auto;padding:5px 16px;">Cancel</button>
-        </div>
-    </div>
-
     <div class="popup-overlay" id="appAlertOverlay"></div>
     <div class="popup-box alert-box" id="appAlertBox">
         <div class="popup-header"><h2 id="appAlertTitle">Notice</h2></div>
@@ -314,11 +317,11 @@
             showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Your session has expired. Please log in again.',
                 function () { window.location.reload(); });
         } else {
-            showAlert('Could not load data. Please try again.');
+            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Could not load data. Please try again.');
         }
     }
 
-    $('#pickerOverlay, #genericPicker, #billPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    $('#pickerOverlay, #genericPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
     var DOCNO = @Html.Raw(JsonConvert.SerializeObject(head.DOCNO ?? ""));
@@ -328,37 +331,130 @@
 
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_MRETU_DET));
     var rowSeq = 0;
-    rows.forEach(function (r) { r._cid = ++rowSeq; r._availQty = null; r._availWeight = null; });
+
+    // A saved document's lines carry the FLAG the VB6 form wrote ('1' = Quantity,
+    // '2' = Net Wt) -- restore the option from it before any recalculation.
+    if (rows.length && String(rows[0].FLAG || '1') === '2') { $('input[name=OptFlag][value=WT]').prop('checked', true); }
+    function basisOf(r) { return $('input[name=OptFlag]:checked').val() === 'WT' ? num(r.WEIGHT) : num(r.Mretu); }
+    rows.forEach(function (r) {
+        r._cid = ++rowSeq; r._availQty = null; r._availWeight = null;
+        r._discPct = num(r.DISC);
+        var b = basisOf(r);
+        r._discPerUnit = b ? num(r.DISCOUNT) / b : null;
+    });
 
     // Cache of the currently-loaded bill's lines (from GetOriginalBill), keyed by
-    // item+mrp+mfgdt+batchno -- used both by "Select Data" and to (re)cap the
-    // Return Qty/Net Wt ceiling on every grid row as its identifying fields change.
+    // item+mrp+mfgdt+batchno -- used to (re)cap the Return Qty/Net Wt ceiling on
+    // every grid row as its identifying fields change.
     var billLinesCache = [];
     var billHeaderCache = null;
+    var billRt = '';
 
     function lineKey(itcd, mrp, mfgdt, batchno) {
-        return (itcd || '') + '|' + (mrp || '') + '|' + (mfgdt ? mfgdt.substring(0, 10) : '') + '|' + (batchno || '');
+        function n(s) { return String(s || '').trim().toUpperCase(); }
+        return n(itcd) + '|' + n(mrp) + '|' + (mfgdt ? String(mfgdt).substring(0, 10) : '') + '|' + n(batchno);
     }
 
-    function loadBillLines(blno, cb) {
-        if (!blno) { billLinesCache = []; billHeaderCache = null; if (cb) cb(); return; }
-        $.getJSON('@Url.Action("GetOriginalBill", "MarketReturn")', { blno: blno, excludeDocno: DOCNO, excludeUnit: UNIT }, function (data) {
+    // VB6 ChkLastYr / chkLLYr -- which fiscal year's schema the bill is read from.
+    function yearBack() { return $('#chkLastYr').is(':checked') ? 1 : ($('#chkLLYr').is(':checked') ? 2 : 0); }
+    function setYearBack(yb) { $('#chkLastYr').prop('checked', yb === 1); $('#chkLLYr').prop('checked', yb === 2); }
+    $('#chkLastYr').on('change', function () { if (this.checked) $('#chkLLYr').prop('checked', false); });
+    $('#chkLLYr').on('change', function () { if (this.checked) $('#chkLastYr').prop('checked', false); });
+
+    // yb = -1 lets the server find the bill in the current, last or before-last
+    // year (used when reopening a saved document).
+    function loadBillLines(blno, yb, cb) {
+        if (!blno) { billLinesCache = []; billHeaderCache = null; if (cb) cb(false); return; }
+        $.getJSON('@Url.Action("GetOriginalBill", "MarketReturn")',
+            { blno: blno, unit: UNIT, rt: billRt, yearBack: yb, excludeDocno: DOCNO, excludeUnit: UNIT }, function (data) {
             billHeaderCache = data.header || null;
             billLinesCache = data.lines || [];
-            if (cb) cb();
+            if (billHeaderCache) { billRt = billHeaderCache.rt || ''; setYearBack(billHeaderCache.yearBack || 0); }
+            if (cb) cb(true);
         }).fail(function (jqXHR) {
             billLinesCache = []; billHeaderCache = null;
-            if (jqXHR.status === 404) { showAlert('Bill No "' + blno + '" was not found.'); }
-            else { handleLookupFail(jqXHR); }
-            if (cb) cb();
+            if (jqXHR.status === 404 || /not found/i.test((jqXHR.responseJSON && jqXHR.responseJSON.message) || '')) {
+                showAlert('Bill No "' + blno + '" was not found.');
+            } else { handleLookupFail(jqXHR); }
+            if (cb) cb(false);
         });
     }
+
+    // VB6 poplines: the bill overwrites the header (party, vehicle, transporter,
+    // veh type, trip no/unit, LR no), sets Quantity/Net Wt from the bill's FLAG,
+    // and replaces the grid with every bill line -- qty, weights, rate, discount
+    // and GST code/rates as billed. Each line defaults to what is still returnable
+    // (billed minus what other Market Returns already took back).
+    function popLines() {
+        var h = billHeaderCache;
+        if (!h) return;
+        // The return belongs to the bill's Sales unit (BTEA/BGCH/...), not the
+        // PacketTea login unit (e.g. JSTI) the screen may have been opened with.
+        if (h.unit && !IS_EDIT) { UNIT = h.unit; $('#UNIT_disp').val(h.unit); }
+        $('#BLDT').val(h.bldt ? h.bldt.substring(0, 10) : '');
+        $('#PCD').val(h.pcd || ''); $('#PCD_disp').val(h.partyName || '');
+        $('#VEH').val(h.veh || '');
+        $('#TPT').val(h.tpt || ''); $('#TPT_disp').val(h.tptName || '');
+        $('#VTYPE').val(h.vtype || '').attr('title', h.vtypeName || '');
+        $('#TRIP_NO').val(h.tripNo == null ? '' : h.tripNo);
+        $('#TRIP_UNIT').val(h.tripUnit || '');
+        $('#LR_NO').val(h.lrNo || '');
+        $('input[name=OptFlag][value=' + (h.optFlag === 'WT' ? 'WT' : 'QTY') + ']').prop('checked', true);
+
+        rows = billLinesCache.map(function (l) {
+            var q = num(l.qty), avail = Math.max(0, num(l.availableQty));
+            var share = q > 0 ? Math.min(1, avail / q) : 0;
+            var r = {
+                _cid: ++rowSeq, ITCD: l.itcd, ItemName: l.itemName, MRP: l.mrp, MFGDT: l.mfgdt, BATCHNO: l.batchno,
+                Mretu: avail,
+                WEIGHT: Math.round(Math.min(num(l.weight), num(l.availableWeight)) * 1000) / 1000,
+                GROSS_WEIGHT: Math.round(num(l.grossWeight) * share * 1000) / 1000,
+                SHT: 0, BKG: 0, LKG: 0, PLCRCD: l.plcrcd || '', PLCRQTY: 0,
+                RATE: num(l.rate), DISC: num(l.disc), _discPct: num(l.disc), DISCOUNT: num(l.discount),
+                CSTCD: l.cstcd || '', FLAG: l.flag || '1',
+                GST_CODE: l.gstCode || '', CGST_RATE: num(l.cgstRate), SGST_RATE: num(l.sgstRate),
+                IGST_RATE: num(l.igstRate), GCESS_RATE: num(l.gcessRate),
+                _availQty: num(l.availableQty), _availWeight: num(l.availableWeight)
+            };
+            // Bill discount is carried per unit of the amount basis, so a partial
+            // return gets its proportional share of it.
+            var billBasis = h.optFlag === 'WT' ? num(l.weight) : q;
+            r._discPerUnit = billBasis ? num(l.discount) / billBasis : null;
+            recalcRow(r);
+            return r;
+        });
+        renderGrid();
+    }
+
+    // Bill help (VB6 TEXT3_buttonclick) -- a party must be chosen first.
+    $('#btnBillHelp').on('click', function () {
+        if (!$('#PCD').val()) { showAlert('Select Party first', function () { $('#PCD').focus(); }); return; }
+        openPicker('bill', $('#BLNO'), function (row) {
+            $('#BLNO').val(row.BLNO);
+            billRt = row.RT || '';
+            loadBillLines(row.BLNO, yearBack(), function (ok) { if (ok) popLines(); });
+        });
+    });
+
+    // Typing a Bill No (VB6 Text3_Validate) loads it the same way.
+    $('#BLNO').on('change', function () {
+        var blno = $.trim($(this).val());
+        billRt = '';
+        if (!blno) { billLinesCache = []; billHeaderCache = null; return; }
+        loadBillLines(blno, yearBack(), function (ok) { if (ok) popLines(); });
+    });
 
     // Re-derive a row's ceiling (available qty/weight) from the cached bill lines
     // whenever its identifying fields (item/mrp/mfgdt/batch) change.
     function capRow(r) {
+        // A bill line without a Mfg Date matches its item+MRP+batch on any date
+        // (the user has to type one for the return line).
         var key = lineKey(r.ITCD, r.MRP, r.MFGDT, r.BATCHNO);
-        var m = billLinesCache.find(function (b) { return lineKey(b.itcd, b.mrp, b.mfgdt, b.batchno) === key; });
+        var undated = lineKey(r.ITCD, r.MRP, null, r.BATCHNO);
+        var m = billLinesCache.find(function (b) {
+            return b.mfgdt ? lineKey(b.itcd, b.mrp, b.mfgdt, b.batchno) === key
+                           : lineKey(b.itcd, b.mrp, null, b.batchno) === undated;
+        });
         if (m) {
             r._availQty = num(m.availableQty);
             r._availWeight = num(m.availableWeight);
@@ -414,28 +510,21 @@
         $('#ftAmt').text(round2(totAmt).toFixed(2));
     }
 
+    // VB6 poplines' arithmetic: Amount = rate x qty (or x net wt), discount kept
+    // separate, GST on (Amount - Discount) at the bill line's own rates (the bill
+    // already carries the CGST+SGST vs IGST split). The server recomputes the same
+    // on Save from the bill itself.
     function recalcRow(r) {
-        var basis = $('input[name=OptFlag]:checked').val() === 'WT' ? num(r.WEIGHT) : num(r.Mretu);
-        var baseAmt = round2(basis * num(r.RATE));
-        var discAmt = r._discPct ? round2(baseAmt * num(r._discPct) / 100) : num(r.DISCOUNT);
-        r.DISCOUNT = discAmt;
-        r.AMT = round2(baseAmt - discAmt);
-        // Client-side GST preview only -- the server recomputes CGST/SGST/IGST/
-        // Cess authoritatively on Save using SLMAS.INTERU and GSTMAS by GST_CODE
-        // (see MarketReturnController.SaveOrUpdate); this just avoids the grid
-        // showing stale zeros until the page is reloaded after a save.
-        if (partyInterstate === true) {
-            r.IGST_AMT = round2(r.AMT * num(r.IGST_RATE) / 100);
-            r.CGST_AMT = 0; r.SGST_AMT = 0;
-        } else {
-            r.CGST_AMT = round2(r.AMT * num(r.CGST_RATE) / 100);
-            r.SGST_AMT = round2(r.AMT * num(r.SGST_RATE) / 100);
-            r.IGST_AMT = 0;
-        }
-        r.GCESS_AMT = round2(r.AMT * num(r.GCESS_RATE) / 100);
+        var basis = basisOf(r);
+        r.AMT = round2(basis * num(r.RATE));
+        if (r._discPerUnit != null) r.DISCOUNT = round2(basis * r._discPerUnit);
+        else if (r._discPct) r.DISCOUNT = round2(r.AMT * num(r._discPct) / 100);
+        var taxable = r.AMT - num(r.DISCOUNT);
+        r.CGST_AMT = round2(taxable * num(r.CGST_RATE) / 100);
+        r.SGST_AMT = round2(taxable * num(r.SGST_RATE) / 100);
+        r.IGST_AMT = round2(taxable * num(r.IGST_RATE) / 100);
+        r.GCESS_AMT = round2(taxable * num(r.GCESS_RATE) / 100);
     }
-
-    var partyInterstate = null; // resolved from GetParty's INTERU flag once Party is chosen
 
     $('#gridBody').on('input change', 'input', function () {
         var $tr = $(this).closest('tr');
@@ -456,6 +545,8 @@
         r.PLCRQTY = num($tr.find('.f-crqty').val());
         r.RATE = num($tr.find('.f-rate').val());
         r._discPct = num($tr.find('.f-discpct').val());
+        r.DISC = r._discPct;
+        if ($(this).hasClass('f-discpct')) r._discPerUnit = null; // user-set % replaces the bill's discount
         r.GST_CODE = ($tr.find('.f-gstcode').val() || '').toUpperCase();
 
         if ($(this).hasClass('f-item') || $(this).hasClass('f-mrp') || $(this).hasClass('f-mfgdt') || $(this).hasClass('f-batchno')) {
@@ -489,7 +580,11 @@
     });
 
     $('input[name=OptFlag]').on('change', function () {
-        rows.forEach(function (r) { recalcRow(r); });
+        // Keep each line's discount amount; only the per-unit basis changes.
+        rows.forEach(function (r) {
+            if (r._discPerUnit != null) { var b = basisOf(r); r._discPerUnit = b ? num(r.DISCOUNT) / b : null; }
+            recalcRow(r);
+        });
         renderGrid();
     });
 
@@ -513,8 +608,18 @@
     var pickerConfig = {
         party: { url: '@Url.Action("GetParty", "MarketReturn")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCD' },
         transporter: { url: '@Url.Action("GetTransporter", "MarketReturn")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'TPT' },
-        item: { url: '@Url.Action("GetItemMaster", "MarketReturn")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: null }
+        item: { url: '@Url.Action("GetItemMaster", "MarketReturn")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: null },
+        bill: {
+            url: '@Url.Action("GetBillList", "MarketReturn")', target: null, title: 'Bill No',
+            cols: [['BLNO', 'Bill No'], ['BLDT', 'Bill Date'], ['VAT_NO', 'VAT No'], ['UNIT', 'Unit'], ['PCD', 'Party'], ['ACNAME', 'Name']],
+            params: function () { return { pcd: $('#PCD').val(), unit: UNIT, yearBack: yearBack() }; }
+        }
     };
+    function cellText(key, v) {
+        if (v == null) return '';
+        if (key === 'BLDT' && typeof v === 'string' && v.length >= 10) { var p = v.substring(0, 10).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+        return v;
+    }
     var activePicker = null;
     var pickerXhr = null;
     var pickerReqSeq = 0;
@@ -532,7 +637,8 @@
 
     function openPicker(key, $input, onSelect) {
         activePicker = { key: key, input: $input, onSelect: onSelect };
-        $('#pickerTitle').text('Select ' + key);
+        $('#pickerTitle').text('Select ' + (pickerConfig[key].title || key));
+        $('#genericPicker').toggleClass('wide', key === 'bill');
         $('#pickerSearch').val('');
         $('#pickerBody').empty().removeData('rows');
         $('#pickerOverlay, #genericPicker').fadeIn(120);
@@ -545,17 +651,22 @@
         var cfg = pickerConfig[activePicker.key];
         var myReq = ++pickerReqSeq;
         if (pickerXhr) { pickerXhr.abort(); }
-        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
+        pickerXhr = $.getJSON(cfg.url, $.extend({ search: term }, cfg.params ? cfg.params() : {}), function (data) {
             if (myReq !== pickerReqSeq) return;
             data = data || [];
             var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
             data.forEach(function (row, i) {
                 html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
                     var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
-                    return '<td>' + (v == null ? '' : v) + '</td>';
+                    return '<td>' + cellText(c[0], v) + '</td>';
                 }).join('') + '</tr>';
             });
             html += '</tbody></table>';
+            if (!data.length && activePicker.key === 'bill') {
+                html += '<p style="margin:10px 4px;color:#666;">No bills found for party ' + ($('#PCD').val() || '') +
+                    (yearBack() === 1 ? ' in last year' : yearBack() === 2 ? ' in the year before last' : ' in this year') +
+                    '. Try Last Year / Before Last Year, or check the Party.</p>';
+            }
             $('#pickerBody').html(html);
             $('#pickerBody').data('rows', data);
         }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
@@ -573,82 +684,8 @@
             var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
             $('#' + cfg.target).val(code);
             $('#' + cfg.target + '_disp').val(name || '');
-            if (cfg.target === 'PCD') {
-                partyInterstate = String(row.INTERU || row.interu || '').toUpperCase() === 'Y';
-                rows.forEach(function (r) { recalcRow(r); });
-                renderGrid();
-            }
         }
         closePicker();
-    });
-
-    // =========================================================
-    // "Select Data" -- pull lines in from the referenced Bill No
-    // =========================================================
-    $('#btnPickBill').on('click', function () {
-        var blno = $('#BLNO').val();
-        if (!blno) { showAlert('Enter a Bill No first.'); return; }
-        loadBillLines(blno, function () {
-            if (!billHeaderCache) return;
-            $('#BLDT').val(billHeaderCache.bldt ? billHeaderCache.bldt.substring(0, 10) : '');
-            if (!$('#PCD').val()) { $('#PCD').val(billHeaderCache.pcd || ''); }
-            if (!$('#TPT').val()) { $('#TPT').val(billHeaderCache.tpt || ''); }
-            if (!$('#VEH').val()) { $('#VEH').val(billHeaderCache.veh || ''); }
-            if (!$('#VTYPE').val()) { $('#VTYPE').val(billHeaderCache.vtype || ''); }
-            rows.forEach(function (r) { capRow(r); });
-            renderGrid();
-            showAlert('Bill No ' + blno + ' loaded (' + billLinesCache.length + ' line(s)). Use "Select Data" to pull lines into the grid.');
-        });
-    });
-
-    $('#btnSelectBillLines').on('click', function () {
-        var blno = $('#BLNO').val();
-        if (!blno) { showAlert('Enter a Bill No first.'); return; }
-        function openIt() {
-            var html = '<table><thead><tr><th></th><th>Item</th><th>MRP</th><th>Mfg Date</th><th>Batch No</th>' +
-                '<th style="text-align:right;">Billed Qty</th><th style="text-align:right;">Available Qty</th>' +
-                '<th style="text-align:right;">Rate</th><th>GST Code</th></tr></thead><tbody>';
-            billLinesCache.forEach(function (l, i) {
-                var mfg = l.mfgdt ? new Date(l.mfgdt).toLocaleDateString('en-GB') : '';
-                var disabled = l.availableQty <= 0 ? 'disabled' : '';
-                html += '<tr data-i="' + i + '"><td><input type="checkbox" class="billChk" ' + disabled + ' /></td>' +
-                    '<td>' + (l.itemName || l.itcd || '') + '</td><td>' + (l.mrp || '') + '</td><td>' + mfg + '</td><td>' + (l.batchno || '') + '</td>' +
-                    '<td style="text-align:right;">' + round2(l.qty).toFixed(2) + '</td>' +
-                    '<td style="text-align:right;">' + round2(l.availableQty).toFixed(2) + '</td>' +
-                    '<td style="text-align:right;">' + round2(l.rate).toFixed(2) + '</td><td>' + (l.gstCode || '') + '</td></tr>';
-            });
-            html += '</tbody></table>';
-            if (!billLinesCache.length) html = '<p style="margin:10px 4px;color:#666;">No lines found on this bill.</p>';
-            $('#billBody').html(html);
-            $('#pickerOverlay, #billPicker').fadeIn(120);
-        }
-        if (billHeaderCache && billHeaderCache.blno === blno) { openIt(); }
-        else { loadBillLines(blno, openIt); }
-    });
-    function closeBillPicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
-
-    $('#btnBillOk').on('click', function () {
-        $('#billBody .billChk:checked').each(function () {
-            var i = $(this).closest('tr').data('i');
-            var l = billLinesCache[i];
-            if (!l || l.availableQty <= 0) return;
-            var dup = rows.some(function (r) { return lineKey(r.ITCD, r.MRP, r.MFGDT, r.BATCHNO) === lineKey(l.itcd, l.mrp, l.mfgdt, l.batchno); });
-            if (dup) return;
-            var qty = round2(l.availableQty);
-            rows.push({
-                _cid: ++rowSeq, ITCD: l.itcd, ItemName: l.itemName, MRP: l.mrp, MFGDT: l.mfgdt, BATCHNO: l.batchno,
-                Mretu: qty, GROSS_WEIGHT: l.grossWeight ? round2(l.grossWeight) : 0,
-                WEIGHT: l.availableWeight ? round2(Math.min(l.weight, l.availableWeight)) : 0,
-                SHT: 0, BKG: 0, LKG: 0, PLCRCD: '', PLCRQTY: 0,
-                RATE: round2(l.rate), _discPct: 0, DISCOUNT: 0, AMT: 0,
-                GST_CODE: l.gstCode || '', CGST_RATE: 0, CGST_AMT: 0, SGST_RATE: 0, SGST_AMT: 0, IGST_RATE: 0, IGST_AMT: 0, GCESS_RATE: 0, GCESS_AMT: 0,
-                _availQty: l.availableQty, _availWeight: l.availableWeight
-            });
-            var added = rows[rows.length - 1];
-            recalcRow(added);
-        });
-        renderGrid();
-        closeBillPicker();
     });
 
     // =========================================================
@@ -658,20 +695,20 @@
     $('#btnSave').on('click', function () {
         if (!$('#DATE_ORA').val()) { showAlert('Date required'); return; }
         if (!$('#BLNO').val()) { showAlert('Bill No is required.'); return; }
-        if (!$('#BLDT').val()) { showAlert('Bill Date is required. Use "Pick / Load Bill" to fetch it.'); return; }
+        if (!$('#BLDT').val()) { showAlert('Bill Date is required. Select the Bill No from its help to fetch it.'); return; }
         if (!$('#PCD').val()) { showAlert('Party Code is required.'); return; }
         if (!$('#TPT').val()) { showAlert('Transporter Code is required.'); return; }
         if (!$('#VEH').val()) { showAlert('Vehicle Number is required.'); return; }
 
-        var valid = rows.filter(function (r) { return r.ITCD; });
-        if (!valid.length) { showAlert('At least one item line with a valid Item Code is required.'); return; }
+        // As in VB6 Command1_Click, bill lines left at zero Return/Shortage/
+        // Breakage/Leakage are simply not saved.
+        var valid = rows.filter(function (r) { return r.ITCD && (num(r.Mretu) + num(r.SHT) + num(r.BKG) + num(r.LKG)) !== 0; });
+        if (!valid.length) { showAlert('At least one item line with a non-zero quantity is required.'); return; }
         for (var i = 0; i < valid.length; i++) {
             var r = valid[i];
             if (!r.MRP) { showAlert('MRP is required for item ' + r.ITCD + '.'); return; }
             if (!r.MFGDT) { showAlert('Manufacturing Date is required for item ' + r.ITCD + '.'); return; }
             if (!r.BATCHNO) { showAlert('Batch No is required for item ' + r.ITCD + '.'); return; }
-            var qtySum = num(r.Mretu) + num(r.SHT) + num(r.BKG) + num(r.LKG);
-            if (qtySum === 0) { showAlert('Enter a non-zero Return/Shortage/Breakage/Leakage quantity for item ' + r.ITCD + '.'); return; }
             if (r._availQty != null && num(r.Mretu) > r._availQty + 0.001) {
                 showAlert('Return Qty for ' + r.ITCD + ' exceeds the quantity available on Bill No ' + $('#BLNO').val() + '.'); return;
             }
@@ -691,10 +728,13 @@
                     VEH: $('#VEH').val(),
                     VTYPE: $('#VTYPE').val(),
                     LR_NO: $('#LR_NO').val(),
-                    INVNO: $('#INVNO').val()
+                    INVNO: $('#INVNO').val(),
+                    TRIP_NO: $('#TRIP_NO').val() ? num($('#TRIP_NO').val()) : null,
+                    TRIP_UNIT: $('#TRIP_UNIT').val()
                 },
                 T_MRETU_DET: valid,
-                OptFlag: $('input[name=OptFlag]:checked').val()
+                OptFlag: $('input[name=OptFlag]:checked').val(),
+                BillYearBack: yearBack()
             };
 
             $.ajax({
@@ -715,9 +755,11 @@
     });
 
     // Pre-load the bill lines cache on open (edit/view) so availability ceilings
-    // show immediately instead of only after "Pick / Load Bill" is clicked again.
+    // show immediately; the saved rows themselves are kept, not re-populated.
+    // yearBack -1: the server finds which year's schema holds the bill and the
+    // Last Year / Before Last Year boxes are ticked to match.
     if ($('#BLNO').val()) {
-        loadBillLines($('#BLNO').val(), function () {
+        loadBillLines($('#BLNO').val(), -1, function () {
             rows.forEach(function (r) { capRow(r); });
             renderGrid();
         });
@@ -731,7 +773,7 @@
     var IS_VIEW = @Html.Raw(isView ? "true" : "false");
     var IRN_LOCKED = @Html.Raw(irnLocked ? "true" : "false");
     if (IS_VIEW || IRN_LOCKED) {
-        $('.accordion-container :input, #btnPickBill, #btnSelectBillLines, #btnAddRow, #btnRemoveRows')
+        $('.accordion-container :input, #btnBillHelp, #btnAddRow, #btnRemoveRows')
             .prop('disabled', true);
         $('#btnSave').addClass('is-disabled').prop('disabled', true);
     }

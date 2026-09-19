@@ -1,15 +1,21 @@
 @model PacketTea.Models.PT.T_INV_DATA
 @using Newtonsoft.Json
 @{
-    ViewBag.Title = "Other Invoice";
+    string tran = (string)ViewBag.Tran ?? "1";
+    string tranName = (string)ViewBag.TranName ?? "Other Invoice";
+    string listAction = (string)ViewBag.ListAction ?? "Index";
+    bool isNote = tran != "1";
+    ViewBag.Title = tranName;
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var docTypes = (Dictionary<string, string>)ViewBag.DocTypes;
+    var docTypes = (Dictionary<string, string>)ViewBag.DocTypes ?? new Dictionary<string, string>();
     bool isEdit = ViewBag.IsEdit ?? false;
-    // True only when this window was opened from the list page's "New" inline row --
-    // Unit + Doc Type were already chosen there, so both repeat here read-only.
-    bool lockedFromList = ViewBag.LockedFromList ?? false;
     bool isView = ViewBag.IsView ?? false;
-    var head = Model.TRN_INV_HEAD;
+    var head = Model.TRN_INV_HEAD ?? new PacketTea.Models.PT.T_INV_HEAD();
+    bool irnLocked = !string.IsNullOrEmpty(head.IRN);
+    bool readOnly = isView || irnLocked || (isEdit && !string.IsNullOrEmpty(head.LockMessage));
+    string typeName = docTypes.ContainsKey(head.DOCTYPE ?? "") ? docTypes[head.DOCTYPE] : "";
+    Func<DateTime?, string> Iso = d => d?.ToString("yyyy-MM-dd") ?? "";
+    Func<decimal?, string> F2 = v => (v ?? 0m).ToString("0.00");
 }
 
 <!doctype html>
@@ -20,40 +26,65 @@
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
     <script src="~/libraries/assetspo/js/custom.js"></script>
     <style>
-        input[readonly] { background-color: #f3f4f7; color: #555; }
+        input[readonly], textarea[readonly] { background-color: #f3f4f7; color: #555; }
+        /* purchase-order.css only defines 10/15/20/50/100 */
+        .form-col-40 { width: 40%; padding: 0 10px; margin-bottom: 10px; }
+        .form-col-33 { width: 33.33%; padding: 0 10px; margin-bottom: 10px; }
         .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
+        .inp-pick { display: flex; gap: 4px; }
+        .inp-pick input { flex: 1; min-width: 0; }
+        .inp-pick .pick-btn { width: auto; padding: 0 9px; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; }
+        .num2 { text-align: right; }
+        .radio-row label { font-weight: normal; margin-right: 14px; }
+        .radio-row input { width: auto; }
+
         #gridTable th, #gridTable td { white-space: nowrap; }
-        #gridTable td input { min-width: 80px; }
-        #gridTable td input.f-rate, #gridTable td input.f-amount, #gridTable td input.f-qty,
-        #gridTable td input.f-cgstrate, #gridTable td input.f-cgstamt,
-        #gridTable td input.f-sgstrate, #gridTable td input.f-sgstamt,
-        #gridTable td input.f-igstrate, #gridTable td input.f-igstamt,
-        #gridTable td input.f-cessrate, #gridTable td input.f-cessamt,
-        #gridTable td input.f-tcsrate, #gridTable td input.f-tcsamt,
-        input[type="number"] { text-align: right; }
-        .popup-box.picker-box { width: 420px; display: none; }
-        .popup-box .picker-body { max-height: 36vh; overflow-y: auto; margin-top: 8px; }
-        .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; }
-        .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
-        .popup-box .picker-body tr:hover td { background: #eef3ff; }
-        .popup-box .picker-search { margin-bottom: 8px; }
-        .action-btns li a.is-disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
-        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
-        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
-        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
-        .totals-row { display: flex; justify-content: flex-end; gap: 24px; padding: 10px 4px; }
+        #gridTable th.num, #gridTable td.num { text-align: right; }
+        #gridTable td input { min-width: 70px; }
+        #gridTable td input.f-itcd { width: 62px; min-width: 62px; text-transform: uppercase; }
+        #gridTable td input.f-gst { width: 48px; min-width: 48px; }
+        #gridTable td input.f-name { min-width: 160px; }
+        #gridTable td input.f-desc { min-width: 170px; }
+        #gridTable td input.calc { background-color: #f3f4f7; text-align: right; min-width: 64px; width: 80px; }
+        #gridTable td input.pct { min-width: 52px; width: 56px; }
+        .grid-pick-btn { width: 20px; height: 21px; padding: 0; margin-left: 2px; vertical-align: middle; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; font-size: 11px; line-height: 1; }
+
+        .totals-row { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 18px; padding: 10px 4px; }
         .totals-row .tot-item { text-align: right; }
         .totals-row .tot-item label { display: block; font-size: 11px; color: #666; }
         .totals-row .tot-item input { width: 130px; text-align: right; }
+        .totals-row .tot-item.net input { font-weight: bold; }
+
+        .popup-box.picker-box { width: 560px; max-width: 94vw; display: none; }
+        .popup-box.picker-box.wide { width: 820px; }
+        .popup-box .picker-body { max-height: 45vh; overflow-y: auto; margin-top: 8px; }
+        .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; position: sticky; top: 0; }
+        .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
+        .popup-box .picker-body th.num, .popup-box .picker-body td.num { text-align: right; }
+        .popup-box .picker-body tr:hover td, .popup-box .picker-body tr.hl td { background: #eef3ff; }
+        .popup-box .picker-note { color: #777; font-size: 11.5px; margin-top: 6px; }
+        .popup-box.alert-box { width: 440px; max-width: 92vw; display: none; }
+        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+        .popup-box .popup-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+        .popup-box.desc-box { width: 560px; max-width: 94vw; display: none; }
+        .popup-box.desc-box input { width: 100%; margin-bottom: 6px; }
+        .popup-box.gl-box { width: 980px; max-width: 96vw; display: none; }
+        .popup-box.gl-box .gl-body { max-height: 55vh; overflow: auto; }
+        #glTable { width: 100%; border-collapse: collapse; font-size: 12px; }
+        #glTable th { background: #404e68; color: #fff; padding: 6px; position: sticky; top: 0; }
+        #glTable td { border-bottom: 1px solid #eee; padding: 4px 6px; white-space: nowrap; }
+        #glTable .num { text-align: right; }
+        #glTable input { width: 90px; text-transform: uppercase; }
+        #glTable input.missing { border-color: #d9534f; background: #fff3f3; }
+        #glTable tfoot td { font-weight: bold; border-top: 2px solid #ccc; }
+        .gl-warn { color: #8a6d3b; background: #fcf8e3; border: 1px solid #faebcc; padding: 6px 10px; margin-bottom: 8px; font-size: 12px; }
+        .popup-box.items-box { width: 820px; max-width: 94vw; display: none; }
+        .action-btns li a.is-disabled, .action-btns li button:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+        .irn-banner { background:#fff3cd; border:1px solid #ffe69c; color:#664d03; padding:8px 14px; margin-bottom:10px; border-radius:4px; font-size:13px; }
     </style>
 </head>
 <body>
-
-    <input type="hidden" id="isEdit" value="@(isEdit ? "1" : "0")" />
-    <!-- API's TRN_INV_HEAD uses an "assigned" (not auto-generated) id strategy --
-         the existing row's ID must be echoed back on update. -->
-    <input type="hidden" id="ID" value="@head.ID" />
 
     <div class="general-container">
         <div class="purchase-details">
@@ -61,9 +92,9 @@
             <div class="header-content">
                 <div class="action-btns">
                     <ul>
-                        <li><a href="@Url.Action("Index", "OtherInvoice")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                        <li><a href="@Url.Action(listAction, "OtherInvoice")"><i class="fa fa-arrow-left"></i> Back</a></li>
                         <li><button type="button" id="btnSave"><i class="fa fa-floppy-o"></i> Save</button></li>
-                        <li><a href="@Url.Action("Index", "OtherInvoice")"><i class="fa fa-times"></i> Cancel</a></li>
+                        <li><a href="@Url.Action(listAction, "OtherInvoice")"><i class="fa fa-times"></i> Cancel</a></li>
                         <li style="margin-left:auto">
                             <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
                                 Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
@@ -74,35 +105,34 @@
                 <div class="header-details">
                     <div class="left">
                         <div class="order-code">
-                            <div class="txt"><div class="title-heading">Other Invoice</div></div>
+                            <div class="txt"><div class="title-heading">@tranName</div></div>
                         </div>
                         <div class="title-heading">DOC NO. : @(head.DOCNO ?? "")</div>
-                    </div>
-                    <div class="right">
-                        <div>IRN : <span id="irnText">@(string.IsNullOrEmpty(head.IRN) ? "Not Generated" : head.IRN)</span></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Unit / Doc Type -- always visible, locks read-only once chosen on the list
-                 page's "New" row (same pattern as Master Blend Entry's Unit/Blend Type). -->
+            @if (irnLocked)
+            {
+                <div class="irn-banner"><i class="fa fa-lock"></i> e-Invoice (IRN: @head.IRN) already generated against this document -- Edit/Delete is not allowed.</div>
+            }
+            else if (isEdit && !isView && !string.IsNullOrEmpty(head.LockMessage))
+            {
+                <div class="irn-banner"><i class="fa fa-lock"></i> @head.LockMessage</div>
+            }
+
             <div class="accordion-container compact-accordion">
                 <div class="accordion">
-                    <div class="accordion-header active"><span class="txt">Unit / Doc Type</span></div>
+                    <div class="accordion-header active"><span class="txt">Unit / Type</span></div>
                     <div class="accordion-body">
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Unit</label>
-                                <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                                <input type="text" id="UNIT" value="@head.UNIT" readonly />
                             </div>
-                            <div class="form-col-20">
-                                <label>Doc Type <span>(*)</span></label>
-                                <select id="DOCTYPE" @((isEdit || lockedFromList) ? "disabled" : "")>
-                                    @foreach (var dt in docTypes)
-                                    {
-                                        <option value="@dt.Key" selected="@(dt.Key == head.DOCTYPE)">@dt.Value</option>
-                                    }
-                                </select>
+                            <div class="form-col-40">
+                                <label>Type</label>
+                                <input type="text" id="DOCTYPE_disp" value="@(head.DOCTYPE)@(string.IsNullOrEmpty(typeName) ? "" : " - " + typeName)" readonly />
                             </div>
                         </div>
                     </div>
@@ -118,55 +148,108 @@
 
                         <div class="form-row">
                             <div class="form-col-20">
-                                <label>Doc No</label>
+                                <label>@(isNote ? "Doc No" : "Invoice No")</label>
                                 <input type="text" id="DOCNO" value="@head.DOCNO" readonly placeholder="(auto)" />
                             </div>
                             <div class="form-col-20">
-                                <label>Doc Date <span>(*)</span></label>
-                                <input type="date" id="DOCDT" value="@(head.DOCDT?.ToString("yyyy-MM-dd"))" @(isEdit ? "disabled" : "") />
+                                <label>@(isNote ? "Doc Date" : "Invoice Date") <span>(*)</span></label>
+                                <input type="date" id="DOCDT" value="@Iso(head.DOCDT)" @(isEdit ? "readonly" : "") max="@DateTime.Today.ToString("yyyy-MM-dd")" />
                             </div>
                             <div class="form-col-20">
                                 <label>Party <span>(*)</span></label>
-                                <input type="text" id="PCD" data-picker="party" value="@head.PCD" placeholder="Code" />
+                                <div class="inp-pick">
+                                    <input type="text" id="PCD" value="@head.PCD" placeholder="Code" maxlength="6" style="text-transform:uppercase;" />
+                                    <button type="button" class="pick-btn" data-pick="party" title="Search party"><i class="fa fa-search"></i></button>
+                                </div>
                             </div>
-                            <div class="form-col-20">
+                            <div class="form-col-40">
                                 <label>Party Name</label>
                                 <input type="text" id="PCD_disp" value="@head.PartyName" readonly />
                             </div>
-                            <div class="form-col-20">
-                                <label>Rate Incl./Excl. Tax</label>
-                                <select id="RATE_TYPE">
-                                    <option value="E" selected="@(head.RATE_TYPE != "I")">Excl. Tax</option>
-                                    <option value="I" selected="@(head.RATE_TYPE == "I")">Incl. Tax</option>
-                                </select>
+                        </div>
+
+                        <div class="form-row">
+                            @if (isNote)
+                            {
+                                <div class="form-col-20">
+                                    <label>Invoice No</label>
+                                    <div class="inp-pick">
+                                        <input type="text" id="CONTRACT_NO" value="@head.CONTRACT_NO" maxlength="100" />
+                                        <button type="button" class="pick-btn" id="btnRefInv" title="Select the party's invoice"><i class="fa fa-search"></i></button>
+                                    </div>
+                                </div>
+                                <div class="form-col-20">
+                                    <label>Invoice Date</label>
+                                    <input type="date" id="CONTRACT_DATE" value="@Iso(head.CONTRACT_DATE)" />
+                                </div>
+                                <div class="form-col-20 radio-row">
+                                    <label>&nbsp;</label>
+                                    <label><input type="checkbox" id="chkLastYr" @(head.RefLastYear ? "checked" : "") /> Invoice of last year</label>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="form-col-20">
+                                    <label>Contract No</label>
+                                    <input type="text" id="CONTRACT_NO" value="@head.CONTRACT_NO" maxlength="100" />
+                                </div>
+                                <div class="form-col-20">
+                                    <label>Contract Date</label>
+                                    <input type="date" id="CONTRACT_DATE" value="@Iso(head.CONTRACT_DATE)" />
+                                </div>
+                            }
+                            <div class="form-col-40 radio-row">
+                                <label>Rate</label>
+                                <div style="padding-top:6px;">
+                                    <label><input type="radio" name="RATE_TYPE" value="N" @(head.RATE_TYPE != "Y" ? "checked" : "") /> Excl. Tax</label>
+                                    <label><input type="radio" name="RATE_TYPE" value="Y" @(head.RATE_TYPE == "Y" ? "checked" : "") /> Incl. Tax</label>
+                                </div>
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-col-20">
-                                <label>Trans/Driver Code</label>
-                                <input type="text" id="TRANS_CODE" value="@head.TRANS_CODE" />
+                                <label>Transporter</label>
+                                <div class="inp-pick">
+                                    <input type="text" id="TRANS_CODE" value="@head.TRANS_CODE" placeholder="Code" maxlength="6" style="text-transform:uppercase;" />
+                                    <button type="button" class="pick-btn" data-pick="transporter" title="Search transporter"><i class="fa fa-search"></i></button>
+                                </div>
+                            </div>
+                            <div class="form-col-20">
+                                <label>Transporter Name</label>
+                                <input type="text" id="TRANS_CODE_disp" value="@head.TransName" readonly />
                             </div>
                             <div class="form-col-20">
                                 <label>Vehicle No</label>
-                                <input type="text" id="VEHICLE_NO" value="@head.VEHICLE_NO" />
+                                <input type="text" id="VEH_NO" value="@head.VEH_NO" maxlength="20" style="text-transform:uppercase;" />
                             </div>
                             <div class="form-col-20">
                                 <label>Challan No</label>
-                                <input type="text" id="CHALLAN_NO" value="@head.CHALLAN_NO" />
+                                <input type="text" id="CHL_NO" value="@head.CHL_NO" maxlength="30" />
                             </div>
                             <div class="form-col-20">
                                 <label>Challan Date</label>
-                                <input type="date" id="CHALLAN_DT" value="@(head.CHALLAN_DT?.ToString("yyyy-MM-dd"))" />
+                                <input type="date" id="CHL_DATE" value="@Iso(head.CHL_DATE)" />
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-col-20">
-                                <label>Bank Code <span>(*)</span></label>
-                                <input type="text" id="BANK_CODE" data-picker="bank" value="@head.BANK_CODE" placeholder="Code" />
+                                <label>RR No</label>
+                                <input type="text" id="CNNO" value="@head.CNNO" maxlength="20" />
                             </div>
                             <div class="form-col-20">
+                                <label>RR Date</label>
+                                <input type="date" id="CNDT" value="@Iso(head.CNDT)" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Bank Code <span>(*)</span></label>
+                                <div class="inp-pick">
+                                    <input type="text" id="BANK_CODE" value="@head.BANK_CODE" placeholder="Code" maxlength="8" />
+                                    <button type="button" class="pick-btn" data-pick="bank" title="Search bank"><i class="fa fa-search"></i></button>
+                                </div>
+                            </div>
+                            <div class="form-col-40">
                                 <label>Bank Name</label>
                                 <input type="text" id="BANK_CODE_disp" value="@head.BankName" readonly />
                             </div>
@@ -175,31 +258,31 @@
                         <div class="form-row">
                             <div class="form-col-100">
                                 <label>Remarks</label>
-                                <textarea id="REMARKS" style="height:50px;">@head.REMARKS</textarea>
+                                <input type="text" id="NAR3" value="@head.NAR3" maxlength="100" />
                             </div>
                         </div>
 
                         <div class="form-row">
-                            <div class="form-col-20">
+                            <div class="form-col-33">
                                 <label>Delivery Address 1</label>
-                                <input type="text" id="DELIVERY_ADD1" value="@head.DELIVERY_ADD1" />
+                                <input type="text" id="DELIV_ADD1" value="@head.DELIV_ADD1" maxlength="100" />
                             </div>
-                            <div class="form-col-20">
+                            <div class="form-col-33">
                                 <label>Delivery Address 2</label>
-                                <input type="text" id="DELIVERY_ADD2" value="@head.DELIVERY_ADD2" />
+                                <input type="text" id="DELIV_ADD2" value="@head.DELIV_ADD2" maxlength="100" />
                             </div>
-                            <div class="form-col-20">
+                            <div class="form-col-33">
                                 <label>Delivery Address 3</label>
-                                <input type="text" id="DELIVERY_ADD3" value="@head.DELIVERY_ADD3" />
+                                <input type="text" id="DELIV_ADD3" value="@head.DELIV_ADD3" maxlength="100" />
                             </div>
                         </div>
 
                     </div>
                 </div>
 
-                <!-- Lines -->
+                <!-- Item Detail -->
                 <div class="accordion">
-                    <div class="accordion-header"><span class="txt">Item Detail</span></div>
+                    <div class="accordion-header active"><span class="txt">Item Detail</span></div>
                     <div class="accordion-body active" style="display:block;">
                         <div class="action-btns">
                             <ul>
@@ -214,61 +297,40 @@
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
                                         <th style="width:30px;">Sl</th>
                                         <th>Item <span style="color:red;">(*)</span></th>
+                                        <th>Item Name</th>
                                         <th>Description</th>
-                                        <th style="width:90px;">HSN Code</th>
-                                        <th style="width:80px;text-align:right;">Qty</th>
-                                        <th style="width:70px;">UOM</th>
-                                        <th style="width:80px;text-align:right;">Rate</th>
-                                        <th style="width:90px;text-align:right;">Amount</th>
-                                        <th style="width:80px;">GST Code <span style="color:red;">(*)</span></th>
-                                        <th style="width:70px;text-align:right;">CGST %</th>
-                                        <th style="width:80px;text-align:right;">CGST Amt</th>
-                                        <th style="width:70px;text-align:right;">SGST %</th>
-                                        <th style="width:80px;text-align:right;">SGST Amt</th>
-                                        <th style="width:70px;text-align:right;">IGST %</th>
-                                        <th style="width:80px;text-align:right;">IGST Amt</th>
-                                        <th style="width:70px;text-align:right;">Cess %</th>
-                                        <th style="width:80px;text-align:right;">Cess Amt</th>
-                                        <th style="width:70px;text-align:right;">TCS %</th>
-                                        <th style="width:80px;text-align:right;">TCS Amt</th>
+                                        <th>HSN Code</th>
+                                        <th class="num">Qty</th>
+                                        <th>UOM</th>
+                                        <th class="num">Rate</th>
+                                        <th class="num">Amount</th>
+                                        <th>GST <span style="color:red;">(*)</span></th>
+                                        <th class="num">CGST%</th>
+                                        <th class="num">CGST Amt</th>
+                                        <th class="num">SGST%</th>
+                                        <th class="num">SGST Amt</th>
+                                        <th class="num">IGST%</th>
+                                        <th class="num">IGST Amt</th>
+                                        <th class="num">Cess%</th>
+                                        <th class="num">Cess Amt</th>
+                                        <th class="num">TCS%</th>
+                                        <th class="num">TCS Amt</th>
+                                        <th class="num">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody id="gridBody"></tbody>
-                                <tfoot>
-                                    <tr class="total">
-                                        <td colspan="8" style="text-align:right;">Total</td>
-                                        <td id="ftAmt" style="text-align:right;"></td>
-                                        <td></td>
-                                        <td></td><td id="ftCgst" style="text-align:right;"></td>
-                                        <td></td><td id="ftSgst" style="text-align:right;"></td>
-                                        <td></td><td id="ftIgst" style="text-align:right;"></td>
-                                        <td></td><td id="ftCess" style="text-align:right;"></td>
-                                        <td></td><td id="ftTcs" style="text-align:right;"></td>
-                                    </tr>
-                                </tfoot>
                             </table>
                         </div>
 
                         <div class="totals-row">
-                            <div class="tot-item">
-                                <label>Gross Amount</label>
-                                <input type="text" id="dispGross" readonly />
-                            </div>
-                            <div class="tot-item">
-                                <label>Round Off</label>
-                                <input type="number" step="0.01" id="ROUND_OFF" value="@(head.ROUND_OFF ?? 0)" />
-                            </div>
-                            <div class="tot-item">
-                                <label>Net Amount</label>
-                                <input type="text" id="dispNet" readonly />
-                            </div>
+                            <div class="tot-item"><label>Total Qty</label><input type="text" id="totQty" readonly /></div>
+                            <div class="tot-item"><label>Taxable Amount</label><input type="text" id="totTaxable" readonly /></div>
+                            <div class="tot-item"><label>GST Amount</label><input type="text" id="totGst" readonly /></div>
+                            <div class="tot-item"><label>TCS Amount</label><input type="text" id="totTcs" readonly /></div>
+                            <div class="tot-item"><label>Gross Amount</label><input type="text" id="totGross" readonly /></div>
+                            <div class="tot-item"><label>Round Off</label><input type="text" id="R_OFF" class="num2" data-neg="1" inputmode="decimal" value="@F2(head.R_OFF)" /></div>
+                            <div class="tot-item net"><label>Net Amount</label><input type="text" id="totNet" readonly /></div>
                         </div>
-                        <p style="color:#888;font-size:11.5px;padding:0 4px;">
-                            Note: CGST/SGST/IGST/Cess/TCS amounts and the final Net Amount are authoritatively
-                            computed server-side on Save (per the GST/TCS rate master and the Incl./Excl. Tax
-                            toggle) -- the figures shown here before Save are a client-side estimate only and
-                            will refresh to the saved values once the record reloads.
-                        </p>
                     </div>
                 </div>
 
@@ -276,27 +338,75 @@
         </div>
     </div>
 
-    <!-- Backdrop shared by every picker below -->
+    <!-- Backdrop shared by every popup -->
     <div class="popup-overlay" id="pickerOverlay"></div>
 
-    <!-- Generic single-select picker (Party/Bank/Item) -->
+    <!-- Generic searchable picker -->
     <div class="popup-box picker-box" id="genericPicker">
         <div class="popup-header">
             <h2 id="pickerTitle">Select</h2>
-            <button type="button" class="close-btn" onclick="closePicker()">X</button>
+            <button type="button" class="close-btn" id="pickerClose">X</button>
         </div>
-        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
+        <input type="text" id="pickerSearch" placeholder="Type to search any column..." autocomplete="off" />
         <div class="picker-body" id="pickerBody"></div>
+        <div class="picker-note">Up/Down to move, Enter to select, Esc to close. Showing up to 100 matches.</div>
     </div>
 
-    <!-- In-page alert/confirm modal -->
+    <!-- Item description (VB6 frmItemDesc: four lines) -->
+    <div class="popup-box desc-box" id="descBox">
+        <div class="popup-header"><h2>Item Description</h2></div>
+        <input type="text" id="desc1" maxlength="200" placeholder="Line 1" />
+        <input type="text" id="desc2" maxlength="200" placeholder="Line 2" />
+        <input type="text" id="desc3" maxlength="200" placeholder="Line 3" />
+        <input type="text" id="desc4" maxlength="200" placeholder="Line 4" />
+        <div class="popup-actions">
+            <button type="button" class="btn-white" id="descCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="descOk" style="width:auto;padding:5px 16px;">OK</button>
+        </div>
+    </div>
+
+    <!-- Select Item from the referenced invoice (VB6 Frame6 / datagrid2) -->
+    <div class="popup-box items-box" id="itemsBox">
+        <div class="popup-header"><h2 id="itemsTitle">Select Item</h2></div>
+        <div class="picker-body">
+            <table>
+                <thead><tr><th style="width:26px;"><input type="checkbox" id="itemsAll" /></th><th>Item</th><th>Description</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th><th>GST</th></tr></thead>
+                <tbody id="itemsBody"></tbody>
+            </table>
+        </div>
+        <div class="picker-note">Ticked lines replace the item grid (rate left blank for the note's own rate).</div>
+        <div class="popup-actions">
+            <button type="button" class="btn-white" id="itemsCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="itemsOk" style="width:auto;padding:5px 16px;">OK</button>
+        </div>
+    </div>
+
+    <!-- Accounting preview (VB6 Frame3 / jvgrid) -->
+    <div class="popup-box gl-box" id="glBox">
+        <div class="popup-header"><h2>Accounting Entry Preview</h2></div>
+        <div id="glWarn"></div>
+        <div class="gl-body">
+            <table id="glTable">
+                <thead>
+                    <tr><th>Sl</th><th>A/c Code</th><th>Sub Code</th><th>Account Name</th><th>Ref Code</th><th>Cost Centre</th><th class="num">Debit</th><th class="num">Credit</th></tr>
+                </thead>
+                <tbody id="glBody"></tbody>
+                <tfoot><tr><td colspan="6" style="text-align:right;">Total</td><td class="num" id="glDr"></td><td class="num" id="glCr"></td></tr></tfoot>
+            </table>
+        </div>
+        <div class="picker-note">Fields marked red are required for that account. Save writes the invoice and this voucher together.</div>
+        <div class="popup-actions">
+            <button type="button" class="btn-white" id="glBack" style="width:auto;padding:5px 16px;">Back</button>
+            <button type="button" class="btn-blue" id="glSave" style="width:auto;padding:5px 16px;"><i class="fa fa-floppy-o"></i> Save</button>
+        </div>
+    </div>
+
+    <!-- In-page alert/confirm -->
     <div class="popup-overlay" id="appAlertOverlay"></div>
     <div class="popup-box alert-box" id="appAlertBox">
-        <div class="popup-header">
-            <h2 id="appAlertTitle">Notice</h2>
-        </div>
+        <div class="popup-header"><h2 id="appAlertTitle">Notice</h2></div>
         <div class="alert-message" id="appAlertMessage"></div>
-        <div class="alert-actions">
+        <div class="popup-actions">
             <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
             <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
         </div>
@@ -304,7 +414,7 @@
 
 <script>
     // =========================================================
-    // In-page alert/confirm (see markup above) -- verbatim from Master Blend Entry.
+    // Alerts / confirm
     // =========================================================
     function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
     function showAlert(message, onOk) {
@@ -313,6 +423,7 @@
         $('#appAlertCancel').hide();
         $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
         $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+        setTimeout(function () { $('#appAlertOk').focus(); }, 130);
     }
     function showConfirm(message, onYes) {
         $('#appAlertTitle').text('Confirm');
@@ -321,297 +432,585 @@
         $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onYes) onYes(); });
         $('#appAlertOverlay, #appAlertBox').fadeIn(120);
     }
-
-    function handleLookupFail(jqXHR) {
-        if (jqXHR.status === 440) {
-            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Your session has expired. Please log in again.',
-                function () { window.location.reload(); });
-        } else {
-            showAlert('Could not load data. Please try again.');
-        }
+    function handleAjaxFail(jqXHR) {
+        var msg = (jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Could not load data. Please try again.';
+        if (jqXHR.status === 440) showAlert(msg, function () { window.location.reload(); });
+        else if (jqXHR.statusText !== 'abort') showAlert(msg);
     }
 
-    // Re-parent onto the true <body> -- same fixed-position-popup workaround as Master
-    // Blend Entry's InsertOrUpdate.cshtml (see its comment for the full explanation).
-    $('#pickerOverlay, #genericPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    // Fixed-position popups must sit directly under <body>.
+    $('#pickerOverlay, #genericPicker, #descBox, #itemsBox, #glBox, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
-    var IS_EDIT = $('#isEdit').val() === '1';
-    var rows = @Html.Raw(JsonConvert.SerializeObject(Model.TRN_INV_DETAIL));
+    // =========================================================
+    // State
+    // =========================================================
+    var TRAN = '@tran';
+    var IS_NOTE = TRAN !== '1';
+    var IS_EDIT = @Html.Raw(isEdit ? "true" : "false");
+    var READ_ONLY = @Html.Raw(readOnly ? "true" : "false");
+    var LIST_URL = '@Url.Action(listAction, "OtherInvoice")';
+    var HEAD = @Html.Raw(JsonConvert.SerializeObject(new {
+        head.DOC_YEAR, head.UNIT, head.DOCTYPE, head.DOCNO, head.UnitStateCode,
+        head.PartyStateCode, head.PartyInterU, head.PartyPan, head.PartyTcsTag
+    }));
+    var UNIT = HEAD.UNIT || '';
+    var UNIT_STATE = HEAD.UnitStateCode || '';
+    var PARTY = { state: HEAD.PartyStateCode || '', pan: HEAD.PartyPan || '', tcsTag: HEAD.PartyTcsTag || 'N' };
+    var GST = {};   // GST_CODE -> rates (GSTMAS)
+
+    var rows = @Html.Raw(JsonConvert.SerializeObject(Model.TRN_INV_DETAIL ?? new List<PacketTea.Models.PT.T_INV_DETAIL>()));
     var rowSeq = 0;
     rows.forEach(function (r) { r._cid = ++rowSeq; });
 
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
-    function round2(v) { return Math.round(num(v) * 100) / 100; }
-    function htmlAttr(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+    function round2(v) { var n = num(v); return Math.sign(n) * Math.round(Math.abs(n) * 100 + 1e-8) / 100; }
+    function f2(v) { return round2(v).toFixed(2); }
+    function fmt2(v) { return round2(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function esc(v) { return $('<div>').text(v == null ? '' : v).html(); }
+    function up(v) { return $.trim(v || '').toUpperCase(); }
+    function isoDate(v) { return v ? String(v).substring(0, 10) : ''; }
+    function dmy(v) { var s = isoDate(v); if (!s) return ''; var p = s.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+    function rateIncl() { return $('input[name=RATE_TYPE]:checked').val() === 'Y'; }
+    function docDate() { return $('#DOCDT').val() || isoDate(new Date().toISOString()); }
+
+    // =========================================================
+    // Numeric inputs: digits and one decimal point only, 2 decimals,
+    // right-aligned (class num2; data-neg allows a leading minus).
+    // =========================================================
+    function cleanNum(s, allowNeg) {
+        s = String(s || '').replace(allowNeg ? /[^0-9.\-]/g : /[^0-9.]/g, '');
+        if (allowNeg) s = s.replace(/(?!^)-/g, '');
+        var i = s.indexOf('.');
+        if (i >= 0) s = s.substring(0, i + 1) + s.substring(i + 1).replace(/\./g, '').substring(0, 2);
+        return s;
+    }
+    $(document).on('keypress', 'input.num2', function (e) {
+        var ch = String.fromCharCode(e.which), v = this.value, neg = !!$(this).data('neg');
+        if (e.which < 32) return;
+        if (ch === '-' && neg && this.selectionStart === 0 && v.indexOf('-') < 0) return;
+        if (ch === '.' && v.indexOf('.') < 0) return;
+        if (!/[0-9]/.test(ch)) { e.preventDefault(); return; }
+        var dot = v.indexOf('.');
+        if (dot >= 0 && this.selectionStart > dot && this.selectionStart === this.selectionEnd && v.length - dot > 2) e.preventDefault();
+    });
+    $(document).on('input paste', 'input.num2', function () {
+        var c = cleanNum(this.value, !!$(this).data('neg'));
+        if (c !== this.value) this.value = c;
+    });
+    $(document).on('blur', 'input.num2', function () {
+        if (this.value === '' || this.value === '-') { this.value = '0.00'; }
+        else this.value = f2(this.value);
+    });
+
+    // =========================================================
+    // Calculation -- mirrors the API (VB6 calcamt); the server recomputes on save.
+    // =========================================================
+    function calcLine(r) {
+        var g = GST[up(r.GST_CODE)];
+        var qty = num(r.QTY), rate = num(r.RATE);
+        r.AMT = round2(qty * rate);
+        r.CGST_RATE = r.SGST_RATE = r.IGST_RATE = r.GCESS_RATE = r.TCS_RATE = 0;
+        var taxPct = 0;
+        if (g) {
+            if (UNIT_STATE && PARTY.state === UNIT_STATE) { r.CGST_RATE = num(g.CGST_RATE); r.SGST_RATE = num(g.SGST_RATE); taxPct = r.CGST_RATE + r.SGST_RATE; }
+            else { r.IGST_RATE = num(g.IGST_RATE); taxPct = r.IGST_RATE; }
+            r.GCESS_RATE = num(g.GCESS_RATE);
+            if (docDate() < '2020-10-01') r.TCS_RATE = num(g.TCS_RATE);
+            else if (PARTY.tcsTag === 'Y') r.TCS_RATE = PARTY.pan ? num(g.TCS_RATE_PAN) : num(g.TCS_RATE);
+        }
+        var rateO = rateIncl() ? round2(rate * 100 / (100 + taxPct)) : rate;
+        r._amtO = round2(qty * rateO);
+        r.CGST_AMT = round2(r._amtO * r.CGST_RATE / 100);
+        r.SGST_AMT = round2(r._amtO * r.SGST_RATE / 100);
+        r.IGST_AMT = round2(r._amtO * r.IGST_RATE / 100);
+        r.GCESS_AMT = round2(r._amtO * r.GCESS_RATE / 100);
+        var tax = r.CGST_AMT + r.SGST_AMT + r.IGST_AMT + r.GCESS_AMT;
+        r.TCS_AMT = round2((r._amtO + tax) * r.TCS_RATE / 100);
+        r.TOT_AMT = round2(r.AMT + (rateIncl() ? 0 : tax) + r.TCS_AMT);
+    }
+
+    function recalcAll() { rows.forEach(calcLine); renderGrid(); }
+
+    function renderTotals() {
+        var q = 0, taxable = 0, gst = 0, tcs = 0, gross = 0;
+        rows.forEach(function (r) {
+            if (!r.ITCD || !r.AMT) return;
+            q += num(r.QTY); taxable += num(r._amtO);
+            gst += num(r.CGST_AMT) + num(r.SGST_AMT) + num(r.IGST_AMT) + num(r.GCESS_AMT);
+            tcs += num(r.TCS_AMT); gross += num(r.TOT_AMT);
+        });
+        $('#totQty').val(fmt2(q)); $('#totTaxable').val(fmt2(taxable)); $('#totGst').val(fmt2(gst));
+        $('#totTcs').val(fmt2(tcs)); $('#totGross').val(fmt2(gross));
+        $('#totNet').val(fmt2(round2(gross) + num($('#R_OFF').val())));
+    }
+
+    function cell(cls, v, ro) { return '<td class="num"><input type="text" class="' + cls + (ro ? ' calc' : ' num2') + '" inputmode="decimal" value="' + f2(v) + '"' + (ro ? ' readonly tabindex="-1"' : '') + ' /></td>'; }
+    function pct(cls, v) { return '<td class="num"><input type="text" class="' + cls + ' calc pct" value="' + f2(v) + '" readonly tabindex="-1" /></td>'; }
 
     function renderGrid() {
         var $tb = $('#gridBody').empty();
-        var totAmt = 0, totCgst = 0, totSgst = 0, totIgst = 0, totCess = 0, totTcs = 0;
-        rows.forEach(function (r, idx) {
-            r.SRLNO = idx + 1;
-            totAmt += num(r.AMT);
-            totCgst += num(r.CGST_AMT);
-            totSgst += num(r.SGST_AMT);
-            totIgst += num(r.IGST_AMT);
-            totCess += num(r.GCESS_AMT);
-            totTcs += num(r.TCS_AMT);
+        rows.forEach(function (r, i) {
+            r.SRLNO = i + 1;
+            if (r._amtO === undefined) calcLine(r);
             var tr = $('<tr data-cid="' + r._cid + '"></tr>');
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
             tr.append('<td>' + r.SRLNO + '</td>');
-            tr.append('<td><input type="text" class="f-itcd" data-code="' + htmlAttr(r.ITCD || '') + '" value="' + htmlAttr(r.ItemName || r.ITCD || '') + '" placeholder="Search item" /></td>');
-            tr.append('<td><input type="text" class="f-descn" value="' + htmlAttr(r.DESCN || '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-hsn" value="' + htmlAttr(r.HSN_CODE || '') + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
-            tr.append('<td><input type="text" class="f-uom" value="' + htmlAttr(r.UOM || '') + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="text" class="f-gstcode" value="' + htmlAttr(r.GST_CODE || '') + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-cgstrate" value="' + (r.CGST_RATE || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-cgstamt" value="' + (r.CGST_AMT || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-sgstrate" value="' + (r.SGST_RATE || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-sgstamt" value="' + (r.SGST_AMT || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-igstrate" value="' + (r.IGST_RATE || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-igstamt" value="' + (r.IGST_AMT || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-cessrate" value="' + (r.GCESS_RATE || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-cessamt" value="' + (r.GCESS_AMT || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-tcsrate" value="' + (r.TCS_RATE || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-tcsamt" value="' + (r.TCS_AMT || 0) + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-itcd" maxlength="4" value="' + esc(r.ITCD) + '" /><button type="button" class="grid-pick-btn" data-gpick="item" title="Search item">...</button></td>');
+            tr.append('<td><input type="text" class="f-name" value="' + esc(r.ITEM_NAME) + '" readonly tabindex="-1" /></td>');
+            tr.append('<td><input type="text" class="f-desc" maxlength="200" value="' + esc(r.ITDESC1) + '" /><button type="button" class="grid-pick-btn" data-gpick="desc" title="Description lines 1-4">...</button></td>');
+            tr.append('<td><input type="text" class="f-hsn" maxlength="10" value="' + esc(r.HSN_CODE) + '" style="min-width:80px;width:80px;" /></td>');
+            tr.append(cell('f-qty', r.QTY, false));
+            tr.append('<td><input type="text" class="f-uom" maxlength="19" value="' + esc(r.UNIT_DESC) + '" style="min-width:50px;width:56px;" /></td>');
+            tr.append(cell('f-rate', r.RATE, false));
+            tr.append(cell('f-amt', r.AMT, true));
+            tr.append('<td><input type="text" class="f-gst" maxlength="3" value="' + esc(r.GST_CODE) + '" /><button type="button" class="grid-pick-btn" data-gpick="gst" title="Search GST code">...</button></td>');
+            tr.append(pct('f-cgstr', r.CGST_RATE)); tr.append(cell('f-cgsta', r.CGST_AMT, true));
+            tr.append(pct('f-sgstr', r.SGST_RATE)); tr.append(cell('f-sgsta', r.SGST_AMT, true));
+            tr.append(pct('f-igstr', r.IGST_RATE)); tr.append(cell('f-igsta', r.IGST_AMT, true));
+            tr.append(pct('f-cessr', r.GCESS_RATE)); tr.append(cell('f-cessa', r.GCESS_AMT, true));
+            tr.append(pct('f-tcsr', r.TCS_RATE)); tr.append(cell('f-tcsa', r.TCS_AMT, true));
+            tr.append(cell('f-tot', r.TOT_AMT, true));
             $tb.append(tr);
         });
-        $('#ftAmt').text(round2(totAmt).toFixed(2));
-        $('#ftCgst').text(round2(totCgst).toFixed(2));
-        $('#ftSgst').text(round2(totSgst).toFixed(2));
-        $('#ftIgst').text(round2(totIgst).toFixed(2));
-        $('#ftCess').text(round2(totCess).toFixed(2));
-        $('#ftTcs').text(round2(totTcs).toFixed(2));
-        recalcTotals();
+        renderTotals();
+        if (READ_ONLY) lockForm();
+    }
+
+    function refreshRowCells($tr, r) {
+        $tr.find('.f-amt').val(f2(r.AMT));
+        $tr.find('.f-cgstr').val(f2(r.CGST_RATE)); $tr.find('.f-cgsta').val(f2(r.CGST_AMT));
+        $tr.find('.f-sgstr').val(f2(r.SGST_RATE)); $tr.find('.f-sgsta').val(f2(r.SGST_AMT));
+        $tr.find('.f-igstr').val(f2(r.IGST_RATE)); $tr.find('.f-igsta').val(f2(r.IGST_AMT));
+        $tr.find('.f-cessr').val(f2(r.GCESS_RATE)); $tr.find('.f-cessa').val(f2(r.GCESS_AMT));
+        $tr.find('.f-tcsr').val(f2(r.TCS_RATE)); $tr.find('.f-tcsa').val(f2(r.TCS_AMT));
+        $tr.find('.f-tot').val(f2(r.TOT_AMT));
+        renderTotals();
     }
 
     function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
 
-    // Live edits -> keep `rows` in sync + a client-side estimate of Qty*Rate=Amount
-    // (the authoritative, tax-aware Amount/GST split is always recomputed server-side
-    // on Save -- see the note under the grid).
-    $('#gridBody').on('input change', 'input', function () {
-        var $tr = $(this).closest('tr');
-        var r = findRow($tr.data('cid'));
-        if (!r) return;
-        r.DESCN = $tr.find('.f-descn').val();
-        r.HSN_CODE = $tr.find('.f-hsn').val();
-        r.QTY = num($tr.find('.f-qty').val());
-        r.UOM = $tr.find('.f-uom').val();
-        r.RATE = num($tr.find('.f-rate').val());
-        r.GST_CODE = $tr.find('.f-gstcode').val();
-
-        r.AMT = round2(r.QTY * r.RATE);
-        $tr.find('.f-amount').val(r.AMT.toFixed(2));
-
-        recalcTotals();
+    $('#gridBody').on('input', '.f-qty, .f-rate', function () {
+        var c = cleanNum(this.value, false);
+        if (c !== this.value) this.value = c;
+        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
+        r.QTY = num($tr.find('.f-qty').val()); r.RATE = num($tr.find('.f-rate').val());
+        calcLine(r); refreshRowCells($tr, r);
     });
-
-    $('#gridBody').on('blur', '.f-rate, .f-qty', function () {
-        $(this).val(round2($(this).val()).toFixed(2));
+    $('#gridBody').on('input', '.f-desc, .f-hsn, .f-uom', function () {
+        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
+        r.ITDESC1 = $tr.find('.f-desc').val(); r.HSN_CODE = $tr.find('.f-hsn').val(); r.UNIT_DESC = $tr.find('.f-uom').val();
     });
+    $('input[name=RATE_TYPE]').on('change', recalcAll);
+    $('#R_OFF').on('input', renderTotals);
+    $('#DOCDT').on('change', recalcAll);
 
-    function recalcTotals() {
-        var totAmt = 0;
-        rows.forEach(function (r) { totAmt += num(r.AMT); });
-        $('#dispGross').val(round2(totAmt).toFixed(2));
-        var net = round2(totAmt) + num($('#ROUND_OFF').val());
-        $('#dispNet').val(round2(net).toFixed(2));
+    function applyItem($tr, r, it) {
+        r.ITCD = it.CODE; r.ITEM_NAME = it.NAME || '';
+        if (it.UOM) r.UNIT_DESC = it.UOM;
+        if (it.HSN_CODE) r.HSN_CODE = it.HSN_CODE;
+        $tr.find('.f-itcd').val(r.ITCD); $tr.find('.f-name').val(r.ITEM_NAME);
+        $tr.find('.f-uom').val(r.UNIT_DESC || ''); $tr.find('.f-hsn').val(r.HSN_CODE || '');
     }
-    $('#ROUND_OFF').on('input', recalcTotals);
+    function applyGst($tr, r, g) {
+        r.GST_CODE = g.CODE; GST[up(g.CODE)] = g;
+        $tr.find('.f-gst').val(r.GST_CODE);
+        calcLine(r); refreshRowCells($tr, r);
+    }
+
+    // Typed codes are resolved exactly against the master (VB6 *_Validate).
+    $('#gridBody').on('change', '.f-itcd', function () {
+        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid')), code = up($(this).val());
+        if (!code) { r.ITCD = ''; r.ITEM_NAME = ''; $tr.find('.f-name').val(''); calcLine(r); refreshRowCells($tr, r); return; }
+        lookupCode('item', code, function (it) {
+            if (it) applyItem($tr, r, it);
+            else { showAlert('Enter valid item (' + code + ').'); $tr.find('.f-itcd').val(r.ITCD || ''); }
+        });
+    });
+    $('#gridBody').on('change', '.f-gst', function () {
+        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid')), code = up($(this).val());
+        if (!code) { r.GST_CODE = ''; calcLine(r); refreshRowCells($tr, r); return; }
+        if (GST[code]) { applyGst($tr, r, GST[code]); return; }
+        lookupCode('gst', code, function (g) {
+            if (g) applyGst($tr, r, g);
+            else { showAlert('GST Code ' + code + ' is not defined.'); $tr.find('.f-gst').val(r.GST_CODE || ''); }
+        });
+    });
+
+    $('#gridBody').on('click', '.grid-pick-btn', function () {
+        if (READ_ONLY) return;
+        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid')), kind = $(this).data('gpick');
+        if (kind === 'item') openPicker('item', function (it) { applyItem($tr, r, it); $tr.find('.f-desc').focus(); });
+        else if (kind === 'gst') openPicker('gst', function (g) { applyGst($tr, r, g); });
+        else if (kind === 'desc') openDesc($tr, r);
+    });
+    // F2 / F1 on a code cell opens its search (VB6 F1 help).
+    $('#gridBody').on('keydown', '.f-itcd, .f-gst', function (e) {
+        if (e.key === 'F2' || e.key === 'F1') { e.preventDefault(); $(this).siblings('.grid-pick-btn').click(); }
+    });
 
     $('#btnAddRow').on('click', function () {
-        rows.push({ _cid: ++rowSeq, QTY: 0, RATE: 0, AMT: 0 });
-        renderGrid();
+        if (READ_ONLY) return;
+        if (!$('#PCD').val()) { showAlert('No party selected', function () { $('#PCD').focus(); }); return; }
+        var r = { _cid: ++rowSeq, QTY: 0, RATE: 0 };
+        // VB6 DataGrid1_AfterColUpdate: a new line starts with the previous line's description.
+        var prev = rows[rows.length - 1];
+        if (prev) { r.ITDESC1 = prev.ITDESC1; r.ITDESC2 = prev.ITDESC2; r.ITDESC3 = prev.ITDESC3; r.ITDESC4 = prev.ITDESC4; }
+        rows.push(r); calcLine(r); renderGrid();
+        $('#gridBody tr:last .f-itcd').focus();
     });
-
     $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
-
     $('#btnRemoveRows').on('click', function () {
+        if (READ_ONLY) return;
         var cids = $('.rowChk:checked').map(function () { return $(this).closest('tr').data('cid'); }).get();
         if (!cids.length) { showAlert('Select at least one row to remove.'); return; }
         rows = rows.filter(function (r) { return cids.indexOf(r._cid) === -1; });
+        $('#chkAll').prop('checked', false);
         renderGrid();
     });
 
-    // =========================================================
-    // Item lookup (grid row) -- resolve on blur, same shape as Master Blend Entry's
-    // f-mark blur-resolve. Accepts either the typed ITCD code or the item name.
-    // =========================================================
-    $('#gridBody').on('blur', '.f-itcd', function () {
-        var $inp = $(this), typed = $.trim($inp.val());
-        var $tr = $inp.closest('tr');
-        var r = findRow($tr.data('cid'));
-        if (!typed) { $inp.attr('data-code', ''); if (r) { r.ITCD = ''; r.ItemName = ''; } return; }
-        if (r && r.ItemName === typed && r.ITCD) { $inp.attr('data-code', r.ITCD); return; }
-        $.getJSON('@Url.Action("GetItemMaster", "OtherInvoice")', { search: typed }, function (data) {
-            data = data || [];
-            var t = typed.toUpperCase();
-            var m = data.find(function (x) { return String(x.CODE || '').toUpperCase() === t; })
-                 || (data.length === 1 ? data[0] : null);
-            if (m) {
-                $inp.attr('data-code', m.CODE).val(m.NAME || m.CODE);
-                if (r) {
-                    r.ITCD = m.CODE; r.ItemName = m.NAME || '';
-                    if (!r.DESCN) { r.DESCN = m.NAME || ''; $tr.find('.f-descn').val(r.DESCN); }
-                    if (!r.HSN_CODE && m.HSN_CODE) { r.HSN_CODE = m.HSN_CODE; $tr.find('.f-hsn').val(r.HSN_CODE); }
-                    if (!r.UOM && m.UOM) { r.UOM = m.UOM; $tr.find('.f-uom').val(r.UOM); }
-                }
-                return;
-            }
-            $inp.val(r && r.ItemName ? r.ItemName : (r && r.ITCD ? r.ITCD : ''));
-            showAlert('"' + typed + '" does not match any item. Use the picker or a valid item code.');
-        }).fail(handleLookupFail);
-    });
-    // Click opens the searchable picker instead of relying purely on free typing.
-    $('#gridBody').on('click focus', '.f-itcd', function () {
-        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
-        if (!r) return;
-        openPicker('item', $tr.find('.f-itcd'), function (row) {
-            r.ITCD = row.CODE; r.ItemName = row.NAME || '';
-            $tr.find('.f-itcd').val(row.NAME || row.CODE).attr('data-code', row.CODE);
-            if (!r.DESCN) { r.DESCN = row.NAME || ''; $tr.find('.f-descn').val(r.DESCN); }
-            if (!r.HSN_CODE && row.HSN_CODE) { r.HSN_CODE = row.HSN_CODE; $tr.find('.f-hsn').val(r.HSN_CODE); }
-            if (!r.UOM && row.UOM) { r.UOM = row.UOM; $tr.find('.f-uom').val(r.UOM); }
-        });
-    });
-
-    // =========================================================
-    // Generic single-select picker (header fields: Party, Bank; also used
-    // row-scoped for the grid's Item column above via the onSelect callback).
-    // =========================================================
-    var pickerConfig = {
-        party: { url: '@Url.Action("GetParty", "OtherInvoice")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCD' },
-        bank: { url: '@Url.Action("GetBank", "OtherInvoice")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'BANK_CODE' },
-        item: { url: '@Url.Action("GetItemMaster", "OtherInvoice")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['UOM', 'UOM']], target: null }
-    };
-    var activePicker = null;
-    var pickerXhr = null;
-    var pickerReqSeq = 0;
-
-    $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
-
-    function openPicker(key, $input, onSelect) {
-        activePicker = { key: key, input: $input, onSelect: onSelect };
-        $('#pickerTitle').text('Select ' + key);
-        $('#pickerSearch').val('');
-        $('#pickerBody').empty().removeData('rows');
-        $('#pickerOverlay, #genericPicker').fadeIn(120);
-        loadPickerData('');
-        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
+    // Description popup (ITDESC1-4)
+    var descRow = null;
+    function openDesc($tr, r) {
+        descRow = { $tr: $tr, r: r };
+        $('#desc1').val(r.ITDESC1 || ''); $('#desc2').val(r.ITDESC2 || ''); $('#desc3').val(r.ITDESC3 || ''); $('#desc4').val(r.ITDESC4 || '');
+        $('#pickerOverlay, #descBox').fadeIn(120);
+        setTimeout(function () { $('#desc1').focus(); }, 130);
     }
-    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+    $('#descCancel').on('click', function () { $('#pickerOverlay, #descBox').fadeOut(120); });
+    $('#descOk').on('click', function () {
+        var r = descRow.r;
+        r.ITDESC1 = $('#desc1').val(); r.ITDESC2 = $('#desc2').val(); r.ITDESC3 = $('#desc3').val(); r.ITDESC4 = $('#desc4').val();
+        descRow.$tr.find('.f-desc').val(r.ITDESC1);
+        $('#pickerOverlay, #descBox').fadeOut(120);
+    });
 
-    function loadPickerData(term) {
-        var cfg = pickerConfig[activePicker.key];
-        var myReq = ++pickerReqSeq;
-        if (pickerXhr) { pickerXhr.abort(); }
-        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
-            if (myReq !== pickerReqSeq) return;
+    // =========================================================
+    // Searchable pickers -- the server matches the typed text against every
+    // column shown (and returns at most 100 rows).
+    // =========================================================
+    var pickers = {
+        party: { title: 'Party', url: '@Url.Action("GetParty", "OtherInvoice")', wide: true,
+                 cols: [['CODE', 'Code'], ['NAME', 'Name'], ['CITY', 'City'], ['ROUTE', 'Route'], ['MOBILE', 'Mobile'], ['GST_NO', 'GSTIN']],
+                 params: function () { return { unit: UNIT }; } },
+        transporter: { title: 'Transporter', url: '@Url.Action("GetTransporter", "OtherInvoice")',
+                 cols: [['CODE', 'Code'], ['NAME', 'Name'], ['CITY', 'City']], params: function () { return { unit: UNIT }; } },
+        bank: { title: 'Bank', url: '@Url.Action("GetBank", "OtherInvoice")', wide: true,
+                 cols: [['CODE', 'A/c Code'], ['NAME', 'Account Name'], ['BANK_NAME', 'Bank'], ['AC_NO', 'A/c No']], params: function () { return { unit: UNIT }; } },
+        item: { title: 'Item', url: '@Url.Action("GetItemMaster", "OtherInvoice")',
+                 cols: [['CODE', 'Code'], ['NAME', 'Name'], ['UOM', 'UOM'], ['HSN_CODE', 'HSN']], params: function () { return { unit: UNIT }; } },
+        gst: { title: 'GST Code', url: '@Url.Action("GetGstCode", "OtherInvoice")', wide: true,
+                 cols: [['CODE', 'Code'], ['NAME', 'Description'], ['CGST_RATE', 'CGST %', 1], ['SGST_RATE', 'SGST %', 1], ['IGST_RATE', 'IGST %', 1], ['GCESS_RATE', 'Cess %', 1]],
+                 params: function () { return { unit: UNIT }; } },
+        refinv: { title: 'Invoice of the party', url: '@Url.Action("GetRefInvoices", "OtherInvoice")',
+                 cols: [['DOCNO', 'Invoice No'], ['DOCDT', 'Date', 0, 1], ['TOTAL_AMT', 'Amount', 1]],
+                 params: function () { return { pcd: up($('#PCD').val()), unit: UNIT, lastYear: $('#chkLastYr').is(':checked') }; } },
+        refcode: { title: 'Reference Code', url: '@Url.Action("GetRefCode", "OtherInvoice")', cols: [['CODE', 'Code'], ['NAME', 'Name']] },
+        cost: { title: 'Cost Centre', url: '@Url.Action("GetCostCentre", "OtherInvoice")', cols: [['CODE', 'Code'], ['NAME', 'Name']] }
+    };
+    var active = null, pickXhr = null, pickSeq = 0, pickTimer = null;
+    var pickerFromGl = false;   // picker opened from the accounting preview -> go back to it on close
+
+    function showGlBox() { $('#pickerOverlay, #glBox').stop(true, true).show(); }
+
+    function openPicker(key, onSelect, extraParams, fromGl) {
+        pickerFromGl = !!fromGl;
+        active = { key: key, onSelect: onSelect, extra: extraParams || {} };
+        var cfg = pickers[key];
+        $('#pickerTitle').text('Select ' + cfg.title);
+        $('#genericPicker').toggleClass('wide', !!cfg.wide);
+        $('#pickerSearch').val('');
+        $('#pickerBody').html('<p style="color:#777;margin:8px;">Loading...</p>');
+        $('#pickerOverlay, #genericPicker').fadeIn(120);
+        setTimeout(function () { $('#pickerSearch').focus(); }, 130);
+        loadPicker('');
+    }
+    function closePicker(selected) {
+        active = null;
+        if (pickerFromGl) { pickerFromGl = false; $('#genericPicker').stop(true, true).hide(); showGlBox(); return; }
+        $('#pickerOverlay, #genericPicker').fadeOut(120);
+    }
+    $('#pickerClose').on('click', function () { closePicker(false); });
+
+    function cellText(col, v) {
+        if (v == null) return '';
+        if (col[3]) return dmy(v);
+        if (col[2]) return fmt2(v);
+        return v;
+    }
+    function loadPicker(term) {
+        var cfg = pickers[active.key], my = ++pickSeq;
+        if (pickXhr) pickXhr.abort();
+        var params = $.extend({ search: term }, cfg.params ? cfg.params() : {}, active.extra);
+        pickXhr = $.getJSON(cfg.url, params, function (data) {
+            if (my !== pickSeq || !active) return;
             data = data || [];
-            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th' + (c[2] ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
             data.forEach(function (row, i) {
-                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
-                    var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
-                    return '<td>' + (v == null ? '' : v) + '</td>';
+                html += '<tr data-i="' + i + '"' + (i === 0 ? ' class="hl"' : '') + '>' + cfg.cols.map(function (c) {
+                    return '<td' + (c[2] ? ' class="num"' : '') + '>' + esc(cellText(c, row[c[0]])) + '</td>';
                 }).join('') + '</tr>';
             });
             html += '</tbody></table>';
-            $('#pickerBody').html(html);
-            $('#pickerBody').data('rows', data);
-        }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
+            if (!data.length) html += '<p style="color:#777;margin:8px;">No matching records.</p>';
+            $('#pickerBody').html(html).data('rows', data);
+        }).fail(function (x) { if (my === pickSeq) { closePicker(false); handleAjaxFail(x); } });
     }
-
-    $('#pickerBody').on('click', 'tr[data-i]', function () {
-        var data = $('#pickerBody').data('rows');
-        var row = data[$(this).data('i')];
-        var cfg = pickerConfig[activePicker.key];
-
-        if (activePicker.onSelect) {
-            activePicker.onSelect(row);
-        } else if (cfg.target) {
-            var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
-            var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
-            $('#' + cfg.target).val(code);
-            $('#' + cfg.target + '_disp').val(name || '');
-        }
-        closePicker();
+    $('#pickerSearch').on('input', function () {
+        var t = $(this).val();
+        clearTimeout(pickTimer);
+        pickTimer = setTimeout(function () { loadPicker(t); }, 250);
+    });
+    function pickRow(i) {
+        var data = $('#pickerBody').data('rows') || [];
+        if (!active || !data[i]) return;
+        var cb = active.onSelect;
+        closePicker(true);
+        cb(data[i]);
+    }
+    $('#pickerBody').on('click', 'tr[data-i]', function () { pickRow($(this).data('i')); });
+    $('#pickerSearch').on('keydown', function (e) {
+        var $rows = $('#pickerBody tr[data-i]'), $hl = $rows.filter('.hl'), idx = $rows.index($hl);
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            idx = Math.max(0, Math.min($rows.length - 1, idx + (e.key === 'ArrowDown' ? 1 : -1)));
+            $rows.removeClass('hl').eq(idx).addClass('hl')[0].scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+            e.preventDefault(); if ($hl.length) pickRow($hl.data('i'));
+        } else if (e.key === 'Escape') { closePicker(false); }
     });
 
+    // Exact code lookup (typed code instead of picking).
+    function lookupCode(key, code, cb) {
+        var cfg = pickers[key];
+        $.getJSON(cfg.url, $.extend({ code: code }, cfg.params ? cfg.params() : {}), function (data) {
+            cb((data || []).find(function (x) { return up(x.CODE) === up(code); }) || null);
+        }).fail(handleAjaxFail);
+    }
+
     // =========================================================
-    // Save (mirrors trn_scrap_inv.frm's Command1_Click validation order, minus the
-    // GL-preview stage -- straight validate-then-save, see the controller's comments).
+    // Header lookups
     // =========================================================
-    $('#btnSave').on('click', function () {
-        if (!$('#PCD').val()) { showAlert('Party cannot be blank'); return; }
-        if (!$('#BANK_CODE').val()) { showAlert('Bank Code cannot be blank'); return; }
-        if (!$('#DOCTYPE').val()) { showAlert('Document Type cannot be blank'); return; }
-        if (!$('#DOCDT').val()) { showAlert('Doc Date cannot be blank'); return; }
-
-        var valid = rows.filter(function (r) { return r.ITCD || num(r.QTY) !== 0 || num(r.RATE) !== 0; });
-        if (valid.some(function (r) { return num(r.QTY) < 0; })) { showAlert('Quantity cannot be negative.'); return; }
-        if (valid.some(function (r) { return (num(r.QTY) * num(r.RATE)) !== 0 && !r.GST_CODE; })) {
-            showAlert('GST Code is mandatory for every priced line.'); return;
-        }
-
-        var grossPreview = valid.reduce(function (s, r) { return s + round2(num(r.QTY) * num(r.RATE)); }, 0);
-        if (round2(grossPreview) === 0) { showAlert('Total invoice amount cannot be zero.'); return; }
-
-        showConfirm('Are you sure?', function () {
-            var model = {
-                TRN_INV_HEAD: {
-                    ID: $('#ID').val() ? parseInt($('#ID').val(), 10) : 0,
-                    DOCNO: $('#DOCNO').val(),
-                    DOCDT: $('#DOCDT').val(),
-                    DOCTYPE: $('#DOCTYPE').val(),
-                    PCD: $('#PCD').val(),
-                    TRANS_CODE: $('#TRANS_CODE').val(),
-                    VEHICLE_NO: $('#VEHICLE_NO').val(),
-                    CHALLAN_NO: $('#CHALLAN_NO').val(),
-                    CHALLAN_DT: $('#CHALLAN_DT').val() || null,
-                    REMARKS: $('#REMARKS').val(),
-                    BANK_CODE: $('#BANK_CODE').val(),
-                    RATE_TYPE: $('#RATE_TYPE').val(),
-                    DELIVERY_ADD1: $('#DELIVERY_ADD1').val(),
-                    DELIVERY_ADD2: $('#DELIVERY_ADD2').val(),
-                    DELIVERY_ADD3: $('#DELIVERY_ADD3').val(),
-                    ROUND_OFF: num($('#ROUND_OFF').val())
-                },
-                TRN_INV_DETAIL: valid
-            };
-
-            $.ajax({
-                url: '@Url.Action("Save", "OtherInvoice")',
-                type: 'POST', contentType: 'application/json', data: JSON.stringify(model),
-                success: function (resp) {
-                    if (resp.success) {
-                        showAlert(resp.message || 'Saved.', function () {
-                            window.location.href = '@Url.Action("Index", "OtherInvoice")' + '?doctype=' + encodeURIComponent($('#DOCTYPE').val());
-                        });
-                    } else {
-                        showAlert(resp.message || 'Save failed.');
-                    }
-                },
-                error: function (xhr) {
-                    var msg = (xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.title)) || (xhr.responseText || 'Save failed - server error.');
-                    showAlert(msg);
-                }
+    function setParty(p) {
+        $('#PCD').val(p ? p.CODE : ''); $('#PCD_disp').val(p ? p.NAME : '');
+        PARTY = { state: p ? (p.STATE_CODE || '') : '', pan: p ? (p.PANNO || '') : '', tcsTag: p ? (p.TCS_TAG || 'N') : 'N' };
+        if (p && UNIT_STATE && PARTY.state !== UNIT_STATE) $('#PCD_disp').attr('title', 'Inter-state party: IGST applies');
+        recalcAll();
+    }
+    function bindHeaderLookup(id, key, onSet) {
+        $('#' + id).on('change', function () {
+            var code = up($(this).val());
+            if (!code) { onSet(null); return; }
+            lookupCode(key, code, function (x) {
+                if (x) onSet(x);
+                else { onSet(null); showAlert(pickers[key].title + ' Code Not Valid (' + code + ').', function () { $('#' + id).focus(); }); }
             });
         });
+    }
+    function setSimple(id) { return function (x) { $('#' + id).val(x ? x.CODE : ''); $('#' + id + '_disp').val(x ? x.NAME : ''); }; }
+    bindHeaderLookup('PCD', 'party', setParty);
+    bindHeaderLookup('TRANS_CODE', 'transporter', setSimple('TRANS_CODE'));
+    bindHeaderLookup('BANK_CODE', 'bank', setSimple('BANK_CODE'));
+    $('.pick-btn[data-pick]').on('click', function () {
+        if (READ_ONLY) return;
+        var key = $(this).data('pick');
+        openPicker(key, key === 'party' ? setParty : setSimple(key === 'bank' ? 'BANK_CODE' : 'TRANS_CODE'));
+    });
+    $('#PCD, #TRANS_CODE, #BANK_CODE').on('keydown', function (e) {
+        if (e.key === 'F2' || e.key === 'F1') { e.preventDefault(); $(this).siblings('.pick-btn').click(); }
     });
 
-    renderGrid();
+    // =========================================================
+    // Debit/Credit Note: pick the party's invoice, then which of its
+    // lines to bring in (VB6 Text_ContractNo + Frame6).
+    // =========================================================
+    var refLines = [];
+    $('#btnRefInv').on('click', function () {
+        if (READ_ONLY) return;
+        if (!$('#PCD').val()) { showAlert('Select Party first', function () { $('#PCD').focus(); }); return; }
+        openPicker('refinv', function (inv) {
+            $('#CONTRACT_NO').val(inv.DOCNO);
+            $('#CONTRACT_DATE').val(isoDate(inv.DOCDT));
+            $.getJSON('@Url.Action("GetRefInvoiceLines", "OtherInvoice")',
+                { refNo: inv.DOCNO, unit: UNIT, lastYear: $('#chkLastYr').is(':checked') }, function (lines) {
+                refLines = lines || [];
+                if (!refLines.length) { showAlert('No item lines found on invoice ' + inv.DOCNO + '.'); return; }
+                $('#itemsTitle').text('Select Item -- ' + inv.DOCNO);
+                $('#itemsBody').html(refLines.map(function (l, i) {
+                    return '<tr><td><input type="checkbox" class="itemChk" data-i="' + i + '" checked /></td><td>' + esc(l.ITCD) + '</td><td>' + esc(l.DESCN) +
+                        '</td><td class="num">' + fmt2(l.QTY) + '</td><td class="num">' + fmt2(l.RATE) + '</td><td class="num">' + fmt2(l.AMT) + '</td><td>' + esc(l.GST_CODE) + '</td></tr>';
+                }).join(''));
+                $('#itemsAll').prop('checked', true);
+                $('#pickerOverlay, #itemsBox').fadeIn(120);
+            }).fail(handleAjaxFail);
+        });
+    });
+    $('#itemsAll').on('change', function () { $('.itemChk').prop('checked', $(this).is(':checked')); });
+    $('#itemsCancel').on('click', function () { $('#pickerOverlay, #itemsBox').fadeOut(120); });
+    $('#itemsOk').on('click', function () {
+        var picked = $('.itemChk:checked').map(function () { return refLines[$(this).data('i')]; }).get();
+        $('#pickerOverlay, #itemsBox').fadeOut(120);
+        if (!picked.length) return;
+        rows = picked.map(function (l) {
+            return { _cid: ++rowSeq, ITCD: l.ITCD, ITEM_NAME: l.DESCN, ITDESC1: l.ITDESC1 || '', UNIT_DESC: l.UNIT_DESC || '',
+                     HSN_CODE: l.HSN_CODE || '', QTY: num(l.QTY), RATE: 0, GST_CODE: l.GST_CODE || '' };
+        });
+        ensureGst(rows.map(function (r) { return r.GST_CODE; }), recalcAll);
+    });
+
+    // Loads GST master rows for the given codes (cached) before recalculating.
+    function ensureGst(codes, cb) {
+        var missing = codes.map(up).filter(function (c, i, a) { return c && !GST[c] && a.indexOf(c) === i; });
+        if (!missing.length) { cb(); return; }
+        $.getJSON(pickers.gst.url, { unit: UNIT }, function (data) {
+            (data || []).forEach(function (g) { GST[up(g.CODE)] = g; });
+            cb();
+        }).fail(function (x) { handleAjaxFail(x); cb(); });
+    }
 
     // =========================================================
-    // View mode -- same data as Edit, but nothing on the form is editable.
+    // Save -- step 1 Preview (validate + voucher), step 2 Save.
     // =========================================================
-    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
-    if (IS_VIEW) {
-        $('.accordion-container :input').prop('disabled', true);
-        $('#btnSave, #btnAddRow, #btnRemoveRows').addClass('is-disabled').prop('disabled', true);
+    function buildModel(legs) {
+        return {
+            TRAN: TRAN,
+            TRN_INV_HEAD: {
+                TRAN: TRAN,
+                DOC_YEAR: HEAD.DOC_YEAR, UNIT: UNIT, DOCTYPE: HEAD.DOCTYPE, DOCNO: HEAD.DOCNO || '',
+                DOCDT: $('#DOCDT').val(),
+                PCD: up($('#PCD').val()),
+                CONTRACT_NO: $.trim($('#CONTRACT_NO').val()), CONTRACT_DATE: $('#CONTRACT_DATE').val() || null,
+                CHL_NO: $.trim($('#CHL_NO').val()), CHL_DATE: $('#CHL_DATE').val() || null,
+                VEH_NO: up($('#VEH_NO').val()), CNNO: $.trim($('#CNNO').val()), CNDT: $('#CNDT').val() || null,
+                NAR3: $.trim($('#NAR3').val()),
+                DELIV_ADD1: $.trim($('#DELIV_ADD1').val()), DELIV_ADD2: $.trim($('#DELIV_ADD2').val()), DELIV_ADD3: $.trim($('#DELIV_ADD3').val()),
+                TRANS_CODE: up($('#TRANS_CODE').val()), BANK_CODE: up($('#BANK_CODE').val()),
+                RATE_TYPE: rateIncl() ? 'Y' : 'N', R_OFF: num($('#R_OFF').val())
+            },
+            TRN_INV_DETAIL: rows.filter(function (r) { return r.ITCD || num(r.QTY) || num(r.RATE); }).map(function (r) {
+                return { ITCD: up(r.ITCD), ITDESC1: r.ITDESC1 || '', ITDESC2: r.ITDESC2 || '', ITDESC3: r.ITDESC3 || '', ITDESC4: r.ITDESC4 || '',
+                         UNIT_DESC: r.UNIT_DESC || '', HSN_CODE: r.HSN_CODE || '', QTY: num(r.QTY), RATE: num(r.RATE), GST_CODE: up(r.GST_CODE) };
+            }),
+            LEGS: legs || []
+        };
     }
+
+    function clientChecks() {
+        if (!$('#DOCDT').val()) return ['Bill Date can\'t be empty', '#DOCDT'];
+        if (!$('#PCD').val() || !$('#PCD_disp').val()) return ['Cannot Save without party name', '#PCD'];
+        if (!$('#BANK_CODE').val()) return ['Bank code cannot be blank', '#BANK_CODE'];
+        var lines = rows.filter(function (r) { return r.ITCD || num(r.QTY) || num(r.RATE); });
+        if (!lines.length) return ['Enter at least one item line.', null];
+        for (var i = 0; i < lines.length; i++) {
+            var r = lines[i];
+            if (!r.ITCD) return ['Item Code required on line ' + r.SRLNO + '.', null];
+            if (num(r.QTY) * num(r.RATE) !== 0 && !r.GST_CODE) return ['No GST Code Defined for item ' + r.ITCD + '. Please Check It.', null];
+        }
+        return null;
+    }
+
+    var lastPreview = null;
+    $('#btnSave').on('click', function () {
+        if (READ_ONLY) return;
+        var err = clientChecks();
+        if (err) { showAlert(err[0], function () { if (err[1]) $(err[1]).focus(); }); return; }
+        var zeroQty = rows.filter(function (r) { return r.ITCD && num(r.QTY) === 0; });
+        var go = function () { runPreview(); };
+        if (zeroQty.length) showConfirm('Quantity is zero for ' + zeroQty.map(function (r) { return r.ITCD; }).join(', ') + '.\nThose lines will not be saved. Do you want to continue?', go);
+        else go();
+    });
+
+    function runPreview() {
+        $('#btnSave').prop('disabled', true);
+        $.ajax({
+            url: '@Url.Action("Preview", "OtherInvoice")', type: 'POST', contentType: 'application/json',
+            data: JSON.stringify(buildModel(currentLegs()))
+        }).done(function (resp) {
+            if (!resp.success) { showAlert(resp.message || 'Validation failed.'); return; }
+            lastPreview = resp.data;
+            showGl(resp.data);
+        }).fail(function (x) { showAlert((x.responseJSON && x.responseJSON.message) || 'Validation failed - server error.'); })
+          .always(function () { $('#btnSave').prop('disabled', false); });
+    }
+
+    function showGl(p) {
+        var warn = (p.Warnings || []).map(esc).join('<br/>');
+        $('#glWarn').html(warn ? '<div class="gl-warn">' + warn + '</div>' : '');
+        $('#glBody').html((p.Legs || []).map(function (g) {
+            return '<tr data-srl="' + g.SRLNO + '" data-acode="' + esc(g.ACODE) + '">' +
+                '<td>' + g.SRLNO + '</td><td>' + esc(g.ACODE) + '</td><td>' + esc(g.SUBCODE) + '</td>' +
+                '<td>' + esc(g.ACNAME || (g.ACC_EXISTS ? '' : '(not in chart of accounts)')) + '</td>' +
+                '<td><input type="text" class="gl-ref' + (g.NEED_REF ? ' need' : '') + '" maxlength="7" value="' + esc(g.REF_CODE) + '" /><button type="button" class="grid-pick-btn gl-pick" data-k="refcode">...</button></td>' +
+                '<td><input type="text" class="gl-cost' + (g.NEED_COST ? ' need' : '') + '" maxlength="10" value="' + esc(g.COST_CENTRE) + '" /><button type="button" class="grid-pick-btn gl-pick" data-k="cost">...</button></td>' +
+                '<td class="num">' + (g.DR ? fmt2(g.DR) : '') + '</td><td class="num">' + (g.CR ? fmt2(g.CR) : '') + '</td></tr>';
+        }).join(''));
+        $('#glDr').text(fmt2(p.Totals.DR)); $('#glCr').text(fmt2(p.Totals.CR));
+        markMissing();
+        $('#pickerOverlay, #glBox').fadeIn(120);
+    }
+    function markMissing() {
+        $('#glBody input').each(function () { $(this).toggleClass('missing', $(this).hasClass('need') && !$.trim($(this).val())); });
+    }
+    $('#glBody').on('input', 'input', markMissing);
+    $('#glBody').on('click', '.gl-pick', function () {
+        var $td = $(this).closest('td'), $tr = $(this).closest('tr'), key = $(this).data('k');
+        $('#glBox').stop(true, true).hide();
+        openPicker(key, function (x) { $td.find('input').val(x.CODE); markMissing(); },
+                   key === 'refcode' ? { acode: $tr.data('acode') } : {}, true);
+    });
+    $('#glBack').on('click', function () { $('#pickerOverlay, #glBox').fadeOut(120); });
+
+    function currentLegs() {
+        return $('#glBody tr').map(function () {
+            return { SRLNO: $(this).data('srl'), ACODE: String($(this).data('acode')),
+                     REF_CODE: up($(this).find('.gl-ref').val()), COST_CENTRE: up($(this).find('.gl-cost').val()) };
+        }).get();
+    }
+
+    $('#glSave').on('click', function () {
+        if ($('#glBody input.missing').length) { $('#glBody input.missing').first().focus(); showAlert('Enter the Ref Code / Cost Centre marked in red.'); return; }
+        showConfirm('Are you sure?', function () {
+            $('#glSave').prop('disabled', true);
+            $.ajax({
+                url: '@Url.Action("Save", "OtherInvoice")', type: 'POST', contentType: 'application/json',
+                data: JSON.stringify(buildModel(currentLegs()))
+            }).done(function (resp) {
+                if (resp.success) {
+                    $('#pickerOverlay, #glBox').hide();
+                    var d = resp.data || {};
+                    var msg = 'Saved. ' + (IS_NOTE ? 'Doc' : 'Invoice') + ' No: ' + (d.doctype || '') + ' ' + (d.docno || '');
+                    if (d.warnings && d.warnings.length) msg += '\n\n' + d.warnings.join('\n');
+                    showAlert(msg, function () { window.location.href = LIST_URL; });
+                } else {
+                    showAlert(resp.message || 'Save failed.');
+                }
+            }).fail(function (x) { showAlert((x.responseJSON && x.responseJSON.message) || 'Save failed - server error.'); })
+              .always(function () { $('#glSave').prop('disabled', false); });
+        });
+    });
+    // =========================================================
+    // View / locked mode
+    // =========================================================
+    function lockForm() {
+        $('.accordion-container :input, #R_OFF').prop('disabled', true);
+        $('.pick-btn, .grid-pick-btn, #btnRefInv').prop('disabled', true);
+        $('#btnSave').prop('disabled', true);
+        $('#btnAddRow, #btnRemoveRows').addClass('is-disabled');
+    }
+
+    // Saved lines keep their saved amounts until something on them changes (a GST
+    // rate edited in the master since must not silently alter a document on View).
+    // Taxable base: AMT for tax-exclusive rates, TOT - TCS - tax when inclusive.
+    rows.forEach(function (r) {
+        var tax = num(r.CGST_AMT) + num(r.SGST_AMT) + num(r.IGST_AMT) + num(r.GCESS_AMT);
+        r._amtO = rateIncl() ? round2(num(r.TOT_AMT) - num(r.TCS_AMT) - tax) : num(r.AMT);
+    });
+
+    // Initial render: GST rates for the saved lines (needed once a line is edited), then draw.
+    ensureGst(rows.map(function (r) { return r.GST_CODE; }), function () {
+        renderGrid();
+        if (READ_ONLY) lockForm();
+        else if (!IS_EDIT) $('#PCD').focus();
+    });
 </script>
 </body>
 </html>

@@ -2,23 +2,27 @@
 @model List<Finance.Controllers.TEA.InvDocRow>
 
 @{
-    ViewBag.Title = "Other Invoice";
+    string tran = (string)ViewBag.Tran ?? "1";
+    string tranName = (string)ViewBag.TranName ?? "Other Invoice";
+    string listAction = (string)ViewBag.ListAction ?? "Index";
+    bool isNote = tran != "1";
+    ViewBag.Title = tranName;
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var docTypes = (Dictionary<string, string>)ViewBag.DocTypes;
+    var docTypes = (Dictionary<string, string>)ViewBag.DocTypes ?? new Dictionary<string, string>();
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
+    const int colCount = 15;
 }
 
 @{
-    // Sortable column header -- same server-side-sort pattern as Master Blend Entry's
-    // Index.cshtml (the API's GetByPage's sortBy/sortDir), so a header sorts the WHOLE
-    // filtered result set, not just the rows on the current page.
-    Func<string, string, MvcHtmlString> SortTh = (key, label) =>
+    // Sortable column header -- server-side sort (the API's GetByPage sortBy/sortDir),
+    // same as Master Blend Entry's list: a header sorts the whole filtered result set.
+    Func<string, string, string, MvcHtmlString> SortTh = (key, label, extraClass) =>
     {
         var cur = (string)(ViewBag.SortBy ?? "");
         var dir = (string)(ViewBag.SortDir ?? "");
         var active = string.Equals(cur, key, StringComparison.OrdinalIgnoreCase);
         var next = (active && dir == "asc") ? "desc" : "asc";
-        var thClass = active ? "sortable is-sorted" : "sortable";
+        var thClass = (active ? "sortable is-sorted" : "sortable") + (string.IsNullOrEmpty(extraClass) ? "" : " " + extraClass);
         var up = (active && dir == "asc") ? "feather icon-arrow-up on" : "feather icon-arrow-up";
         var down = (active && dir != "asc") ? "feather icon-arrow-down on" : "feather icon-arrow-down";
         return MvcHtmlString.Create(
@@ -27,6 +31,7 @@
             "</span><span class=\"sort-arrows\"><i class=\"" + up + "\"></i><i class=\"" +
             down + "\"></i></span></th>");
     };
+    Func<decimal?, string> N2 = v => (v ?? 0m).ToString("N2");
 }
 
 <!doctype html>
@@ -36,6 +41,7 @@
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
     <style>
+        /* Same list metrics as Master Blend Entry / Purchase Order. */
         .table.table-sm td, .table.table-sm th { padding: 0.6rem; }
         tbody div { overflow: unset !important; height: auto !important; max-height: none !important; }
         .btn-link { font-weight: 500; color: black; border-radius: 0; }
@@ -46,6 +52,7 @@
         }
         table.main-table td .row-expand-btn { font-size: 12px; line-height: 1.3; }
         table.main-table td .row-check { margin: 0; vertical-align: middle; }
+        table.main-table th.num, table.main-table td.num { text-align: right; white-space: nowrap; }
 
         .table-responsive thead th.sortable { cursor: pointer; user-select: none; }
         .table-responsive thead th.sortable:hover { background-color: #4b5b7a; }
@@ -57,7 +64,10 @@
         table.detail-sub-table { width: 100%; border-collapse: collapse; }
         table.detail-sub-table th, table.detail-sub-table td { border: 1px solid #ddd; padding: 6px; white-space: nowrap; }
         table.detail-sub-table thead th { background-color: #404e68; color: #fff; font-weight: bold; }
+        table.detail-sub-table .num { text-align: right; }
 
+        /* The "New" inline row -- pick Unit + Type first, then the pencil (enabled only
+           once both are chosen) opens the entry screen with both locked in. */
         tr.new-entry-row td { background-color: #eef3ff; vertical-align: middle; }
         tr.new-entry-row select { border: 1px solid #ccc; border-radius: 4px; padding: 4px 6px; width: 100%; }
         tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
@@ -70,42 +80,22 @@
         <div class="action-btns">
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
-                <li>
-                    <a href="javascript:void(0)" id="btnNew">
-                        <i class="fa fa-plus"></i> New
-                    </a>
-                </li>
-                <li>
-                    <a href="javascript:void(0)" id="editBtn">
-                        <i class="fa fa-pencil"></i> Edit
-                    </a>
-                </li>
-                <li>
-                    <a href="javascript:void(0)" id="viewBtn">
-                        <i class="fa fa-eye"></i> View
-                    </a>
-                </li>
-                <li>
-                    <a href="javascript:void(0)" id="deleteBtn">
-                        <i class="fa fa-trash-o"></i> Delete
-                    </a>
-                </li>
-                <li>
-                    <a href="javascript:void(0)" id="linesBtn">
-                        <i class="fa fa-list"></i> Lines
-                    </a>
-                </li>
+                <li><a href="javascript:void(0)" id="btnNew"><i class="fa fa-plus"></i> New</a></li>
+                <li><a href="javascript:void(0)" id="editBtn"><i class="fa fa-pencil"></i> Edit</a></li>
+                <li><a href="javascript:void(0)" id="viewBtn"><i class="fa fa-eye"></i> View</a></li>
+                <li><a href="javascript:void(0)" id="deleteBtn"><i class="fa fa-trash-o"></i> Delete</a></li>
+                <li><a href="javascript:void(0)" id="linesBtn"><i class="fa fa-list"></i> Lines</a></li>
                 <li style="margin-left:auto">
                     <label class="btn btn-inverse pull-right" style="margin: 10px;">LIST</label>
                 </li>
             </ul>
         </div>
 
-        <div class="title-heading">Other Invoice</div>
+        <div class="title-heading">@tranName</div>
 
         <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
-            <div style="position: relative; width: 250px;">
-                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No"
+            <div style="position: relative; width: 300px;">
+                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No / Party / Type / Unit / Date"
                        style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
                 <i class="fa fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333;"></i>
             </div>
@@ -117,14 +107,18 @@
                     <tr>
                         <th style="width:26px;"></th>
                         <th style="width:26px;"></th>
-                        @SortTh("DOCNO", "Doc No")
-                        @SortTh("DOCDT", "Date")
-                        <th>Type</th>
-                        @SortTh("PARTY", "Party")
-                        <th>Bank Code</th>
-                        <th style="text-align:right;">Gross Amt</th>
-                        <th style="text-align:right;">Round Off</th>
-                        @SortTh("TOTAL_AMT", "Total Amt")
+                        @SortTh("DOCNO", "Doc No", "")
+                        @SortTh("DOCDT", "Date", "")
+                        @SortTh("DOCTYPE", "Type", "")
+                        @SortTh("UNIT", "Unit", "")
+                        @SortTh("PARTY", "Party", "")
+                        @SortTh("CONTRACT_NO", isNote ? "Invoice No" : "Contract No", "")
+                        <th>@(isNote ? "Invoice Date" : "Vehicle No")</th>
+                        @SortTh("TAXABLE_AMT", "Taxable Amt", "num")
+                        <th class="num">GST Amt</th>
+                        <th class="num">TCS Amt</th>
+                        <th class="num">Round Off</th>
+                        @SortTh("TOTAL_AMT", "Net Amt", "num")
                         <th>IRN</th>
                     </tr>
                 </thead>
@@ -140,42 +134,56 @@
                                 <td>
                                     <input type="checkbox" class="row-check"
                                            value="@row.docno"
+                                           data-docyear="@row.docYear"
+                                           data-unit="@row.unit"
                                            data-doctype="@row.doctype"
-                                           data-unit="@row.unit" />
+                                           data-irn="@(string.IsNullOrEmpty(row.irn) ? "" : "Y")" />
                                 </td>
                                 <td style="text-align:center;">
-                                    <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show more details" style="cursor:pointer;"></i>
+                                    <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show item lines" style="cursor:pointer;"></i>
                                 </td>
                                 <td>
-                                    <a href="@Url.Action("InsertOrUpdate", "OtherInvoice", new { docno = row.docno, docdt = row.docdt?.ToString("yyyy-MM-dd"), doctype = row.doctype, unit = row.unit })">@row.docno</a>
+                                    <a href="@Url.Action("InsertOrUpdate", "OtherInvoice", new { tran, docYear = row.docYear, unit = row.unit, doctype = row.doctype, docno = row.docno, view = true })">@row.docno</a>
                                 </td>
                                 <td>@(row.docdt?.ToString("dd/MM/yyyy"))</td>
-                                <td>@(docTypes != null && row.doctype != null && docTypes.ContainsKey(row.doctype) ? docTypes[row.doctype] : row.doctype)</td>
-                                <td>@row.partyName</td>
-                                <td>@row.bankCode</td>
-                                <td class="text-right">@(row.grossAmt.HasValue ? row.grossAmt.Value.ToString("N2") : "")</td>
-                                <td class="text-right">@(row.roundOff.HasValue ? row.roundOff.Value.ToString("N2") : "")</td>
-                                <td class="text-right">@(row.totalAmt.HasValue ? row.totalAmt.Value.ToString("N2") : "")</td>
+                                <td title="@(docTypes.ContainsKey(row.doctype ?? "") ? docTypes[row.doctype] : "")">@row.doctype</td>
+                                <td>@row.unit</td>
+                                <td title="@row.pcd">@row.partyName</td>
+                                <td>@row.contractNo</td>
+                                <td>@(isNote ? row.contractDate?.ToString("dd/MM/yyyy") : row.vehNo)</td>
+                                <td class="num">@N2(row.taxableAmt)</td>
+                                <td class="num">@N2(row.gstAmt)</td>
+                                <td class="num">@N2(row.tcsAmt)</td>
+                                <td class="num">@N2(row.roundOff)</td>
+                                <td class="num">@N2(row.totalAmt)</td>
                                 <td>@(string.IsNullOrEmpty(row.irn) ? "" : "Yes")</td>
                             </tr>
                             <tr class="row-detail" id="@detailId" style="display:none;"
-                                data-docno="@row.docno" data-doctype="@row.doctype" data-unit="@row.unit">
-                                <td colspan="11" style="background:#f8f9fc;padding:10px 12px;">
+                                data-docyear="@row.docYear" data-unit="@row.unit" data-doctype="@row.doctype" data-docno="@row.docno">
+                                <td colspan="@colCount" style="background:#f8f9fc;padding:10px 12px;">
                                     <div style="overflow-x:auto;">
                                         <table class="detail-sub-table">
                                             <thead>
                                                 <tr>
                                                     <th style="width:34px;">Sl</th>
                                                     <th>Item</th>
-                                                    <th style="text-align:right;">Qty</th>
+                                                    <th>Description</th>
+                                                    <th>HSN</th>
+                                                    <th class="num">Qty</th>
                                                     <th>UOM</th>
-                                                    <th style="text-align:right;">Rate</th>
-                                                    <th style="text-align:right;">Amount</th>
+                                                    <th class="num">Rate</th>
+                                                    <th class="num">Amount</th>
                                                     <th>GST Code</th>
+                                                    <th class="num">CGST</th>
+                                                    <th class="num">SGST</th>
+                                                    <th class="num">IGST</th>
+                                                    <th class="num">Cess</th>
+                                                    <th class="num">TCS</th>
+                                                    <th class="num">Total</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="detail-items-body">
-                                                <tr><td colspan="7" style="text-align:center;color:#666;">Loading...</td></tr>
+                                                <tr><td colspan="15" style="text-align:center;color:#666;">Loading...</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -185,7 +193,7 @@
                     }
                     else
                     {
-                        <tr><td colspan="11" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="@colCount" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -207,32 +215,26 @@
     </div>
 
     <script>
-        // TEMPORARY diagnostic -- shows which Oracle schema (x-database header, see
-        // Services.SalesGetAsync/SalesPostAsync) this session's TB Sales API calls
-        // actually connect as (CLASSIC_CONTROL.SCHEMA_SALES for the selected company/
-        // location, e.g. "FIN_JSTIL2027"), NOT the unit's normal getDbName schema.
-        // Same pattern as MasterBlendEntry/Index.cshtml's own diagnostic. Safe to
-        // remove once you've confirmed the schema name in the browser console.
-        console.log('[OtherInvoice diag] x-database (Sales schema) for this session: ' +
-            @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(SessionHelper.GetUser()?.Salesdb ?? "(null/empty -- Salesdb is not set for this session)")));
-        console.log('[OtherInvoice diag] x-docyear for this session: ' +
-            @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(SessionHelper.GetUser()?.DocYear ?? "(null/empty -- DocYear is not set for this session)")));
-        console.log('[OtherInvoice diag] Loca: ' + @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(SessionHelper.GetUser()?.Loca)));
-        console.log('[OtherInvoice diag] Allowed doc types (API): ' + JSON.stringify(@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(docTypes))));
-        console.log('[OtherInvoice diag] Units for user (API): ' + JSON.stringify(@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList.Select(u => u.CODE)))));
-        console.log('[OtherInvoice diag] Row count returned by GetByPage: ' + @((int)(ViewBag.RowCount ?? 0)));
         $(function () {
+            var TRAN = '@tran';
+            var LIST_URL = '@Url.Action(listAction, "OtherInvoice")';
+            var ENTRY_URL = '@Url.Action("InsertOrUpdate", "OtherInvoice")';
+
+            function fmt2(v) { var n = parseFloat(v); return (isNaN(n) ? 0 : n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+            function esc(v) { return $('<div>').text(v == null ? '' : v).html(); }
+
             var searchTimer;
             $('#searchInput').on('input', function () {
                 clearTimeout(searchTimer);
-                searchTimer = setTimeout(reload, 400);
+                searchTimer = setTimeout(function () { reload(1); }, 400);
             });
 
+            // Sort state rides along with every navigation (search, paging).
             var SORT_BY = '@(ViewBag.SortBy ?? "")', SORT_DIR = '@(ViewBag.SortDir ?? "")';
             function reload(page, sortBy, sortDir) {
                 var by = (sortBy === undefined) ? SORT_BY : sortBy;
                 var dir = (sortDir === undefined) ? SORT_DIR : sortDir;
-                window.location.href = '@Url.Action("Index", "OtherInvoice")'
+                window.location.href = LIST_URL
                     + '?searchString=' + encodeURIComponent($('#searchInput').val())
                     + '&page=' + (page || 1)
                     + '&sortBy=' + encodeURIComponent(by || '')
@@ -242,104 +244,105 @@
             $('#invTable').on('click', 'thead th.sortable', function () {
                 reload(1, $(this).data('sort'), $(this).data('dir'));
             });
-
             $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
             $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
 
-            // "+" toggle -- item lines sub-grid, fetched fresh on every open via GetRowDetail.
+            // "+" toggle -- the document's item lines, fetched fresh on every open.
             function openDetail($btn) {
                 var $detail = $('#' + $btn.data('target'));
                 $detail.show();
                 $btn.removeClass('fa-plus').addClass('fa-minus');
                 var $body = $detail.find('.detail-items-body');
                 $.get('@Url.Action("GetRowDetail", "OtherInvoice")', {
-                    docno: $detail.data('docno'),
-                    doctype: $detail.data('doctype'),
-                    unit: $detail.data('unit')
+                    docYear: $detail.data('docyear'), unit: $detail.data('unit'),
+                    doctype: $detail.data('doctype'), docno: $detail.data('docno')
                 }).done(function (r) {
                     if (!r || !r.success) {
-                        $body.html('<tr><td colspan="7" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
+                        $body.html('<tr><td colspan="15" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
                         return;
                     }
                     var items = r.details || [];
-                    if (items.length === 0) {
-                        $body.html('<tr><td colspan="7" style="text-align:center;color:#666;">No item lines</td></tr>');
+                    if (!items.length) {
+                        $body.html('<tr><td colspan="15" style="text-align:center;color:#666;">No item lines</td></tr>');
                         return;
                     }
                     $body.empty();
                     items.forEach(function (d, i) {
                         $('<tr>').append(
-                            '<td>' + (d.srlno != null ? d.srlno : (i + 1)) + '</td>',
-                            '<td>' + (d.itemName || d.itcd || '') + '</td>',
-                            '<td style="text-align:right;">' + (d.qty || 0) + '</td>',
-                            '<td>' + (d.uom || '') + '</td>',
-                            '<td style="text-align:right;">' + Number(d.rate || 0).toFixed(2) + '</td>',
-                            '<td style="text-align:right;">' + Number(d.amt || 0).toFixed(2) + '</td>',
-                            '<td>' + (d.gstCode || '') + '</td>'
+                            '<td>' + (d.SRLNO != null ? d.SRLNO : (i + 1)) + '</td>',
+                            '<td>' + esc(d.ITCD) + (d.ITEM_NAME ? ' - ' + esc(d.ITEM_NAME) : '') + '</td>',
+                            '<td>' + esc(d.ITDESC1) + '</td>',
+                            '<td>' + esc(d.HSN_CODE) + '</td>',
+                            '<td class="num">' + fmt2(d.QTY) + '</td>',
+                            '<td>' + esc(d.UNIT_DESC) + '</td>',
+                            '<td class="num">' + fmt2(d.RATE) + '</td>',
+                            '<td class="num">' + fmt2(d.AMT) + '</td>',
+                            '<td>' + esc(d.GST_CODE) + '</td>',
+                            '<td class="num">' + fmt2(d.CGST_AMT) + '</td>',
+                            '<td class="num">' + fmt2(d.SGST_AMT) + '</td>',
+                            '<td class="num">' + fmt2(d.IGST_AMT) + '</td>',
+                            '<td class="num">' + fmt2(d.GCESS_AMT) + '</td>',
+                            '<td class="num">' + fmt2(d.TCS_AMT) + '</td>',
+                            '<td class="num">' + fmt2(d.TOT_AMT) + '</td>'
                         ).appendTo($body);
                     });
                 }).fail(function () {
-                    $body.html('<tr><td colspan="7" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
+                    $body.html('<tr><td colspan="15" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
                 });
             }
             function closeDetail($btn) {
                 $('#' + $btn.data('target')).hide();
                 $btn.removeClass('fa-minus').addClass('fa-plus');
             }
-
             $('#invTable').on('click', '.row-expand-btn', function () {
                 var $btn = $(this);
                 if ($('#' + $btn.data('target')).is(':visible')) closeDetail($btn); else openDetail($btn);
             });
 
+            // "Lines": expand the ticked rows, or every row when none is ticked.
             $('#linesBtn').on('click', function () {
                 var $checked = $('.row-check:checked');
-                var $btns = $checked.length
-                    ? $checked.closest('tr').find('.row-expand-btn')
-                    : $('#invTable .row-expand-btn');
+                var $btns = $checked.length ? $checked.closest('tr').find('.row-expand-btn') : $('#invTable .row-expand-btn');
                 var anyClosed = $btns.filter('.fa-plus').length > 0;
                 $btns.each(function () { anyClosed ? openDetail($(this)) : closeDetail($(this)); });
             });
 
-            // "New" inline row -- pick Unit + Doc Type here first, then the pencil (enabled
-            // only once both are chosen) opens the entry screen with both locked in --
-            // same pattern as Master Blend Entry's list.
+            // =========================================================
+            // "New" inline row -- same flow as Master Blend Entry: pick Unit + Type
+            // (the document type) here, then the pencil opens the entry screen
+            // with both locked.
+            // =========================================================
             var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
-            var DOC_TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(docTypes));
+            var TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(docTypes));
+            var typeKeys = Object.keys(TYPES);
 
             function buildNewRow() {
                 var unitOpts = '<option value="">Select Unit</option>' +
-                    UNIT_LIST.map(function (u) { return '<option value="' + u.CODE + '">' + u.CODE + ' - ' + (u.NAME || '') + '</option>'; }).join('');
-                var typeOpts = '<option value="">Select Doc Type</option>' +
-                    Object.keys(DOC_TYPES).map(function (k) { return '<option value="' + k + '">' + DOC_TYPES[k] + '</option>'; }).join('');
+                    UNIT_LIST.map(function (u) { return '<option value="' + esc(u.CODE) + '">' + esc(u.CODE) + ' - ' + esc(u.NAME || '') + '</option>'; }).join('');
+                var typeOpts = (typeKeys.length === 1 ? '' : '<option value="">Select Type</option>') +
+                    typeKeys.map(function (k) { return '<option value="' + esc(k) + '">' + esc(k) + ' - ' + esc(TYPES[k]) + '</option>'; }).join('');
                 return '<tr id="newUnitRow" class="new-entry-row">' +
-                    '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Other Invoice"></i></td>' +
+                    '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open @tranName"></i></td>' +
                     '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
-                    '<td colspan="2"><select id="newRowDocType">' + typeOpts + '</select></td>' +
-                    '<td colspan="6"></td>' +
+                    '<td colspan="3"><select id="newRowType">' + typeOpts + '</select></td>' +
+                    '<td colspan="@(colCount - 7)"></td>' +
                     '</tr>';
             }
-
             function refreshGoNewState() {
-                var ready = !!$('#newRowUnit').val() && !!$('#newRowDocType').val();
-                $('.go-new').toggleClass('is-ready', ready);
+                $('.go-new').toggleClass('is-ready', !!$('#newRowUnit').val() && !!$('#newRowType').val());
             }
-
             $('#btnNew').on('click', function () {
                 if ($('#newUnitRow').length) return;
                 $('#invTable tbody').prepend(buildNewRow());
                 refreshGoNewState();
             });
-
-            $('#invTable').on('change', '#newRowUnit, #newRowDocType', refreshGoNewState);
-
+            $('#invTable').on('change', '#newRowUnit, #newRowType', refreshGoNewState);
             $('#invTable').on('click', '.go-new', function () {
-                var unit = $('#newRowUnit').val(), doctype = $('#newRowDocType').val();
+                var unit = $('#newRowUnit').val(), type = $('#newRowType').val();
                 if (!unit) { alert('Please select Unit first'); return; }
-                if (!doctype) { alert('Please select Doc Type first'); return; }
-                window.location.href = '@Url.Action("InsertOrUpdate", "OtherInvoice")'
-                    + '?unit=' + encodeURIComponent(unit)
-                    + '&doctype=' + encodeURIComponent(doctype);
+                if (!type) { alert('Please select Type first'); return; }
+                window.location.href = ENTRY_URL + '?tran=' + TRAN
+                    + '&unit=' + encodeURIComponent(unit) + '&doctype=' + encodeURIComponent(type);
             });
 
             function getSingleChecked(action) {
@@ -348,35 +351,36 @@
                 if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
                 return $c;
             }
+            function entryUrl($c, view) {
+                return ENTRY_URL + '?tran=' + TRAN
+                    + '&docYear=' + encodeURIComponent($c.data('docyear'))
+                    + '&unit=' + encodeURIComponent($c.data('unit'))
+                    + '&doctype=' + encodeURIComponent($c.data('doctype'))
+                    + '&docno=' + encodeURIComponent($c.val())
+                    + (view ? '&view=true' : '');
+            }
 
             $('#editBtn').on('click', function () {
                 var $c = getSingleChecked('edit');
                 if (!$c) return;
-                window.location.href = '@Url.Action("InsertOrUpdate", "OtherInvoice")'
-                    + '?docno=' + encodeURIComponent($c.val())
-                    + '&doctype=' + encodeURIComponent($c.data('doctype'))
-                    + '&unit=' + encodeURIComponent($c.data('unit'));
+                if ($c.data('irn') === 'Y') { alert('e-Invoice (IRN) already generated for ' + $c.val() + ' -- it cannot be edited.'); return; }
+                window.location.href = entryUrl($c, false);
             });
-
             $('#viewBtn').on('click', function () {
                 var $c = getSingleChecked('view');
-                if (!$c) return;
-                window.location.href = '@Url.Action("InsertOrUpdate", "OtherInvoice")'
-                    + '?docno=' + encodeURIComponent($c.val())
-                    + '&doctype=' + encodeURIComponent($c.data('doctype'))
-                    + '&unit=' + encodeURIComponent($c.data('unit'))
-                    + '&view=true';
+                if ($c) window.location.href = entryUrl($c, true);
             });
-
             $('#deleteBtn').on('click', function () {
                 var $c = getSingleChecked('delete');
                 if (!$c) return;
-                if (!confirm('Are you sure you want to delete Doc No ' + $c.val() + ' ?')) return;
-
+                if ($c.data('irn') === 'Y') { alert('e-Invoice (IRN) already generated for ' + $c.val() + ' -- it cannot be deleted.'); return; }
+                if (!confirm('Are you sure to Cancel ' + $c.data('doctype') + ' ' + $c.val() + ' ?\nIts accounting voucher will be removed as well.')) return;
                 $('<form>', { method: 'POST', action: '@Url.Action("Delete", "OtherInvoice")' })
-                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
-                    .append($('<input>', { type: 'hidden', name: 'doctype', value: $c.data('doctype') }))
+                    .append($('<input>', { type: 'hidden', name: 'tran', value: TRAN }))
+                    .append($('<input>', { type: 'hidden', name: 'docYear', value: $c.data('docyear') }))
                     .append($('<input>', { type: 'hidden', name: 'unit', value: $c.data('unit') }))
+                    .append($('<input>', { type: 'hidden', name: 'doctype', value: $c.data('doctype') }))
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
                     .appendTo('body').submit();
             });
         });

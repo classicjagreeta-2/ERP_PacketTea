@@ -122,7 +122,16 @@ namespace Finance.Controllers.TEA
             if (model?.T_MRETU_HED != null)
                 model.T_MRETU_HED.LOCA = string.IsNullOrEmpty(model.T_MRETU_HED.LOCA) ? CurrentLoca : model.T_MRETU_HED.LOCA;
 
-            var response = await Services.SalesPostAsync<dynamic>("/api/MarketReturn/SaveOrUpdate", model);
+            // The API's MRETU_DATA names its parts MRETU_HED/MRETU_DET (no "T_"
+            // prefix) -- posting T_MRETU_DATA as-is left the header null there.
+            var payload = new
+            {
+                MRETU_HED = model?.T_MRETU_HED,
+                MRETU_DET = model?.T_MRETU_DET,
+                OptFlag = model?.OptFlag,
+                BillYearBack = model?.BillYearBack ?? 0
+            };
+            var response = await Services.SalesPostAsync<dynamic>("/api/MarketReturn/SaveOrUpdate", payload);
             return Json(new
             {
                 success = response.IsSuccessStatusCode,
@@ -203,11 +212,25 @@ namespace Finance.Controllers.TEA
             return JsonExactOrSessionExpired(r);
         }
 
+        // Bill No help (VB6 TEXT3_buttonclick) -- the chosen party's bills for this
+        // unit + the signed-in LOCA, in the current / last / before-last year.
         [HttpGet]
-        public async Task<ActionResult> GetOriginalBill(string blno = "", string excludeDocno = "", string excludeUnit = "")
+        public async Task<ActionResult> GetBillList(string pcd = "", string unit = "", int yearBack = 0, string search = "")
         {
             var r = await Services.SalesGetAsync<dynamic>(
-                $"/api/MarketReturn/GetOriginalBill?blno={blno}&excludeDocno={excludeDocno}&excludeUnit={excludeUnit}");
+                $"/api/MarketReturn/GetBillList?pcd={Uri.EscapeDataString(pcd ?? "")}&unit={Uri.EscapeDataString(unit ?? "")}" +
+                $"&loca={Uri.EscapeDataString(CurrentLoca)}&yearBack={yearBack}&search={Uri.EscapeDataString(search ?? "")}");
+            return JsonExactOrSessionExpired(r);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> GetOriginalBill(string blno = "", string unit = "", string rt = "", int yearBack = 0,
+                                                        string excludeDocno = "", string excludeUnit = "")
+        {
+            var r = await Services.SalesGetAsync<dynamic>(
+                $"/api/MarketReturn/GetOriginalBill?blno={Uri.EscapeDataString(blno ?? "")}&unit={Uri.EscapeDataString(unit ?? "")}" +
+                $"&rt={Uri.EscapeDataString(rt ?? "")}&yearBack={yearBack}" +
+                $"&excludeDocno={Uri.EscapeDataString(excludeDocno ?? "")}&excludeUnit={Uri.EscapeDataString(excludeUnit ?? "")}");
             return JsonExactOrSessionExpired(r);
         }
     }
