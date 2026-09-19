@@ -346,6 +346,110 @@ namespace PacketTea.Models
             return tdata;
         }
 
+        // TB Sales modules (Production Entry / Market Return / Other Invoice) store their
+        // data in the Sales schema (CLASSIC_CONTROL.SCHEMA_SALES, e.g. "FIN_JSTIL2027"),
+        // not the unit's normal operating schema -- same cross-schema idea as
+        // FinanceGetAsync/FinancePostAsync above, just routed through Salesdb instead of
+        // Financedb. x-module stays "PacketTea" (not a new module string) so the API's
+        // existing PACKETTEA JwtMiddleware branch and NHibernate mapping namespaces keep
+        // working unchanged -- only the schema/connection changes.
+        public static async Task<ResponseApiModel<TData>> SalesGetAsync<TData>(string url)
+        {
+            ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
+
+            _client.DefaultRequestHeaders.Clear();
+
+            _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
+
+            _client.DefaultRequestHeaders.Add(
+                "x-docyear",
+                Utility.SessionHelper.GetUser().DocYear
+            );
+
+            if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getToken))
+            {
+                _client.DefaultRequestHeaders.Add(
+                    "Authorization",
+                    "Bearer " + Utility.SessionHelper.GetUser().getToken
+                );
+            }
+
+            if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getDbName))
+            {
+                var salesdb = Utility.SessionHelper.GetUser().Salesdb;
+                _client.DefaultRequestHeaders.Add(
+                    "x-database", salesdb);
+            }
+
+            if (!string.IsNullOrEmpty(_dbType))
+            {
+                _client.DefaultRequestHeaders.Add("x-dbtype", _dbType);
+            }
+            if (!String.IsNullOrEmpty(_baseDomain))
+            {
+                url = _baseDomain + url;
+            }
+
+            var rest = await _client.GetAsync(url);
+
+            tdata = await ReadAsString<TData>(rest);
+
+            return tdata;
+        }
+
+        public static async Task<ResponseApiModel<TData>> SalesPostAsync<TData>(
+            string url,
+            object model,
+            Type type = null)
+        {
+            ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
+
+            JsonContent content = JsonContent.Create(model);
+
+            _client.DefaultRequestHeaders.Clear();
+
+            _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
+
+            _client.DefaultRequestHeaders.Add(
+                "x-docyear",
+                Utility.SessionHelper.GetUser().DocYear
+            );
+
+            if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getToken))
+            {
+                _client.DefaultRequestHeaders.Add(
+                    "Authorization",
+                    "Bearer " + Utility.SessionHelper.GetUser().getToken
+                );
+            }
+
+            if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getDbName))
+            {
+                var salesdb = Utility.SessionHelper.GetUser().Salesdb;
+
+                _client.DefaultRequestHeaders.Add(
+                    "x-database",
+                    salesdb
+                );
+            }
+
+            if (!string.IsNullOrEmpty(_dbType))
+            {
+                _client.DefaultRequestHeaders.Add("x-dbtype", _dbType);
+            }
+
+            if (!string.IsNullOrEmpty(_baseDomain))
+            {
+                url = _baseDomain + url;
+            }
+
+            var rest = await _client.PostAsync(url, content);
+
+            tdata = await ReadAsString<TData>(rest);
+
+            return tdata;
+        }
+
         public static async Task<ResponseApiModel<TData>> BoughtleafGetAsync<TData>(string url)
         {
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();

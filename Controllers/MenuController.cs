@@ -50,6 +50,7 @@ namespace PacketTea.Controllers
                     var userinfo = Utility.SessionHelper.GetUser();
                     userinfo.Financedb = dbResp.Data.SCHEMA_FINANCE;
                     userinfo.Factorydb = dbResp.Data.SCHEMA_FACTORY;
+                    userinfo.Salesdb = dbResp.Data.SCHEMA_SALES;
 
                     //var expiresMin = Session["expiresMin"];
                     //var expiresTime = (TimeSpan)Session["expiresTime"];

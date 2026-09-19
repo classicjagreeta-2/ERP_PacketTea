@@ -1,0 +1,617 @@
+@model PacketTea.Models.PT.T_INV_DATA
+@using Newtonsoft.Json
+@{
+    ViewBag.Title = "Other Invoice";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var docTypes = (Dictionary<string, string>)ViewBag.DocTypes;
+    bool isEdit = ViewBag.IsEdit ?? false;
+    // True only when this window was opened from the list page's "New" inline row --
+    // Unit + Doc Type were already chosen there, so both repeat here read-only.
+    bool lockedFromList = ViewBag.LockedFromList ?? false;
+    bool isView = ViewBag.IsView ?? false;
+    var head = Model.TRN_INV_HEAD;
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <script src="~/libraries/assetspo/js/custom.js"></script>
+    <style>
+        input[readonly] { background-color: #f3f4f7; color: #555; }
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
+        #gridTable th, #gridTable td { white-space: nowrap; }
+        #gridTable td input { min-width: 80px; }
+        #gridTable td input.f-rate, #gridTable td input.f-amount, #gridTable td input.f-qty,
+        #gridTable td input.f-cgstrate, #gridTable td input.f-cgstamt,
+        #gridTable td input.f-sgstrate, #gridTable td input.f-sgstamt,
+        #gridTable td input.f-igstrate, #gridTable td input.f-igstamt,
+        #gridTable td input.f-cessrate, #gridTable td input.f-cessamt,
+        #gridTable td input.f-tcsrate, #gridTable td input.f-tcsamt,
+        input[type="number"] { text-align: right; }
+        .popup-box.picker-box { width: 420px; display: none; }
+        .popup-box .picker-body { max-height: 36vh; overflow-y: auto; margin-top: 8px; }
+        .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; }
+        .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
+        .popup-box .picker-body tr:hover td { background: #eef3ff; }
+        .popup-box .picker-search { margin-bottom: 8px; }
+        .action-btns li a.is-disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
+        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
+        .totals-row { display: flex; justify-content: flex-end; gap: 24px; padding: 10px 4px; }
+        .totals-row .tot-item { text-align: right; }
+        .totals-row .tot-item label { display: block; font-size: 11px; color: #666; }
+        .totals-row .tot-item input { width: 130px; text-align: right; }
+    </style>
+</head>
+<body>
+
+    <input type="hidden" id="isEdit" value="@(isEdit ? "1" : "0")" />
+    <!-- API's TRN_INV_HEAD uses an "assigned" (not auto-generated) id strategy --
+         the existing row's ID must be echoed back on update. -->
+    <input type="hidden" id="ID" value="@head.ID" />
+
+    <div class="general-container">
+        <div class="purchase-details">
+
+            <div class="header-content">
+                <div class="action-btns">
+                    <ul>
+                        <li><a href="@Url.Action("Index", "OtherInvoice")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                        <li><button type="button" id="btnSave"><i class="fa fa-floppy-o"></i> Save</button></li>
+                        <li><a href="@Url.Action("Index", "OtherInvoice")"><i class="fa fa-times"></i> Cancel</a></li>
+                        <li style="margin-left:auto">
+                            <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
+                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+                <div class="header-details">
+                    <div class="left">
+                        <div class="order-code">
+                            <div class="txt"><div class="title-heading">Other Invoice</div></div>
+                        </div>
+                        <div class="title-heading">DOC NO. : @(head.DOCNO ?? "")</div>
+                    </div>
+                    <div class="right">
+                        <div>IRN : <span id="irnText">@(string.IsNullOrEmpty(head.IRN) ? "Not Generated" : head.IRN)</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unit / Doc Type -- always visible, locks read-only once chosen on the list
+                 page's "New" row (same pattern as Master Blend Entry's Unit/Blend Type). -->
+            <div class="accordion-container compact-accordion">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Unit / Doc Type</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Unit</label>
+                                <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Doc Type <span>(*)</span></label>
+                                <select id="DOCTYPE" @((isEdit || lockedFromList) ? "disabled" : "")>
+                                    @foreach (var dt in docTypes)
+                                    {
+                                        <option value="@dt.Key" selected="@(dt.Key == head.DOCTYPE)">@dt.Value</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-container">
+
+                <!-- Header -->
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Header</span></div>
+                    <div class="accordion-body">
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Doc No</label>
+                                <input type="text" id="DOCNO" value="@head.DOCNO" readonly placeholder="(auto)" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Doc Date <span>(*)</span></label>
+                                <input type="date" id="DOCDT" value="@(head.DOCDT?.ToString("yyyy-MM-dd"))" @(isEdit ? "disabled" : "") />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Party <span>(*)</span></label>
+                                <input type="text" id="PCD" data-picker="party" value="@head.PCD" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Party Name</label>
+                                <input type="text" id="PCD_disp" value="@head.PartyName" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Rate Incl./Excl. Tax</label>
+                                <select id="RATE_TYPE">
+                                    <option value="E" selected="@(head.RATE_TYPE != "I")">Excl. Tax</option>
+                                    <option value="I" selected="@(head.RATE_TYPE == "I")">Incl. Tax</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Trans/Driver Code</label>
+                                <input type="text" id="TRANS_CODE" value="@head.TRANS_CODE" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Vehicle No</label>
+                                <input type="text" id="VEHICLE_NO" value="@head.VEHICLE_NO" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Challan No</label>
+                                <input type="text" id="CHALLAN_NO" value="@head.CHALLAN_NO" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Challan Date</label>
+                                <input type="date" id="CHALLAN_DT" value="@(head.CHALLAN_DT?.ToString("yyyy-MM-dd"))" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Bank Code <span>(*)</span></label>
+                                <input type="text" id="BANK_CODE" data-picker="bank" value="@head.BANK_CODE" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Bank Name</label>
+                                <input type="text" id="BANK_CODE_disp" value="@head.BankName" readonly />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-100">
+                                <label>Remarks</label>
+                                <textarea id="REMARKS" style="height:50px;">@head.REMARKS</textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Delivery Address 1</label>
+                                <input type="text" id="DELIVERY_ADD1" value="@head.DELIVERY_ADD1" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Delivery Address 2</label>
+                                <input type="text" id="DELIVERY_ADD2" value="@head.DELIVERY_ADD2" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Delivery Address 3</label>
+                                <input type="text" id="DELIVERY_ADD3" value="@head.DELIVERY_ADD3" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Lines -->
+                <div class="accordion">
+                    <div class="accordion-header"><span class="txt">Item Detail</span></div>
+                    <div class="accordion-body active" style="display:block;">
+                        <div class="action-btns">
+                            <ul>
+                                <li><a href="javascript:void(0)" id="btnAddRow"><i class="fa fa-plus"></i> Add Row</a></li>
+                                <li><a href="javascript:void(0)" id="btnRemoveRows"><i class="fa fa-trash-o"></i> Remove Selected</a></li>
+                            </ul>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="border" id="gridTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
+                                        <th style="width:30px;">Sl</th>
+                                        <th>Item <span style="color:red;">(*)</span></th>
+                                        <th>Description</th>
+                                        <th style="width:90px;">HSN Code</th>
+                                        <th style="width:80px;text-align:right;">Qty</th>
+                                        <th style="width:70px;">UOM</th>
+                                        <th style="width:80px;text-align:right;">Rate</th>
+                                        <th style="width:90px;text-align:right;">Amount</th>
+                                        <th style="width:80px;">GST Code <span style="color:red;">(*)</span></th>
+                                        <th style="width:70px;text-align:right;">CGST %</th>
+                                        <th style="width:80px;text-align:right;">CGST Amt</th>
+                                        <th style="width:70px;text-align:right;">SGST %</th>
+                                        <th style="width:80px;text-align:right;">SGST Amt</th>
+                                        <th style="width:70px;text-align:right;">IGST %</th>
+                                        <th style="width:80px;text-align:right;">IGST Amt</th>
+                                        <th style="width:70px;text-align:right;">Cess %</th>
+                                        <th style="width:80px;text-align:right;">Cess Amt</th>
+                                        <th style="width:70px;text-align:right;">TCS %</th>
+                                        <th style="width:80px;text-align:right;">TCS Amt</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gridBody"></tbody>
+                                <tfoot>
+                                    <tr class="total">
+                                        <td colspan="8" style="text-align:right;">Total</td>
+                                        <td id="ftAmt" style="text-align:right;"></td>
+                                        <td></td>
+                                        <td></td><td id="ftCgst" style="text-align:right;"></td>
+                                        <td></td><td id="ftSgst" style="text-align:right;"></td>
+                                        <td></td><td id="ftIgst" style="text-align:right;"></td>
+                                        <td></td><td id="ftCess" style="text-align:right;"></td>
+                                        <td></td><td id="ftTcs" style="text-align:right;"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div class="totals-row">
+                            <div class="tot-item">
+                                <label>Gross Amount</label>
+                                <input type="text" id="dispGross" readonly />
+                            </div>
+                            <div class="tot-item">
+                                <label>Round Off</label>
+                                <input type="number" step="0.01" id="ROUND_OFF" value="@(head.ROUND_OFF ?? 0)" />
+                            </div>
+                            <div class="tot-item">
+                                <label>Net Amount</label>
+                                <input type="text" id="dispNet" readonly />
+                            </div>
+                        </div>
+                        <p style="color:#888;font-size:11.5px;padding:0 4px;">
+                            Note: CGST/SGST/IGST/Cess/TCS amounts and the final Net Amount are authoritatively
+                            computed server-side on Save (per the GST/TCS rate master and the Incl./Excl. Tax
+                            toggle) -- the figures shown here before Save are a client-side estimate only and
+                            will refresh to the saved values once the record reloads.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Backdrop shared by every picker below -->
+    <div class="popup-overlay" id="pickerOverlay"></div>
+
+    <!-- Generic single-select picker (Party/Bank/Item) -->
+    <div class="popup-box picker-box" id="genericPicker">
+        <div class="popup-header">
+            <h2 id="pickerTitle">Select</h2>
+            <button type="button" class="close-btn" onclick="closePicker()">X</button>
+        </div>
+        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
+        <div class="picker-body" id="pickerBody"></div>
+    </div>
+
+    <!-- In-page alert/confirm modal -->
+    <div class="popup-overlay" id="appAlertOverlay"></div>
+    <div class="popup-box alert-box" id="appAlertBox">
+        <div class="popup-header">
+            <h2 id="appAlertTitle">Notice</h2>
+        </div>
+        <div class="alert-message" id="appAlertMessage"></div>
+        <div class="alert-actions">
+            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
+        </div>
+    </div>
+
+<script>
+    // =========================================================
+    // In-page alert/confirm (see markup above) -- verbatim from Master Blend Entry.
+    // =========================================================
+    function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
+    function showAlert(message, onOk) {
+        $('#appAlertTitle').text('Notice');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').hide();
+        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    }
+    function showConfirm(message, onYes) {
+        $('#appAlertTitle').text('Confirm');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').show().off('click').on('click', closeAppAlert);
+        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onYes) onYes(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    }
+
+    function handleLookupFail(jqXHR) {
+        if (jqXHR.status === 440) {
+            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Your session has expired. Please log in again.',
+                function () { window.location.reload(); });
+        } else {
+            showAlert('Could not load data. Please try again.');
+        }
+    }
+
+    // Re-parent onto the true <body> -- same fixed-position-popup workaround as Master
+    // Blend Entry's InsertOrUpdate.cshtml (see its comment for the full explanation).
+    $('#pickerOverlay, #genericPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+
+    var IS_EDIT = $('#isEdit').val() === '1';
+    var rows = @Html.Raw(JsonConvert.SerializeObject(Model.TRN_INV_DETAIL));
+    var rowSeq = 0;
+    rows.forEach(function (r) { r._cid = ++rowSeq; });
+
+    function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
+    function round2(v) { return Math.round(num(v) * 100) / 100; }
+    function htmlAttr(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+    function renderGrid() {
+        var $tb = $('#gridBody').empty();
+        var totAmt = 0, totCgst = 0, totSgst = 0, totIgst = 0, totCess = 0, totTcs = 0;
+        rows.forEach(function (r, idx) {
+            r.SRLNO = idx + 1;
+            totAmt += num(r.AMT);
+            totCgst += num(r.CGST_AMT);
+            totSgst += num(r.SGST_AMT);
+            totIgst += num(r.IGST_AMT);
+            totCess += num(r.GCESS_AMT);
+            totTcs += num(r.TCS_AMT);
+            var tr = $('<tr data-cid="' + r._cid + '"></tr>');
+            tr.append('<td><input type="checkbox" class="rowChk" /></td>');
+            tr.append('<td>' + r.SRLNO + '</td>');
+            tr.append('<td><input type="text" class="f-itcd" data-code="' + htmlAttr(r.ITCD || '') + '" value="' + htmlAttr(r.ItemName || r.ITCD || '') + '" placeholder="Search item" /></td>');
+            tr.append('<td><input type="text" class="f-descn" value="' + htmlAttr(r.DESCN || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-hsn" value="' + htmlAttr(r.HSN_CODE || '') + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
+            tr.append('<td><input type="text" class="f-uom" value="' + htmlAttr(r.UOM || '') + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-gstcode" value="' + htmlAttr(r.GST_CODE || '') + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-cgstrate" value="' + (r.CGST_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-cgstamt" value="' + (r.CGST_AMT || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-sgstrate" value="' + (r.SGST_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-sgstamt" value="' + (r.SGST_AMT || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-igstrate" value="' + (r.IGST_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-igstamt" value="' + (r.IGST_AMT || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-cessrate" value="' + (r.GCESS_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-cessamt" value="' + (r.GCESS_AMT || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-tcsrate" value="' + (r.TCS_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-tcsamt" value="' + (r.TCS_AMT || 0) + '" readonly /></td>');
+            $tb.append(tr);
+        });
+        $('#ftAmt').text(round2(totAmt).toFixed(2));
+        $('#ftCgst').text(round2(totCgst).toFixed(2));
+        $('#ftSgst').text(round2(totSgst).toFixed(2));
+        $('#ftIgst').text(round2(totIgst).toFixed(2));
+        $('#ftCess').text(round2(totCess).toFixed(2));
+        $('#ftTcs').text(round2(totTcs).toFixed(2));
+        recalcTotals();
+    }
+
+    function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
+
+    // Live edits -> keep `rows` in sync + a client-side estimate of Qty*Rate=Amount
+    // (the authoritative, tax-aware Amount/GST split is always recomputed server-side
+    // on Save -- see the note under the grid).
+    $('#gridBody').on('input change', 'input', function () {
+        var $tr = $(this).closest('tr');
+        var r = findRow($tr.data('cid'));
+        if (!r) return;
+        r.DESCN = $tr.find('.f-descn').val();
+        r.HSN_CODE = $tr.find('.f-hsn').val();
+        r.QTY = num($tr.find('.f-qty').val());
+        r.UOM = $tr.find('.f-uom').val();
+        r.RATE = num($tr.find('.f-rate').val());
+        r.GST_CODE = $tr.find('.f-gstcode').val();
+
+        r.AMT = round2(r.QTY * r.RATE);
+        $tr.find('.f-amount').val(r.AMT.toFixed(2));
+
+        recalcTotals();
+    });
+
+    $('#gridBody').on('blur', '.f-rate, .f-qty', function () {
+        $(this).val(round2($(this).val()).toFixed(2));
+    });
+
+    function recalcTotals() {
+        var totAmt = 0;
+        rows.forEach(function (r) { totAmt += num(r.AMT); });
+        $('#dispGross').val(round2(totAmt).toFixed(2));
+        var net = round2(totAmt) + num($('#ROUND_OFF').val());
+        $('#dispNet').val(round2(net).toFixed(2));
+    }
+    $('#ROUND_OFF').on('input', recalcTotals);
+
+    $('#btnAddRow').on('click', function () {
+        rows.push({ _cid: ++rowSeq, QTY: 0, RATE: 0, AMT: 0 });
+        renderGrid();
+    });
+
+    $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
+
+    $('#btnRemoveRows').on('click', function () {
+        var cids = $('.rowChk:checked').map(function () { return $(this).closest('tr').data('cid'); }).get();
+        if (!cids.length) { showAlert('Select at least one row to remove.'); return; }
+        rows = rows.filter(function (r) { return cids.indexOf(r._cid) === -1; });
+        renderGrid();
+    });
+
+    // =========================================================
+    // Item lookup (grid row) -- resolve on blur, same shape as Master Blend Entry's
+    // f-mark blur-resolve. Accepts either the typed ITCD code or the item name.
+    // =========================================================
+    $('#gridBody').on('blur', '.f-itcd', function () {
+        var $inp = $(this), typed = $.trim($inp.val());
+        var $tr = $inp.closest('tr');
+        var r = findRow($tr.data('cid'));
+        if (!typed) { $inp.attr('data-code', ''); if (r) { r.ITCD = ''; r.ItemName = ''; } return; }
+        if (r && r.ItemName === typed && r.ITCD) { $inp.attr('data-code', r.ITCD); return; }
+        $.getJSON('@Url.Action("GetItemMaster", "OtherInvoice")', { search: typed }, function (data) {
+            data = data || [];
+            var t = typed.toUpperCase();
+            var m = data.find(function (x) { return String(x.CODE || '').toUpperCase() === t; })
+                 || (data.length === 1 ? data[0] : null);
+            if (m) {
+                $inp.attr('data-code', m.CODE).val(m.NAME || m.CODE);
+                if (r) {
+                    r.ITCD = m.CODE; r.ItemName = m.NAME || '';
+                    if (!r.DESCN) { r.DESCN = m.NAME || ''; $tr.find('.f-descn').val(r.DESCN); }
+                    if (!r.HSN_CODE && m.HSN_CODE) { r.HSN_CODE = m.HSN_CODE; $tr.find('.f-hsn').val(r.HSN_CODE); }
+                    if (!r.UOM && m.UOM) { r.UOM = m.UOM; $tr.find('.f-uom').val(r.UOM); }
+                }
+                return;
+            }
+            $inp.val(r && r.ItemName ? r.ItemName : (r && r.ITCD ? r.ITCD : ''));
+            showAlert('"' + typed + '" does not match any item. Use the picker or a valid item code.');
+        }).fail(handleLookupFail);
+    });
+    // Click opens the searchable picker instead of relying purely on free typing.
+    $('#gridBody').on('click focus', '.f-itcd', function () {
+        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
+        if (!r) return;
+        openPicker('item', $tr.find('.f-itcd'), function (row) {
+            r.ITCD = row.CODE; r.ItemName = row.NAME || '';
+            $tr.find('.f-itcd').val(row.NAME || row.CODE).attr('data-code', row.CODE);
+            if (!r.DESCN) { r.DESCN = row.NAME || ''; $tr.find('.f-descn').val(r.DESCN); }
+            if (!r.HSN_CODE && row.HSN_CODE) { r.HSN_CODE = row.HSN_CODE; $tr.find('.f-hsn').val(r.HSN_CODE); }
+            if (!r.UOM && row.UOM) { r.UOM = row.UOM; $tr.find('.f-uom').val(r.UOM); }
+        });
+    });
+
+    // =========================================================
+    // Generic single-select picker (header fields: Party, Bank; also used
+    // row-scoped for the grid's Item column above via the onSelect callback).
+    // =========================================================
+    var pickerConfig = {
+        party: { url: '@Url.Action("GetParty", "OtherInvoice")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCD' },
+        bank: { url: '@Url.Action("GetBank", "OtherInvoice")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'BANK_CODE' },
+        item: { url: '@Url.Action("GetItemMaster", "OtherInvoice")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['UOM', 'UOM']], target: null }
+    };
+    var activePicker = null;
+    var pickerXhr = null;
+    var pickerReqSeq = 0;
+
+    $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
+
+    function openPicker(key, $input, onSelect) {
+        activePicker = { key: key, input: $input, onSelect: onSelect };
+        $('#pickerTitle').text('Select ' + key);
+        $('#pickerSearch').val('');
+        $('#pickerBody').empty().removeData('rows');
+        $('#pickerOverlay, #genericPicker').fadeIn(120);
+        loadPickerData('');
+        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
+    }
+    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+
+    function loadPickerData(term) {
+        var cfg = pickerConfig[activePicker.key];
+        var myReq = ++pickerReqSeq;
+        if (pickerXhr) { pickerXhr.abort(); }
+        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
+            if (myReq !== pickerReqSeq) return;
+            data = data || [];
+            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+            data.forEach(function (row, i) {
+                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
+                    var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
+                    return '<td>' + (v == null ? '' : v) + '</td>';
+                }).join('') + '</tr>';
+            });
+            html += '</tbody></table>';
+            $('#pickerBody').html(html);
+            $('#pickerBody').data('rows', data);
+        }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
+    }
+
+    $('#pickerBody').on('click', 'tr[data-i]', function () {
+        var data = $('#pickerBody').data('rows');
+        var row = data[$(this).data('i')];
+        var cfg = pickerConfig[activePicker.key];
+
+        if (activePicker.onSelect) {
+            activePicker.onSelect(row);
+        } else if (cfg.target) {
+            var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
+            var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
+            $('#' + cfg.target).val(code);
+            $('#' + cfg.target + '_disp').val(name || '');
+        }
+        closePicker();
+    });
+
+    // =========================================================
+    // Save (mirrors trn_scrap_inv.frm's Command1_Click validation order, minus the
+    // GL-preview stage -- straight validate-then-save, see the controller's comments).
+    // =========================================================
+    $('#btnSave').on('click', function () {
+        if (!$('#PCD').val()) { showAlert('Party cannot be blank'); return; }
+        if (!$('#BANK_CODE').val()) { showAlert('Bank Code cannot be blank'); return; }
+        if (!$('#DOCTYPE').val()) { showAlert('Document Type cannot be blank'); return; }
+        if (!$('#DOCDT').val()) { showAlert('Doc Date cannot be blank'); return; }
+
+        var valid = rows.filter(function (r) { return r.ITCD || num(r.QTY) !== 0 || num(r.RATE) !== 0; });
+        if (valid.some(function (r) { return num(r.QTY) < 0; })) { showAlert('Quantity cannot be negative.'); return; }
+        if (valid.some(function (r) { return (num(r.QTY) * num(r.RATE)) !== 0 && !r.GST_CODE; })) {
+            showAlert('GST Code is mandatory for every priced line.'); return;
+        }
+
+        var grossPreview = valid.reduce(function (s, r) { return s + round2(num(r.QTY) * num(r.RATE)); }, 0);
+        if (round2(grossPreview) === 0) { showAlert('Total invoice amount cannot be zero.'); return; }
+
+        showConfirm('Are you sure?', function () {
+            var model = {
+                TRN_INV_HEAD: {
+                    ID: $('#ID').val() ? parseInt($('#ID').val(), 10) : 0,
+                    DOCNO: $('#DOCNO').val(),
+                    DOCDT: $('#DOCDT').val(),
+                    DOCTYPE: $('#DOCTYPE').val(),
+                    PCD: $('#PCD').val(),
+                    TRANS_CODE: $('#TRANS_CODE').val(),
+                    VEHICLE_NO: $('#VEHICLE_NO').val(),
+                    CHALLAN_NO: $('#CHALLAN_NO').val(),
+                    CHALLAN_DT: $('#CHALLAN_DT').val() || null,
+                    REMARKS: $('#REMARKS').val(),
+                    BANK_CODE: $('#BANK_CODE').val(),
+                    RATE_TYPE: $('#RATE_TYPE').val(),
+                    DELIVERY_ADD1: $('#DELIVERY_ADD1').val(),
+                    DELIVERY_ADD2: $('#DELIVERY_ADD2').val(),
+                    DELIVERY_ADD3: $('#DELIVERY_ADD3').val(),
+                    ROUND_OFF: num($('#ROUND_OFF').val())
+                },
+                TRN_INV_DETAIL: valid
+            };
+
+            $.ajax({
+                url: '@Url.Action("Save", "OtherInvoice")',
+                type: 'POST', contentType: 'application/json', data: JSON.stringify(model),
+                success: function (resp) {
+                    if (resp.success) {
+                        showAlert(resp.message || 'Saved.', function () {
+                            window.location.href = '@Url.Action("Index", "OtherInvoice")' + '?doctype=' + encodeURIComponent($('#DOCTYPE').val());
+                        });
+                    } else {
+                        showAlert(resp.message || 'Save failed.');
+                    }
+                },
+                error: function (xhr) {
+                    var msg = (xhr.responseJSON && (xhr.responseJSON.message || xhr.responseJSON.title)) || (xhr.responseText || 'Save failed - server error.');
+                    showAlert(msg);
+                }
+            });
+        });
+    });
+
+    renderGrid();
+
+    // =========================================================
+    // View mode -- same data as Edit, but nothing on the form is editable.
+    // =========================================================
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
+    if (IS_VIEW) {
+        $('.accordion-container :input').prop('disabled', true);
+        $('#btnSave, #btnAddRow, #btnRemoveRows').addClass('is-disabled').prop('disabled', true);
+    }
+</script>
+</body>
+</html>

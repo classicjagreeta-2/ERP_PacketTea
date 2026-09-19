@@ -42,6 +42,7 @@ namespace PacketTea
             private string _factoryedb;
             private string _firstname;
             private string _financedb;
+            private string _salesdb;
             public string DocYear
             {
                 get { return _docyear; }
@@ -147,6 +148,11 @@ namespace PacketTea
             {
                 get { return _financedb; }
                 set { _financedb = value; }
+            }
+            public string Salesdb
+            {
+                get { return _salesdb; }
+                set { _salesdb = value; }
             }
         }
 

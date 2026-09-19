@@ -238,6 +238,9 @@
     <Compile Include="Controllers\TEA\MasterBlendEntryController.cs" />
     <Compile Include="Controllers\TEA\AWREntryController.cs" />
     <Compile Include="Controllers\TEA\TeaSampleDrawEntryController.cs" />
+    <Compile Include="Controllers\TEA\ProductionEntryController.cs" />
+    <Compile Include="Controllers\TEA\MarketReturnController.cs" />
+    <Compile Include="Controllers\TEA\OtherInvoiceController.cs" />
     <Compile Include="Controllers\TEA\PackingController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaInvoiceController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaPurchaseEntryController.cs" />
@@ -285,6 +288,14 @@
     <Compile Include="Models\PT\T_AWR_PT_DATA.cs" />
     <Compile Include="Models\PT\T_SAMPLE_DRAW.cs" />
     <Compile Include="Models\PT\T_SAMPLE_DRAW_PT_DATA.cs" />
+    <Compile Include="Models\PT\T_PROD.cs" />
+    <Compile Include="Models\PT\T_PROD_DATA.cs" />
+    <Compile Include="Models\PT\T_MRETU_HED.cs" />
+    <Compile Include="Models\PT\T_MRETU.cs" />
+    <Compile Include="Models\PT\T_MRETU_DATA.cs" />
+    <Compile Include="Models\PT\T_INV_HEAD.cs" />
+    <Compile Include="Models\PT\T_INV_DETAIL.cs" />
+    <Compile Include="Models\PT\T_INV_DATA.cs" />
     <Compile Include="Models\PT\T_TEA_PURCHASE.cs" />
     <Compile Include="Models\PT\UNBL.cs" />
     <Compile Include="Models\PT\UNBLPLT.cs" />

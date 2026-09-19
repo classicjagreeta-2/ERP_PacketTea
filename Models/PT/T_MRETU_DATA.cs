@@ -1,0 +1,16 @@
+using System.Collections.Generic;
+
+namespace PacketTea.Models.PT
+{
+    // Save payload posted to /api/MarketReturn/SaveOrUpdate -- head + item
+    // detail lines, same shape as TEA_BLEND_DATA.
+    public class T_MRETU_DATA
+    {
+        public T_MRETU_HED T_MRETU_HED { get; set; } = new T_MRETU_HED();
+        public List<T_MRETU> T_MRETU_DET { get; set; } = new List<T_MRETU>();
+
+        // Quantity-vs-Net-Weight toggle ("QTY" default or "WT") -- see
+        // ClassicERPCoreAPI's MRETU_DATA.OptFlag for what this drives.
+        public string OptFlag { get; set; } = "QTY";
+    }
+}

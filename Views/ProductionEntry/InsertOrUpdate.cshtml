@@ -1,0 +1,456 @@
+@model PacketTea.Models.PT.T_PROD_DATA
+@using Newtonsoft.Json
+@{
+    ViewBag.Title = "Production Entry";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var types = (Dictionary<string, string>)ViewBag.Types;
+    bool isEdit = ViewBag.IsEdit ?? false;
+    bool lockedFromList = ViewBag.LockedFromList ?? false;
+    bool isView = ViewBag.IsView ?? false;
+    var head = Model.T_PROD;
+    string newType = (string)ViewBag.NewType;
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <script src="~/libraries/assetspo/js/custom.js"></script>
+    <style>
+        input[readonly] { background-color: #f3f4f7; color: #555; }
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
+        input[type="number"] { text-align: right; }
+        .popup-box.picker-box { width: 420px; display: none; }
+        .popup-box .picker-body { max-height: 36vh; overflow-y: auto; margin-top: 8px; }
+        .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; }
+        .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
+        .popup-box .picker-body tr:hover td { background: #eef3ff; }
+        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
+        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <input type="hidden" id="isEdit" value="@(isEdit ? "1" : "0")" />
+    <input type="hidden" id="ID" value="@head.ID" />
+
+    <div class="general-container">
+        <div class="purchase-details">
+
+            <div class="header-content">
+                <div class="action-btns">
+                    <ul>
+                        <li><a href="@Url.Action("Index", "ProductionEntry")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                        <li><button type="button" id="btnSave"><i class="fa fa-floppy-o"></i> Save</button></li>
+                        <li><a href="@Url.Action("Index", "ProductionEntry")"><i class="fa fa-times"></i> Cancel</a></li>
+                        <li style="margin-left:auto">
+                            <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
+                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+                <div class="header-details">
+                    <div class="left">
+                        <div class="order-code">
+                            <div class="txt"><div class="title-heading">Production Entry</div></div>
+                        </div>
+                        <div class="title-heading">DOC NO. : @(head.DOCNO ?? "")</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-container compact-accordion">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Unit / Type</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Unit</label>
+                                <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Type <span>(*)</span></label>
+                                <select id="TYPE" disabled>
+                                    @foreach (var t in types)
+                                    {
+                                        <option value="@t.Key" selected="@(t.Key == newType)">@t.Value (@t.Key)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-container">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Header</span></div>
+                    <div class="accordion-body">
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Doc No</label>
+                                <input type="text" id="DOCNO" value="@head.DOCNO" readonly placeholder="(auto)" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Date <span>(*)</span></label>
+                                <input type="date" id="DATE_ORA" value="@(head.DATE_ORA?.ToString("yyyy-MM-dd"))" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Item <span>(*)</span></label>
+                                <input type="text" id="ITCD" data-picker="item" value="@head.ITCD" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Item Name</label>
+                                <input type="text" id="ITCD_disp" value="@head.ItemName" readonly />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>MRP <span>(*)</span></label>
+                                <input type="text" inputmode="decimal" id="MRP" value="@head.MRP" placeholder="max 4 chars, e.g. 9.50 / 12.5"
+                                       title="MRP is a 4-character code (PROD.MRP / STOCK.MRP), e.g. 9.50, 12.5, 220" />
+                            </div>
+                            <div class="form-col-20">
+                                <label id="lblBatchNo">Batch No. <span>(*)</span></label>
+                                <input type="text" id="BATCHNO" value="@head.BATCHNO" maxlength="12" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Mfg. Dt. <span>(*)</span></label>
+                                <input type="date" id="MFGDT" value="@(head.MFGDT?.ToString("yyyy-MM-dd"))" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Shift</label>
+                                <input type="text" id="SHIFT" value="@head.SHIFT" maxlength="2" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Time From</label>
+                                <input type="time" id="TIME_FROM" value="@head.TIME_FROM" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Time To</label>
+                                <input type="time" id="TIME_TO" value="@head.TIME_TO" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Production (Pkts/Bags) <span>(*)</span></label>
+                                <input type="number" step="0.01" id="PD" value="@head.PD" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Gross Weight (Kg.)</label>
+                                <input type="number" step="0.0001" id="GROSS_WEIGHT" value="@head.GROSS_WEIGHT" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Net Weight (Kg.)</label>
+                                <input type="number" step="0.0001" id="NET_WEIGHT" value="@head.NET_WEIGHT" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Gain/Loss (Kg.)</label>
+                                <input type="number" step="0.0001" id="GAIN_LOSS" value="@head.GAIN_LOSS" />
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="popup-overlay" id="pickerOverlay"></div>
+    <div class="popup-box picker-box" id="genericPicker">
+        <div class="popup-header">
+            <h2 id="pickerTitle">Select</h2>
+            <button type="button" class="close-btn" onclick="closePicker()">X</button>
+        </div>
+        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
+        <div class="picker-body" id="pickerBody"></div>
+    </div>
+
+    <div class="popup-overlay" id="appAlertOverlay"></div>
+    <div class="popup-box alert-box" id="appAlertBox">
+        <div class="popup-header"><h2 id="appAlertTitle">Notice</h2></div>
+        <div class="alert-message" id="appAlertMessage"></div>
+        <div class="alert-actions">
+            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
+        </div>
+    </div>
+
+<script>
+    function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
+    function showAlert(message, onOk) {
+        $('#appAlertTitle').text('Notice');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').hide();
+        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    }
+    function showConfirm(message, onYes) {
+        $('#appAlertTitle').text('Confirm');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').show().off('click').on('click', closeAppAlert);
+        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onYes) onYes(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    }
+    function handleLookupFail(jqXHR) {
+        if (jqXHR.status === 440) {
+            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Your session has expired. Please log in again.',
+                function () { window.location.reload(); });
+        } else {
+            showAlert('Could not load data. Please try again.');
+        }
+    }
+
+    $('#pickerOverlay, #genericPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+
+    var IS_EDIT = $('#isEdit').val() === '1';
+    function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
+    function round2(v) { return Math.round(num(v) * 100) / 100; }
+
+    // PROD.MRP is VARCHAR2(4) and is matched as text against STOCK.MRP, so it is
+    // kept exactly as typed (no rounding/reformatting) and limited to 4 chars.
+    $('#MRP').on('input', function () {
+        var typed = $(this).val().replace(/[^0-9.]/g, '');
+        var v = typed.slice(0, 4);
+        if (v !== $(this).val()) $(this).val(v);
+        if (typed.length > 4) {
+            showAlert('MRP can be at most 4 characters (the database column is 4 characters, same as the VB screen). ' +
+                'Two decimals fit only below 10, e.g. 9.50; from 10 upward use one decimal, e.g. 12.5.');
+        }
+    });
+
+    $('#GROSS_WEIGHT, #NET_WEIGHT, #GAIN_LOSS, #PD').on('blur', function () {
+        var step = $(this).attr('step') === '0.0001' ? 4 : 2;
+        $(this).val(Number(num($(this).val()).toFixed(step)));
+    });
+
+    // =========================================================
+    // Field rules ported from VB frmProduction (the server re-checks all of these on Save)
+    // =========================================================
+    function todayIso() {
+        var d = new Date();
+        return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    }
+    function addDaysIso(iso, days) {
+        var p = iso.split('-');
+        var d = new Date(+p[0], +p[1] - 1, +p[2] + days);
+        return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    }
+    function toDisplay(iso) { var p = (iso || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso; }
+    function field(row, name) { return row[name] !== undefined ? row[name] : row[name.toLowerCase()]; }
+
+    // Selected item's packing factor (pieces per case) and best-before days.
+    var currentItem = null;
+
+    function applyItem(row) {
+        var nob = Math.max(1, parseInt(field(row, 'NOB'), 10) || 1);
+        // VB text1_Validate -> blankrec: a different pieces-per-case makes the entered quantities meaningless.
+        if (currentItem && currentItem.nob !== nob) {
+            $('#PD, #GROSS_WEIGHT, #NET_WEIGHT, #GAIN_LOSS').val(0);
+        }
+        currentItem = { code: field(row, 'CODE'), nob: nob, bbd: parseInt(field(row, 'BBD'), 10) || 0 };
+        $('#ITCD').val(currentItem.code);
+        $('#ITCD_disp').val(field(row, 'NAME') || '');
+    }
+
+    function lookupItem(code, onFound, onMissing) {
+        $.getJSON('@Url.Action("GetItemMaster", "ProductionEntry")', { search: code }, function (data) {
+            var hit = (data || []).filter(function (r) { return String(field(r, 'CODE') || '').trim().toUpperCase() === code.toUpperCase(); })[0];
+            if (hit) onFound(hit); else if (onMissing) onMissing();
+        }).fail(handleLookupFail);
+    }
+
+    $('#ITCD').on('change', function () {
+        var code = $.trim($(this).val());
+        if (!code) { currentItem = null; $('#ITCD_disp').val(''); return; }
+        lookupItem(code, applyItem, function () {
+            $('#ITCD, #ITCD_disp').val('');
+            currentItem = null;
+            showAlert('Invalid Item', function () { $('#ITCD').focus(); });
+        });
+    });
+
+    $('#BATCHNO').on('blur', function () { $(this).val($.trim($(this).val()).toUpperCase()); });
+
+    function pdError() {
+        var pd = num($('#PD').val());
+        if (pd < 0) return 'Net Production can not be negative';
+        var nob = currentItem ? currentItem.nob : 1;
+        var pieces = Math.round((pd - Math.floor(pd)) * 100);
+        if (nob > 1 && pieces > nob - 1) return 'Decimal part cannot be more than ' + (nob - 1) + ' (cases.pieces, ' + nob + ' pieces per case)';
+        return null;
+    }
+    $('#PD').on('change', function () { var e = pdError(); if (e) showAlert(e, function () { $('#PD').focus(); }); });
+
+    function mfgError() {
+        var mfg = $('#MFGDT').val();
+        if (!mfg) return 'Enter Manufacturing Date';
+        var today = todayIso();
+        if (mfg > today) return 'Can not enter future dated Manufacturing Date';
+        if (currentItem && currentItem.bbd > 0 && mfg <= addDaysIso(today, -currentItem.bbd))
+            return 'Material age is more than BBD Period (' + currentItem.bbd + ' days)';
+        return null;
+    }
+    $('#MFGDT').on('change', function () { var e = mfgError(); if (e) showAlert(e, function () { $('#MFGDT').focus(); }); });
+
+    function timeError() {
+        var from = $('#TIME_FROM').val(), to = $('#TIME_TO').val();
+        return (from && to && from >= to) ? 'Time To should be greater than Time From' : null;
+    }
+    $('#TIME_TO, #TIME_FROM').on('change', function () { var e = timeError(); if (e) showAlert(e, function () { $('#TIME_TO').focus(); }); });
+
+    // Edit/view: load the saved item's NOB/BBD so the rules above apply without re-picking it.
+    if ($.trim($('#ITCD').val())) {
+        var savedCode = $.trim($('#ITCD').val());
+        lookupItem(savedCode, function (row) {
+            currentItem = { code: savedCode, nob: Math.max(1, parseInt(field(row, 'NOB'), 10) || 1), bbd: parseInt(field(row, 'BBD'), 10) || 0 };
+        });
+    }
+
+    // =========================================================
+    // Generic single-select picker (Item)
+    // =========================================================
+    var pickerConfig = {
+        item: { url: '@Url.Action("GetItemMaster", "ProductionEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'ITCD' }
+    };
+    var activePicker = null;
+    var pickerXhr = null;
+    var pickerReqSeq = 0;
+
+    $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
+
+    function openPicker(key, $input, onSelect) {
+        activePicker = { key: key, input: $input, onSelect: onSelect };
+        $('#pickerTitle').text('Select ' + key);
+        $('#pickerSearch').val('');
+        $('#pickerBody').empty().removeData('rows');
+        $('#pickerOverlay, #genericPicker').fadeIn(120);
+        loadPickerData('');
+        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
+    }
+    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+
+    function loadPickerData(term) {
+        var cfg = pickerConfig[activePicker.key];
+        var myReq = ++pickerReqSeq;
+        if (pickerXhr) { pickerXhr.abort(); }
+        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
+            if (myReq !== pickerReqSeq) return;
+            data = data || [];
+            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+            data.forEach(function (row, i) {
+                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
+                    var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
+                    return '<td>' + (v == null ? '' : v) + '</td>';
+                }).join('') + '</tr>';
+            });
+            html += '</tbody></table>';
+            $('#pickerBody').html(html);
+            $('#pickerBody').data('rows', data);
+        }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
+    }
+
+    $('#pickerBody').on('click', 'tr[data-i]', function () {
+        var data = $('#pickerBody').data('rows');
+        var row = data[$(this).data('i')];
+        var cfg = pickerConfig[activePicker.key];
+
+        if (activePicker.onSelect) {
+            activePicker.onSelect(row);
+        } else if (activePicker.key === 'item') {
+            applyItem(row);
+        } else if (cfg.target) {
+            var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
+            var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
+            $('#' + cfg.target).val(code);
+            $('#' + cfg.target + '_disp').val(name || '');
+        }
+        closePicker();
+    });
+
+    // =========================================================
+    // Save (mirrors VB Command1_Click validation order)
+    // =========================================================
+    function fail(message, fieldId) {
+        showAlert(message, function () { if (fieldId) $('#' + fieldId).focus(); });
+    }
+
+    $('#btnSave').on('click', function () {
+        $('#BATCHNO').val($.trim($('#BATCHNO').val()).toUpperCase());
+        $('#MRP').val($.trim($('#MRP').val()));
+
+        if (!$('#DATE_ORA').val()) return fail('Date required', 'DATE_ORA');
+        if (!$.trim($('#ITCD').val())) return fail('Item code required', 'ITCD');
+        if (!$('#MRP').val()) return fail('MRP required', 'MRP');
+        if ($('#MRP').val().length > 4) return fail('MRP can be at most 4 characters (e.g. 220, 5.55)', 'MRP');
+        if (!$('#BATCHNO').val()) return fail('Batchno Number required', 'BATCHNO');
+        var e = mfgError(); if (e) return fail(e, 'MFGDT');
+        e = timeError(); if (e) return fail(e, 'TIME_TO');
+        e = pdError(); if (e) return fail(e, 'PD');
+
+        // VB shows this as a non-blocking warning -- fold it into the confirmation.
+        var confirmMsg = 'Are you sure?';
+        if ($('#DATE_ORA').val() !== $('#MFGDT').val()) {
+            confirmMsg = 'Document Date (' + toDisplay($('#DATE_ORA').val()) + ') and Manufacturing Date (' +
+                toDisplay($('#MFGDT').val()) + ') are different. Check the manufacturing date before saving.\n\nAre you sure?';
+        }
+
+        showConfirm(confirmMsg, function () {
+            var model = {
+                ID: $('#ID').val() ? parseInt($('#ID').val(), 10) : 0,
+                UNIT: '@head.UNIT',
+                DOCNO: $('#DOCNO').val(),
+                DATE_ORA: $('#DATE_ORA').val(),
+                ITCD: $.trim($('#ITCD').val()),
+                TM: 'T',
+                MRP: $('#MRP').val(),
+                BATCHNO: $('#BATCHNO').val(),
+                MFGDT: $('#MFGDT').val(),
+                SHIFT: $('#SHIFT').val(),
+                TIME_FROM: $('#TIME_FROM').val(),
+                TIME_TO: $('#TIME_TO').val(),
+                PD: num($('#PD').val()),
+                GROSS_WEIGHT: num($('#GROSS_WEIGHT').val()),
+                NET_WEIGHT: num($('#NET_WEIGHT').val()),
+                GAIN_LOSS: num($('#GAIN_LOSS').val())
+            };
+
+            $.ajax({
+                url: '@Url.Action("Save", "ProductionEntry")',
+                type: 'POST', contentType: 'application/json', data: JSON.stringify({ T_PROD: model }),
+                success: function (resp) {
+                    if (resp.success) {
+                        showAlert(resp.message || 'Saved.', function () {
+                            window.location.href = '@Url.Action("Index", "ProductionEntry")' + '?unit=' + encodeURIComponent('@head.UNIT');
+                        });
+                    } else {
+                        fail(resp.message || 'Save failed.', resp.field);
+                    }
+                },
+                error: function () { showAlert('Save failed - server error.'); }
+            });
+        });
+    });
+
+    // =========================================================
+    // View mode
+    // =========================================================
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
+    if (IS_VIEW) {
+        $('.accordion-container :input').prop('disabled', true);
+        $('#btnSave').addClass('is-disabled').prop('disabled', true);
+    }
+</script>
+</body>
+</html>

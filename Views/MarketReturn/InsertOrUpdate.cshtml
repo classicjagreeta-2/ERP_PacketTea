@@ -1,0 +1,740 @@
+@model PacketTea.Models.PT.T_MRETU_DATA
+@using Newtonsoft.Json
+@{
+    ViewBag.Title = "Market Return";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var types = (Dictionary<string, string>)ViewBag.Types;
+    bool isEdit = ViewBag.IsEdit ?? false;
+    bool lockedFromList = ViewBag.LockedFromList ?? false;
+    bool isView = ViewBag.IsView ?? false;
+    var head = Model.T_MRETU_HED;
+    string newType = (string)ViewBag.NewType;
+    bool irnLocked = !string.IsNullOrEmpty(head.IRN);
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <script src="~/libraries/assetspo/js/custom.js"></script>
+    <style>
+        input[readonly] { background-color: #f3f4f7; color: #555; }
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
+        #gridTable th, #gridTable td { white-space: nowrap; }
+        #gridTable td input { min-width: 80px; }
+        #gridTable td input.f-rate, #gridTable td input.f-amount, #gridTable td input.f-mretu,
+        #gridTable td input.f-grosswt, #gridTable td input.f-netwt, #gridTable td input.f-sht,
+        #gridTable td input.f-bkg, #gridTable td input.f-lkg, #gridTable td input.f-crqty,
+        #gridTable td input.f-discpct, #gridTable td input.f-discount,
+        #gridTable td input.f-cgstrate, #gridTable td input.f-cgstamt,
+        #gridTable td input.f-sgstrate, #gridTable td input.f-sgstamt,
+        #gridTable td input.f-igstrate, #gridTable td input.f-igstamt,
+        #gridTable td input.f-cessrate, #gridTable td input.f-cessamt,
+        input[type="number"] { text-align: right; }
+        #gridTable td input.f-amount, #gridTable td input.f-cgstamt, #gridTable td input.f-sgstamt,
+        #gridTable td input.f-igstamt, #gridTable td input.f-cessamt { background-color: #f3f4f7; }
+        .grid-pick-btn { width: 20px; height: 21px; padding: 0; margin-left: 2px; vertical-align: middle; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; font-size: 11px; line-height: 1; }
+        .popup-box.picker-box { width: 420px; display: none; }
+        .popup-box.picker-box.wide { width: 780px; max-width: 92vw; }
+        .popup-box .picker-body { max-height: 40vh; overflow-y: auto; margin-top: 8px; }
+        .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; }
+        .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
+        .popup-box .picker-body tr:hover td { background: #eef3ff; }
+        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
+        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
+        .action-btns li a.is-disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+        .irn-banner { background:#fff3cd; border:1px solid #ffe69c; color:#664d03; padding:8px 14px; margin-bottom:10px; border-radius:4px; font-size:13px; }
+        .optflag-row label { font-weight: normal; margin-right: 14px; }
+    </style>
+</head>
+<body>
+
+    <input type="hidden" id="isEdit" value="@(isEdit ? "1" : "0")" />
+    <input type="hidden" id="ID" value="@head.ID" />
+
+    <div class="general-container">
+        <div class="purchase-details">
+
+            <div class="header-content">
+                <div class="action-btns">
+                    <ul>
+                        <li><a href="@Url.Action("Index", "MarketReturn")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                        <li><button type="button" id="btnSave"><i class="fa fa-floppy-o"></i> Save</button></li>
+                        <li><a href="@Url.Action("Index", "MarketReturn")"><i class="fa fa-times"></i> Cancel</a></li>
+                        <li style="margin-left:auto">
+                            <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
+                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+                <div class="header-details">
+                    <div class="left">
+                        <div class="order-code">
+                            <div class="txt"><div class="title-heading">Market Return</div></div>
+                        </div>
+                        <div class="title-heading">DOC NO. : @(head.DOCNO ?? "")</div>
+                    </div>
+                </div>
+            </div>
+
+            @if (irnLocked)
+            {
+                <div class="irn-banner"><i class="fa fa-lock"></i> e-Invoice (IRN: @head.IRN) already generated against this document -- Edit/Delete is not allowed.</div>
+            }
+
+            <div class="accordion-container compact-accordion">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Unit / Type</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Unit</label>
+                                <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Type <span>(*)</span></label>
+                                <select id="TYPE" disabled>
+                                    @foreach (var t in types)
+                                    {
+                                        <option value="@t.Key" selected="@(t.Key == newType)">@t.Value (@t.Key)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-container">
+
+                <!-- Header -->
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Header</span></div>
+                    <div class="accordion-body">
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Doc No</label>
+                                <input type="text" id="DOCNO" value="@head.DOCNO" readonly placeholder="(auto)" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Date <span>(*)</span></label>
+                                <input type="date" id="DATE_ORA" value="@(head.DATE_ORA?.ToString("yyyy-MM-dd"))" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Bill No <span>(*)</span></label>
+                                <input type="text" id="BLNO" value="@head.BLNO" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>&nbsp;</label>
+                                <button type="button" id="btnPickBill" style="width:100%;">Pick / Load Bill</button>
+                            </div>
+                            <div class="form-col-20">
+                                <label>Bill Date <span>(*)</span></label>
+                                <input type="date" id="BLDT" value="@(head.BLDT?.ToString("yyyy-MM-dd"))" readonly />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Party <span>(*)</span></label>
+                                <input type="text" id="PCD" data-picker="party" value="@head.PCD" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Party Name</label>
+                                <input type="text" id="PCD_disp" value="@head.PartyName" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Transporter <span>(*)</span></label>
+                                <input type="text" id="TPT" data-picker="transporter" value="@head.TPT" placeholder="Code" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Transporter Name</label>
+                                <input type="text" id="TPT_disp" value="@head.TransporterName" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Vehicle No <span>(*)</span></label>
+                                <input type="text" id="VEH" value="@head.VEH" />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>LR No</label>
+                                <input type="text" id="LR_NO" value="@head.LR_NO" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Invoice No</label>
+                                <input type="text" id="INVNO" value="@head.INVNO" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Veh Type</label>
+                                <input type="text" id="VTYPE" value="@head.VTYPE" />
+                            </div>
+                        </div>
+
+                        <div class="form-row optflag-row">
+                            <div class="form-col-40">
+                                <label>Amount basis (GST/Amount calculation)</label>
+                                <div style="padding-top:6px;">
+                                    <label><input type="radio" name="OptFlag" value="QTY" checked style="width:auto;" /> Quantity</label>
+                                    <label><input type="radio" name="OptFlag" value="WT" style="width:auto;" /> Net Weight</label>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Item Detail -->
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Item Detail</span></div>
+                    <div class="accordion-body active" style="display:block;">
+                        <div class="action-btns">
+                            <ul>
+                                <li><a href="javascript:void(0)" id="btnSelectBillLines"><i class="fa fa-search"></i> Select Data</a></li>
+                                <li><a href="javascript:void(0)" id="btnAddRow"><i class="fa fa-plus"></i> Add Row</a></li>
+                                <li><a href="javascript:void(0)" id="btnRemoveRows"><i class="fa fa-trash-o"></i> Remove Selected</a></li>
+                            </ul>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="border" id="gridTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
+                                        <th style="width:30px;">Sl</th>
+                                        <th>Item <span style="color:red;">(*)</span></th>
+                                        <th>MRP <span style="color:red;">(*)</span></th>
+                                        <th style="width:110px;">Mfg Date <span style="color:red;">(*)</span></th>
+                                        <th>Batch No <span style="color:red;">(*)</span></th>
+                                        <th style="text-align:right;">Return Qty</th>
+                                        <th style="text-align:right;">Gross Wt</th>
+                                        <th style="text-align:right;">Net Wt</th>
+                                        <th style="text-align:right;">Shortage</th>
+                                        <th style="text-align:right;">Breakage</th>
+                                        <th style="text-align:right;">Leakage</th>
+                                        <th>PL-Crate Code</th>
+                                        <th style="text-align:right;">Crate Qty</th>
+                                        <th style="text-align:right;">Rate</th>
+                                        <th style="text-align:right;">Disc %</th>
+                                        <th style="text-align:right;">Discount</th>
+                                        <th style="text-align:right;">Amount</th>
+                                        <th>GST Code</th>
+                                        <th style="text-align:right;">CGST%</th>
+                                        <th style="text-align:right;">CGST Amt</th>
+                                        <th style="text-align:right;">SGST%</th>
+                                        <th style="text-align:right;">SGST Amt</th>
+                                        <th style="text-align:right;">IGST%</th>
+                                        <th style="text-align:right;">IGST Amt</th>
+                                        <th style="text-align:right;">Cess%</th>
+                                        <th style="text-align:right;">Cess Amt</th>
+                                        <th style="text-align:right;">Available Qty</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gridBody"></tbody>
+                                <tfoot>
+                                    <tr class="total">
+                                        <td colspan="6" style="text-align:right;">Total</td>
+                                        <td id="ftMretu" style="text-align:right;"></td>
+                                        <td></td><td id="ftWeight" style="text-align:right;"></td>
+                                        <td></td><td></td><td></td><td></td>
+                                        <td></td><td></td><td></td>
+                                        <td id="ftAmt" style="text-align:right;"></td>
+                                        <td colspan="9"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Backdrop shared by every popup below -->
+    <div class="popup-overlay" id="pickerOverlay"></div>
+
+    <!-- Generic single-select picker (Party/Transporter/Item) -->
+    <div class="popup-box picker-box" id="genericPicker">
+        <div class="popup-header">
+            <h2 id="pickerTitle">Select</h2>
+            <button type="button" class="close-btn" onclick="closePicker()">X</button>
+        </div>
+        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
+        <div class="picker-body" id="pickerBody"></div>
+    </div>
+
+    <!-- "Select Data" -- pick lines from the referenced Bill No -->
+    <div class="popup-box picker-box wide" id="billPicker">
+        <div class="popup-header">
+            <h2>Select Data (Lines from Bill No)</h2>
+            <button type="button" class="close-btn" onclick="closeBillPicker()">X</button>
+        </div>
+        <div class="picker-body" id="billBody"></div>
+        <div style="text-align:right;padding-top:10px;">
+            <button type="button" class="btn-blue" id="btnBillOk" style="width:auto;padding:5px 16px;">OK</button>
+            <button type="button" class="btn-white" onclick="closeBillPicker()" style="width:auto;padding:5px 16px;">Cancel</button>
+        </div>
+    </div>
+
+    <div class="popup-overlay" id="appAlertOverlay"></div>
+    <div class="popup-box alert-box" id="appAlertBox">
+        <div class="popup-header"><h2 id="appAlertTitle">Notice</h2></div>
+        <div class="alert-message" id="appAlertMessage"></div>
+        <div class="alert-actions">
+            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
+        </div>
+    </div>
+
+<script>
+    function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
+    function showAlert(message, onOk) {
+        $('#appAlertTitle').text('Notice');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').hide();
+        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    }
+    function showConfirm(message, onYes) {
+        $('#appAlertTitle').text('Confirm');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').show().off('click').on('click', closeAppAlert);
+        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onYes) onYes(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    }
+    function handleLookupFail(jqXHR) {
+        if (jqXHR.status === 440) {
+            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Your session has expired. Please log in again.',
+                function () { window.location.reload(); });
+        } else {
+            showAlert('Could not load data. Please try again.');
+        }
+    }
+
+    $('#pickerOverlay, #genericPicker, #billPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+
+    var IS_EDIT = $('#isEdit').val() === '1';
+    var DOCNO = @Html.Raw(JsonConvert.SerializeObject(head.DOCNO ?? ""));
+    var UNIT = @Html.Raw(JsonConvert.SerializeObject(head.UNIT ?? ""));
+    function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
+    function round2(v) { return Math.round(num(v) * 100) / 100; }
+
+    var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_MRETU_DET));
+    var rowSeq = 0;
+    rows.forEach(function (r) { r._cid = ++rowSeq; r._availQty = null; r._availWeight = null; });
+
+    // Cache of the currently-loaded bill's lines (from GetOriginalBill), keyed by
+    // item+mrp+mfgdt+batchno -- used both by "Select Data" and to (re)cap the
+    // Return Qty/Net Wt ceiling on every grid row as its identifying fields change.
+    var billLinesCache = [];
+    var billHeaderCache = null;
+
+    function lineKey(itcd, mrp, mfgdt, batchno) {
+        return (itcd || '') + '|' + (mrp || '') + '|' + (mfgdt ? mfgdt.substring(0, 10) : '') + '|' + (batchno || '');
+    }
+
+    function loadBillLines(blno, cb) {
+        if (!blno) { billLinesCache = []; billHeaderCache = null; if (cb) cb(); return; }
+        $.getJSON('@Url.Action("GetOriginalBill", "MarketReturn")', { blno: blno, excludeDocno: DOCNO, excludeUnit: UNIT }, function (data) {
+            billHeaderCache = data.header || null;
+            billLinesCache = data.lines || [];
+            if (cb) cb();
+        }).fail(function (jqXHR) {
+            billLinesCache = []; billHeaderCache = null;
+            if (jqXHR.status === 404) { showAlert('Bill No "' + blno + '" was not found.'); }
+            else { handleLookupFail(jqXHR); }
+            if (cb) cb();
+        });
+    }
+
+    // Re-derive a row's ceiling (available qty/weight) from the cached bill lines
+    // whenever its identifying fields (item/mrp/mfgdt/batch) change.
+    function capRow(r) {
+        var key = lineKey(r.ITCD, r.MRP, r.MFGDT, r.BATCHNO);
+        var m = billLinesCache.find(function (b) { return lineKey(b.itcd, b.mrp, b.mfgdt, b.batchno) === key; });
+        if (m) {
+            r._availQty = num(m.availableQty);
+            r._availWeight = num(m.availableWeight);
+        } else {
+            r._availQty = null;
+            r._availWeight = null;
+        }
+    }
+
+    function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
+
+    function renderGrid() {
+        var $tb = $('#gridBody').empty();
+        var totMretu = 0, totWeight = 0, totAmt = 0;
+        rows.forEach(function (r, idx) {
+            r.SRLNO = idx + 1;
+            totMretu += num(r.Mretu);
+            totWeight += num(r.WEIGHT);
+            totAmt += num(r.AMT);
+            var tr = $('<tr data-cid="' + r._cid + '"></tr>');
+            tr.append('<td><input type="checkbox" class="rowChk" /></td>');
+            tr.append('<td>' + r.SRLNO + '</td>');
+            tr.append('<td><input type="text" class="f-item" data-picker-row="item" value="' + (r.ITCD || '') + '" placeholder="Code" title="' + (r.ItemName || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-mrp" value="' + (r.MRP || '') + '" /></td>');
+            tr.append('<td><input type="date" class="f-mfgdt" value="' + (r.MFGDT ? r.MFGDT.substring(0, 10) : '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-batchno" value="' + (r.BATCHNO || '') + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-mretu" value="' + round2(r.Mretu).toFixed(2) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-grosswt" value="' + (r.GROSS_WEIGHT || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-netwt" value="' + (r.WEIGHT || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-sht" value="' + (r.SHT || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-bkg" value="' + (r.BKG || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-lkg" value="' + (r.LKG || 0) + '" /></td>');
+            tr.append('<td><input type="text" class="f-plcrcd" value="' + (r.PLCRCD || '') + '" /></td>');
+            tr.append('<td><input type="number" step="1" class="f-crqty" value="' + (r.PLCRQTY || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-discpct" value="' + (r._discPct || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-discount" value="' + round2(r.DISCOUNT).toFixed(2) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="text" class="f-gstcode" value="' + (r.GST_CODE || '') + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-cgstrate" value="' + (r.CGST_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-cgstamt" value="' + round2(r.CGST_AMT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-sgstrate" value="' + (r.SGST_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-sgstamt" value="' + round2(r.SGST_AMT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-igstrate" value="' + (r.IGST_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-igstamt" value="' + round2(r.IGST_AMT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-cessrate" value="' + (r.GCESS_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-cessamt" value="' + round2(r.GCESS_AMT).toFixed(2) + '" readonly /></td>');
+            tr.append('<td class="f-avail" style="text-align:right;color:#666;">' + (r._availQty != null ? round2(r._availQty).toFixed(2) : '') + '</td>');
+            $tb.append(tr);
+        });
+        $('#ftMretu').text(round2(totMretu).toFixed(2));
+        $('#ftWeight').text(round2(totWeight).toFixed(3));
+        $('#ftAmt').text(round2(totAmt).toFixed(2));
+    }
+
+    function recalcRow(r) {
+        var basis = $('input[name=OptFlag]:checked').val() === 'WT' ? num(r.WEIGHT) : num(r.Mretu);
+        var baseAmt = round2(basis * num(r.RATE));
+        var discAmt = r._discPct ? round2(baseAmt * num(r._discPct) / 100) : num(r.DISCOUNT);
+        r.DISCOUNT = discAmt;
+        r.AMT = round2(baseAmt - discAmt);
+        // Client-side GST preview only -- the server recomputes CGST/SGST/IGST/
+        // Cess authoritatively on Save using SLMAS.INTERU and GSTMAS by GST_CODE
+        // (see MarketReturnController.SaveOrUpdate); this just avoids the grid
+        // showing stale zeros until the page is reloaded after a save.
+        if (partyInterstate === true) {
+            r.IGST_AMT = round2(r.AMT * num(r.IGST_RATE) / 100);
+            r.CGST_AMT = 0; r.SGST_AMT = 0;
+        } else {
+            r.CGST_AMT = round2(r.AMT * num(r.CGST_RATE) / 100);
+            r.SGST_AMT = round2(r.AMT * num(r.SGST_RATE) / 100);
+            r.IGST_AMT = 0;
+        }
+        r.GCESS_AMT = round2(r.AMT * num(r.GCESS_RATE) / 100);
+    }
+
+    var partyInterstate = null; // resolved from GetParty's INTERU flag once Party is chosen
+
+    $('#gridBody').on('input change', 'input', function () {
+        var $tr = $(this).closest('tr');
+        var r = findRow($tr.data('cid'));
+        if (!r) return;
+
+        r.ITCD = $tr.find('.f-item').val();
+        r.MRP = $tr.find('.f-mrp').val();
+        r.MFGDT = $tr.find('.f-mfgdt').val() || null;
+        r.BATCHNO = ($tr.find('.f-batchno').val() || '').toUpperCase();
+        r.Mretu = num($tr.find('.f-mretu').val());
+        r.GROSS_WEIGHT = num($tr.find('.f-grosswt').val());
+        r.WEIGHT = num($tr.find('.f-netwt').val());
+        r.SHT = num($tr.find('.f-sht').val());
+        r.BKG = num($tr.find('.f-bkg').val());
+        r.LKG = num($tr.find('.f-lkg').val());
+        r.PLCRCD = $tr.find('.f-plcrcd').val();
+        r.PLCRQTY = num($tr.find('.f-crqty').val());
+        r.RATE = num($tr.find('.f-rate').val());
+        r._discPct = num($tr.find('.f-discpct').val());
+        r.GST_CODE = ($tr.find('.f-gstcode').val() || '').toUpperCase();
+
+        if ($(this).hasClass('f-item') || $(this).hasClass('f-mrp') || $(this).hasClass('f-mfgdt') || $(this).hasClass('f-batchno')) {
+            capRow(r);
+            $tr.find('.f-avail').text(r._availQty != null ? round2(r._availQty).toFixed(2) : '');
+        }
+        // Enforce the ceiling client-side too: a picked/typed row's Return Qty can be
+        // edited DOWN freely but never back up past the bill line's remaining balance.
+        if ($(this).hasClass('f-mretu') && r._availQty != null && num(r.Mretu) > r._availQty) {
+            r.Mretu = r._availQty;
+            $tr.find('.f-mretu').val(round2(r.Mretu).toFixed(2));
+            showAlert('Return Qty for ' + (r.ITCD || 'this item') + ' cannot exceed the available billed quantity (' + round2(r._availQty).toFixed(2) + ').');
+        }
+        if ($(this).hasClass('f-netwt') && r._availWeight != null && num(r.WEIGHT) > r._availWeight) {
+            r.WEIGHT = r._availWeight;
+            $tr.find('.f-netwt').val(round2(r.WEIGHT).toFixed(3));
+            showAlert('Net Weight for ' + (r.ITCD || 'this item') + ' cannot exceed the available billed weight (' + round2(r._availWeight).toFixed(3) + ').');
+        }
+
+        recalcRow(r);
+        $tr.find('.f-amount').val(round2(r.AMT).toFixed(2));
+        $tr.find('.f-discount').val(round2(r.DISCOUNT).toFixed(2));
+        $tr.find('.f-cgstamt').val(round2(r.CGST_AMT).toFixed(2));
+        $tr.find('.f-sgstamt').val(round2(r.SGST_AMT).toFixed(2));
+        $tr.find('.f-igstamt').val(round2(r.IGST_AMT).toFixed(2));
+        $tr.find('.f-cessamt').val(round2(r.GCESS_AMT).toFixed(2));
+
+        $('#ftMretu').text(round2(rows.reduce(function (s, x) { return s + num(x.Mretu); }, 0)).toFixed(2));
+        $('#ftWeight').text(round2(rows.reduce(function (s, x) { return s + num(x.WEIGHT); }, 0)).toFixed(3));
+        $('#ftAmt').text(round2(rows.reduce(function (s, x) { return s + num(x.AMT); }, 0)).toFixed(2));
+    });
+
+    $('input[name=OptFlag]').on('change', function () {
+        rows.forEach(function (r) { recalcRow(r); });
+        renderGrid();
+    });
+
+    $('#btnAddRow').on('click', function () {
+        rows.push({ _cid: ++rowSeq, SRLNO: rows.length + 1, Mretu: 0, SHT: 0, BKG: 0, LKG: 0, RATE: 0, AMT: 0, _availQty: null, _availWeight: null });
+        renderGrid();
+    });
+
+    $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
+
+    $('#btnRemoveRows').on('click', function () {
+        var cids = $('.rowChk:checked').map(function () { return $(this).closest('tr').data('cid'); }).get();
+        if (!cids.length) { showAlert('Select at least one row to remove.'); return; }
+        rows = rows.filter(function (r) { return cids.indexOf(r._cid) === -1; });
+        renderGrid();
+    });
+
+    // =========================================================
+    // Generic single-select picker (Party/Transporter/row-level Item)
+    // =========================================================
+    var pickerConfig = {
+        party: { url: '@Url.Action("GetParty", "MarketReturn")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCD' },
+        transporter: { url: '@Url.Action("GetTransporter", "MarketReturn")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'TPT' },
+        item: { url: '@Url.Action("GetItemMaster", "MarketReturn")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: null }
+    };
+    var activePicker = null;
+    var pickerXhr = null;
+    var pickerReqSeq = 0;
+
+    $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
+    $('#gridBody').on('click focus', '.f-item', function () {
+        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
+        openPicker('item', $(this), function (row) {
+            r.ITCD = row.CODE; r.ItemName = row.NAME || '';
+            $tr.find('.f-item').val(row.CODE).attr('title', row.NAME || '');
+            capRow(r);
+            $tr.find('.f-avail').text(r._availQty != null ? round2(r._availQty).toFixed(2) : '');
+        });
+    });
+
+    function openPicker(key, $input, onSelect) {
+        activePicker = { key: key, input: $input, onSelect: onSelect };
+        $('#pickerTitle').text('Select ' + key);
+        $('#pickerSearch').val('');
+        $('#pickerBody').empty().removeData('rows');
+        $('#pickerOverlay, #genericPicker').fadeIn(120);
+        loadPickerData('');
+        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
+    }
+    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+
+    function loadPickerData(term) {
+        var cfg = pickerConfig[activePicker.key];
+        var myReq = ++pickerReqSeq;
+        if (pickerXhr) { pickerXhr.abort(); }
+        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
+            if (myReq !== pickerReqSeq) return;
+            data = data || [];
+            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+            data.forEach(function (row, i) {
+                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
+                    var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
+                    return '<td>' + (v == null ? '' : v) + '</td>';
+                }).join('') + '</tr>';
+            });
+            html += '</tbody></table>';
+            $('#pickerBody').html(html);
+            $('#pickerBody').data('rows', data);
+        }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
+    }
+
+    $('#pickerBody').on('click', 'tr[data-i]', function () {
+        var data = $('#pickerBody').data('rows');
+        var row = data[$(this).data('i')];
+        var cfg = pickerConfig[activePicker.key];
+
+        if (activePicker.onSelect) {
+            activePicker.onSelect(row);
+        } else if (cfg.target) {
+            var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
+            var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
+            $('#' + cfg.target).val(code);
+            $('#' + cfg.target + '_disp').val(name || '');
+            if (cfg.target === 'PCD') {
+                partyInterstate = String(row.INTERU || row.interu || '').toUpperCase() === 'Y';
+                rows.forEach(function (r) { recalcRow(r); });
+                renderGrid();
+            }
+        }
+        closePicker();
+    });
+
+    // =========================================================
+    // "Select Data" -- pull lines in from the referenced Bill No
+    // =========================================================
+    $('#btnPickBill').on('click', function () {
+        var blno = $('#BLNO').val();
+        if (!blno) { showAlert('Enter a Bill No first.'); return; }
+        loadBillLines(blno, function () {
+            if (!billHeaderCache) return;
+            $('#BLDT').val(billHeaderCache.bldt ? billHeaderCache.bldt.substring(0, 10) : '');
+            if (!$('#PCD').val()) { $('#PCD').val(billHeaderCache.pcd || ''); }
+            if (!$('#TPT').val()) { $('#TPT').val(billHeaderCache.tpt || ''); }
+            if (!$('#VEH').val()) { $('#VEH').val(billHeaderCache.veh || ''); }
+            if (!$('#VTYPE').val()) { $('#VTYPE').val(billHeaderCache.vtype || ''); }
+            rows.forEach(function (r) { capRow(r); });
+            renderGrid();
+            showAlert('Bill No ' + blno + ' loaded (' + billLinesCache.length + ' line(s)). Use "Select Data" to pull lines into the grid.');
+        });
+    });
+
+    $('#btnSelectBillLines').on('click', function () {
+        var blno = $('#BLNO').val();
+        if (!blno) { showAlert('Enter a Bill No first.'); return; }
+        function openIt() {
+            var html = '<table><thead><tr><th></th><th>Item</th><th>MRP</th><th>Mfg Date</th><th>Batch No</th>' +
+                '<th style="text-align:right;">Billed Qty</th><th style="text-align:right;">Available Qty</th>' +
+                '<th style="text-align:right;">Rate</th><th>GST Code</th></tr></thead><tbody>';
+            billLinesCache.forEach(function (l, i) {
+                var mfg = l.mfgdt ? new Date(l.mfgdt).toLocaleDateString('en-GB') : '';
+                var disabled = l.availableQty <= 0 ? 'disabled' : '';
+                html += '<tr data-i="' + i + '"><td><input type="checkbox" class="billChk" ' + disabled + ' /></td>' +
+                    '<td>' + (l.itemName || l.itcd || '') + '</td><td>' + (l.mrp || '') + '</td><td>' + mfg + '</td><td>' + (l.batchno || '') + '</td>' +
+                    '<td style="text-align:right;">' + round2(l.qty).toFixed(2) + '</td>' +
+                    '<td style="text-align:right;">' + round2(l.availableQty).toFixed(2) + '</td>' +
+                    '<td style="text-align:right;">' + round2(l.rate).toFixed(2) + '</td><td>' + (l.gstCode || '') + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            if (!billLinesCache.length) html = '<p style="margin:10px 4px;color:#666;">No lines found on this bill.</p>';
+            $('#billBody').html(html);
+            $('#pickerOverlay, #billPicker').fadeIn(120);
+        }
+        if (billHeaderCache && billHeaderCache.blno === blno) { openIt(); }
+        else { loadBillLines(blno, openIt); }
+    });
+    function closeBillPicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+
+    $('#btnBillOk').on('click', function () {
+        $('#billBody .billChk:checked').each(function () {
+            var i = $(this).closest('tr').data('i');
+            var l = billLinesCache[i];
+            if (!l || l.availableQty <= 0) return;
+            var dup = rows.some(function (r) { return lineKey(r.ITCD, r.MRP, r.MFGDT, r.BATCHNO) === lineKey(l.itcd, l.mrp, l.mfgdt, l.batchno); });
+            if (dup) return;
+            var qty = round2(l.availableQty);
+            rows.push({
+                _cid: ++rowSeq, ITCD: l.itcd, ItemName: l.itemName, MRP: l.mrp, MFGDT: l.mfgdt, BATCHNO: l.batchno,
+                Mretu: qty, GROSS_WEIGHT: l.grossWeight ? round2(l.grossWeight) : 0,
+                WEIGHT: l.availableWeight ? round2(Math.min(l.weight, l.availableWeight)) : 0,
+                SHT: 0, BKG: 0, LKG: 0, PLCRCD: '', PLCRQTY: 0,
+                RATE: round2(l.rate), _discPct: 0, DISCOUNT: 0, AMT: 0,
+                GST_CODE: l.gstCode || '', CGST_RATE: 0, CGST_AMT: 0, SGST_RATE: 0, SGST_AMT: 0, IGST_RATE: 0, IGST_AMT: 0, GCESS_RATE: 0, GCESS_AMT: 0,
+                _availQty: l.availableQty, _availWeight: l.availableWeight
+            });
+            var added = rows[rows.length - 1];
+            recalcRow(added);
+        });
+        renderGrid();
+        closeBillPicker();
+    });
+
+    // =========================================================
+    // Save (mirrors the VB Command1_Click validation order, per
+    // Documentation.md section 2 / the approved plan's validation chain)
+    // =========================================================
+    $('#btnSave').on('click', function () {
+        if (!$('#DATE_ORA').val()) { showAlert('Date required'); return; }
+        if (!$('#BLNO').val()) { showAlert('Bill No is required.'); return; }
+        if (!$('#BLDT').val()) { showAlert('Bill Date is required. Use "Pick / Load Bill" to fetch it.'); return; }
+        if (!$('#PCD').val()) { showAlert('Party Code is required.'); return; }
+        if (!$('#TPT').val()) { showAlert('Transporter Code is required.'); return; }
+        if (!$('#VEH').val()) { showAlert('Vehicle Number is required.'); return; }
+
+        var valid = rows.filter(function (r) { return r.ITCD; });
+        if (!valid.length) { showAlert('At least one item line with a valid Item Code is required.'); return; }
+        for (var i = 0; i < valid.length; i++) {
+            var r = valid[i];
+            if (!r.MRP) { showAlert('MRP is required for item ' + r.ITCD + '.'); return; }
+            if (!r.MFGDT) { showAlert('Manufacturing Date is required for item ' + r.ITCD + '.'); return; }
+            if (!r.BATCHNO) { showAlert('Batch No is required for item ' + r.ITCD + '.'); return; }
+            var qtySum = num(r.Mretu) + num(r.SHT) + num(r.BKG) + num(r.LKG);
+            if (qtySum === 0) { showAlert('Enter a non-zero Return/Shortage/Breakage/Leakage quantity for item ' + r.ITCD + '.'); return; }
+            if (r._availQty != null && num(r.Mretu) > r._availQty + 0.001) {
+                showAlert('Return Qty for ' + r.ITCD + ' exceeds the quantity available on Bill No ' + $('#BLNO').val() + '.'); return;
+            }
+        }
+
+        showConfirm('Are you sure?', function () {
+            var model = {
+                T_MRETU_HED: {
+                    ID: $('#ID').val() ? parseInt($('#ID').val(), 10) : 0,
+                    UNIT: UNIT,
+                    DOCNO: $('#DOCNO').val(),
+                    DATE_ORA: $('#DATE_ORA').val(),
+                    BLNO: $('#BLNO').val(),
+                    BLDT: $('#BLDT').val(),
+                    PCD: $('#PCD').val(),
+                    TPT: $('#TPT').val(),
+                    VEH: $('#VEH').val(),
+                    VTYPE: $('#VTYPE').val(),
+                    LR_NO: $('#LR_NO').val(),
+                    INVNO: $('#INVNO').val()
+                },
+                T_MRETU_DET: valid,
+                OptFlag: $('input[name=OptFlag]:checked').val()
+            };
+
+            $.ajax({
+                url: '@Url.Action("Save", "MarketReturn")',
+                type: 'POST', contentType: 'application/json', data: JSON.stringify(model),
+                success: function (resp) {
+                    if (resp.success) {
+                        showAlert(resp.message || 'Saved.', function () {
+                            window.location.href = '@Url.Action("Index", "MarketReturn")' + '?unit=' + encodeURIComponent(UNIT);
+                        });
+                    } else {
+                        showAlert(resp.message || 'Save failed.');
+                    }
+                },
+                error: function () { showAlert('Save failed - server error.'); }
+            });
+        });
+    });
+
+    // Pre-load the bill lines cache on open (edit/view) so availability ceilings
+    // show immediately instead of only after "Pick / Load Bill" is clicked again.
+    if ($('#BLNO').val()) {
+        loadBillLines($('#BLNO').val(), function () {
+            rows.forEach(function (r) { capRow(r); });
+            renderGrid();
+        });
+    } else {
+        renderGrid();
+    }
+
+    // =========================================================
+    // View mode / IRN lock
+    // =========================================================
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
+    var IRN_LOCKED = @Html.Raw(irnLocked ? "true" : "false");
+    if (IS_VIEW || IRN_LOCKED) {
+        $('.accordion-container :input, #btnPickBill, #btnSelectBillLines, #btnAddRow, #btnRemoveRows')
+            .prop('disabled', true);
+        $('#btnSave').addClass('is-disabled').prop('disabled', true);
+    }
+</script>
+</body>
+</html>
