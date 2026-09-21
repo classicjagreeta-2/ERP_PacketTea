@@ -6,6 +6,9 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
+    // Full code -> name map (not the rights-filtered ViewBag.BlendTypes) so the Blend Type
+    // column still shows a name for every row the list returns.
+    var blendTypeNames = Finance.Controllers.TEA.MasterBlendEntryController.BlendTypes;
 }
 
 @{
@@ -144,18 +147,19 @@
                     <tr>
                         <th style="width:26px;"></th>
                         <th style="width:26px;"></th>
+                        @SortTh("UNIT", "Unit")
+                        @SortTh("BLEND_TYPE", "Blend Type")
                         @SortTh("DOCNO", "Doc No")
                         @SortTh("DOCDT", "Date")
-                        @SortTh("PARTY", "Party")
                         @SortTh("BLEND_NO", "Blend No")
-                        @SortTh("BLEND_DESCN", "Blend Details")
+                        @SortTh("BLEND_DATE", "Blend Date")
                         @SortTh("WAREHOUSE", "Warehouse")
-                        @SortTh("ALLOCATION", "Allocation")
                         @SortTh("BLEND_MARK", "Blend Mark")
                         @SortTh("BLEND_GRADE", "Blend Grade")
+                        @SortTh("ALLOCATION", "Allocation")
+                        @SortTh("PARTY", "Party")
                         @SortTh("BLEND_CHEST", "No of Chest")
-                        @SortTh("BLEND_CHEST_WT", "Net WT/Chest")
-                        @SortTh("BLEND_CHEST_GROSSWT", "Gross WT/Chest")
+                        @SortTh("BLEND_CHEST_WT", "Net Wt/Chest")
                         @SortTh("CLOSED", "Closed")
                     </tr>
                 </thead>
@@ -177,20 +181,21 @@
                                 <td style="text-align:center;">
                                     <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show more details" style="cursor:pointer;"></i>
                                 </td>
+                                <td>@row.UNIT</td>
+                                <td>@(row.BLEND_TYPE != null && blendTypeNames.ContainsKey(row.BLEND_TYPE) ? blendTypeNames[row.BLEND_TYPE] : row.BLEND_TYPE)</td>
                                 <td>@row.DOCNO</td>
                                 <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
-                                <td>@row.PartyName</td>
                                 <td>
                                     <a href="@Url.Action("InsertOrUpdate", "MasterBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
                                 </td>
-                                <td>@row.BLEND_DESCN</td>
+                                <td>@(row.BLEND_DATE.HasValue ? row.BLEND_DATE.Value.ToString("dd/MM/yyyy") : "")</td>
                                 <td>@row.WarehouseName</td>
-                                <td>@row.AllocationName</td>
                                 <td>@row.BlendMarkName</td>
                                 <td>@row.BlendGradeName</td>
+                                <td>@row.AllocationName</td>
+                                <td>@row.PartyName</td>
                                 <td class="text-right">@row.BLEND_CHEST</td>
                                 <td class="text-right">@row.BLEND_CHEST_WT</td>
-                                <td class="text-right">@row.BLEND_CHEST_GROSSWT</td>
                                 <td>@(row.CLOSED == "Y" ? "Yes" : "No")</td>
                             </tr>
                             <!-- Header fields that don't fit the main grid -- shown on demand via the
@@ -201,7 +206,7 @@
                                  it was first loaded. -->
                             <tr class="row-detail" id="@detailId" style="display:none;"
                                 data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
-                                <td colspan="15" style="background:#f8f9fc;padding:10px 12px;">
+                                <td colspan="16" style="background:#f8f9fc;padding:10px 12px;">
                                     <!-- Just the item-lines sub-grid -- matches Attendance Entry's own
                                          "+" expand (straight to the detail table, no label/value summary
                                          line above it) instead of also showing Export Ref No/Transporter/
@@ -236,7 +241,7 @@
                     }
                     else
                     {
-                        <tr><td colspan="15" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="16" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -390,7 +395,7 @@
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Master Blend Entry"></i></td>' +
                     '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
                     '<td colspan="2"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
-                    '<td colspan="9"></td>' +
+                    '<td colspan="10"></td>' +
                     '</tr>';
             }
 

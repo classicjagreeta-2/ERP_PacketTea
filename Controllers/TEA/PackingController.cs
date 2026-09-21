@@ -282,6 +282,17 @@ namespace Finance.Controllers.TEA
             return JsonExactOrSessionExpired(r);
         }
 
+        // Backs the grid's Item dropdown: the item master (ITMAS) lives in the Sales
+        // schema (FIN_...), so this goes through SalesGetAsync and reuses Production
+        // Entry's lookup. The whole list is loaded once per page (~500 rows), hence
+        // the large pageSize.
+        [HttpGet]
+        public async Task<ActionResult> GetItems()
+        {
+            var r = await Services.SalesGetAsync<dynamic>("/api/ProductionEntry/GetItemMaster?pageSize=5000");
+            return JsonExactOrSessionExpired(r);
+        }
+
         [HttpGet]
         public async Task<ActionResult> GetFinalBlendList(string blendType = "", string search = "")
         {

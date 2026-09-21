@@ -35,6 +35,34 @@
         /* Code columns sit next to their description, so keep the code inputs narrow
            enough that the pair still fits on one line. */
         #gridTable td input.code-input { width: 72px; min-width: 0; }
+        /* Description columns were truncating (e.g. "BIRLA KAD...") -- give them
+           room for the full mark/grade/category name. */
+        #gridTable td input.f-markname { min-width: 140px; }
+        #gridTable td input.f-gradename { min-width: 200px; }
+        #gridTable td input.f-catname { min-width: 120px; }
+        /* Grade codes run to 8+ chars (e.g. O0000575) and Inv No to 10 -- the shared
+           72px code width clipped them. */
+        #gridTable td input.f-grade.code-input { width: 95px; }
+        #gridTable td input.f-invno { min-width: 110px; }
+        /* Size Code/Size/Rate/Amount stay in the DOM (Rate/Amount still come from the
+           blend lookup and are saved) but are not shown on this screen. */
+        #gridTable .col-hide { display: none; }
+        /* Item dropdown (select2). The theme's style.css forces every
+           .select2-container to width:100% !important and paints the selection teal;
+           the dropdown half is appended to <body>, so that rule stretched it across the
+           whole page and shoved the layout sideways. Pin both halves to sane widths
+           and make the closed box look like the other grid inputs. */
+        #gridTable .select2-container { width: 340px !important; }
+        /* Width comes from select2's own inline style (= the closed box's width), so
+           the list lines up with the box and never runs off the right edge; long item
+           names wrap instead of widening it. */
+        body > .select2-container.select2-container--open { width: auto !important; }
+        body > .select2-container--open .select2-results__option { font-size: 12px; padding: 5px 8px; white-space: normal; line-height: 1.35; }
+        #gridTable .select2-container--default .select2-selection--single { height: 30px; border: 1px solid #ccc; border-radius: 2px; background: #fff; }
+        #gridTable .select2-container--default .select2-selection--single .select2-selection__rendered { background: transparent; color: #222; padding: 0 40px 0 6px; line-height: 28px; font-size: 13px; }
+        #gridTable .select2-container--default .select2-selection--single .select2-selection__arrow { height: 28px; top: 0; }
+        #gridTable .select2-container--default .select2-selection--single .select2-selection__arrow b { border-color: #666 transparent transparent transparent; }
+        #gridTable .select2-container--default .select2-selection--single .select2-selection__clear { color: #999; margin-right: 4px; }
         .grid-pick-btn { width: 20px; height: 21px; padding: 0; margin-left: 2px; vertical-align: middle; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; font-size: 11px; line-height: 1; }
         .popup-box.picker-box { width: 420px; display: none; }
         .popup-box.picker-box.wide { width: 760px; max-width: 92vw; }
@@ -141,16 +169,17 @@
 
                         <!-- Code/description pairs, same as Master and Final Blend Entry's
                              headers. Party is carried over from the picked Final Blend (VB:
-                             txtParty + lblParty), so both halves are read-only here;
+                             txtParty + lblParty); a Party lookup is available but display-only;
                              Location's description used to be a hidden input, which left a
                              picked code on screen with nothing saying what it was. -->
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Party</label>
-                                @* Read-only, no picker: T_BLEND_PACKING has no party column, so a
-                                   party picked here was silently dropped on save and the Final
-                                   Blend's party reappeared on reopen. *@
-                                <input type="text" id="PCODE" value="@head.PCODE" readonly />
+                                @* Defaults from the picked Final Blend; the lookup lets the user
+                                   pick another party for reference only. T_BLEND_PACKING has no
+                                   party column, so the pick is NOT saved -- on reopen the Final
+                                   Blend's party shows again. *@
+                                <input type="text" id="PCODE" data-picker="party" value="@head.PCODE" placeholder="Click to pick" readonly style="cursor:pointer;" />
                             </div>
                             <div class="form-col-20">
                                 <label>Party Name</label>
@@ -211,8 +240,8 @@
                                          AND description) and are read-only. -->
                                     <tr>
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
-                                        <th style="width:30px;">Sl</th>
-                                        <th style="width:40px;">Blend</th>
+                                        <th style="width:50px;min-width:50px;text-align:center;">Sl</th>
+                                        <th style="width:80px;min-width:80px;text-align:center;">Blend</th>
                                         <th>Mark Code <span style="color:red;">(*)</span></th>
                                         <th>Mark</th>
                                         <th>Grade Code <span style="color:red;">(*)</span></th>
@@ -231,10 +260,10 @@
                                         <th style="width:85px;text-align:right;">Qty</th>
                                         <th>Batch No</th>
                                         <th style="width:110px;">Mfg Date</th>
-                                        <th>Size Code</th>
-                                        <th>Size</th>
-                                        <th style="width:75px;text-align:right;">Rate</th>
-                                        <th style="width:90px;text-align:right;">Amount</th>
+                                        <th class="col-hide">Size Code</th>
+                                        <th class="col-hide">Size</th>
+                                        <th class="col-hide" style="width:75px;text-align:right;">Rate</th>
+                                        <th class="col-hide" style="width:90px;text-align:right;">Amount</th>
                                         <th>Alloc Code</th>
                                         <th>Allocation</th>
                                         <th>Item</th>
@@ -243,14 +272,16 @@
                                 </thead>
                                 <tbody id="gridBody"></tbody>
                                 <tfoot>
-                                    <!-- 29 columns: 12 + Bag + 5 + Qty + 5 + Amount + 4. -->
+                                    <!-- 29 columns: 12 + Bag + 5 + Qty + 2 + (Size Code, Size, Rate,
+                                         Amount -- hidden) + 4. -->
                                     <tr class="total">
                                         <td colspan="12" style="text-align:right;">Total</td>
                                         <td id="ftBag" style="text-align:right;"></td>
                                         <td colspan="5"></td>
                                         <td id="ftQty" style="text-align:right;"></td>
-                                        <td colspan="5"></td>
-                                        <td id="ftAmt" style="text-align:right;"></td>
+                                        <td colspan="2"></td>
+                                        <td colspan="3" class="col-hide"></td>
+                                        <td id="ftAmt" class="col-hide" style="text-align:right;"></td>
                                         <td colspan="4"></td>
                                     </tr>
                                 </tfoot>
@@ -366,8 +397,8 @@
             totAmt += num(r.AMOUNT);
             var tr = $('<tr data-cid="' + r._cid + '"></tr>');
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
-            tr.append('<td>' + r.SL_NO + '</td>');
-            tr.append('<td><button type="button" class="grid-pick-btn f-blend-btn" title="Pick a Final Blend for this row">&hellip;</button></td>');
+            tr.append('<td style="text-align:center;">' + r.SL_NO + '</td>');
+            tr.append('<td style="text-align:center;"><button type="button" class="grid-pick-btn f-blend-btn" title="Pick a Final Blend for this row">&hellip;</button></td>');
             tr.append('<td><input type="text" class="f-mark code-input" value="' + esc(r.MARK) + '" placeholder="Code" />' +
                 '<button type="button" class="grid-pick-btn f-mark-btn" title="Search mark">&hellip;</button></td>');
             tr.append('<td><input type="text" class="f-markname" value="' + esc(r.MarkName) + '" readonly /></td>');
@@ -389,15 +420,15 @@
             tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + fmt2(r.QTY) + '" /></td>');
             tr.append('<td><input type="text" class="f-batchno" value="' + esc(r.BATCHNO) + '" /></td>');
             tr.append('<td><input type="date" class="f-mfgfrom" value="' + (r.MFG_FROM ? r.MFG_FROM.substring(0, 10) : '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-szcode code-input" value="' + esc(r.SZ_CODE) + '" placeholder="Code" />' +
+            tr.append('<td class="col-hide"><input type="text" class="f-szcode code-input" value="' + esc(r.SZ_CODE) + '" placeholder="Code" />' +
                 '<button type="button" class="grid-pick-btn f-sz-btn" title="Search chest size">&hellip;</button></td>');
-            tr.append('<td><input type="text" class="f-szdesc" value="' + esc(r.SzDesc) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + fmt2(r.RATE) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + fmt2(r.AMOUNT) + '" readonly /></td>');
+            tr.append('<td class="col-hide"><input type="text" class="f-szdesc" value="' + esc(r.SzDesc) + '" readonly /></td>');
+            tr.append('<td class="col-hide"><input type="number" step="0.01" class="f-rate" value="' + fmt2(r.RATE) + '" /></td>');
+            tr.append('<td class="col-hide"><input type="number" step="0.01" class="f-amount" value="' + fmt2(r.AMOUNT) + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-alloc code-input" value="' + esc(r.ALLOCATION) + '" placeholder="Code" />' +
                 '<button type="button" class="grid-pick-btn f-alloc-btn" title="Search allocation">&hellip;</button></td>');
             tr.append('<td><input type="text" class="f-allocname" value="' + esc(r.AllocationName) + '" readonly /></td>');
-            tr.append('<td><input type="text" class="f-itcd" value="' + esc(r.ITCD) + '" /></td>');
+            tr.append('<td><select class="f-itcd">' + itemOptionsHtml(r.ITCD) + '</select></td>');
             // Numeric input (like Rate/Amount) rather than free text, so letters can't
             // be typed in at all -- and right-aligned via the input[type=number] rule
             // above. Column was widened to VARCHAR2(10) (see T_BLEND_PACKING_ddl.sql)
@@ -410,7 +441,33 @@
         $('#ftQty').text(round2(totQty));
         $('#ftAmt').text(fmt2(totAmt));
         $('#TotalQty').val(round2(totQty + num($('#ShortExcess').val())));
+        $tb.find('select.f-itcd').select2({ width: '340px', placeholder: 'Select item', allowClear: true });
     }
+
+    // Item dropdown -- the item master (ITMAS) comes from the Sales schema, loaded
+    // once and shared by every row. A saved ITCD that is no longer in the list still
+    // gets an option of its own, so reopening a document never blanks it out.
+    var items = [];
+    var itemsHtml = '';
+    function itemOptionsHtml(itcd) {
+        var html = '<option value=""></option>' + itemsHtml;
+        if (itcd && !items.some(function (i) { return i.CODE === itcd; })) {
+            html += '<option value="' + esc(itcd) + '">' + esc(itcd) + '</option>';
+        }
+        return itcd ? html.replace('value="' + esc(itcd) + '"', 'value="' + esc(itcd) + '" selected') : html;
+    }
+    function loadItems() {
+        return $.getJSON('@Url.Action("GetItems", "Packing")').then(function (data) {
+            items = $.isArray(data) ? data : [];
+            itemsHtml = items.map(function (i) {
+                return '<option value="' + esc(i.CODE) + '">' + esc(i.CODE) + ' - ' + esc(i.NAME) + '</option>';
+            }).join('');
+        }, function () { items = []; itemsHtml = ''; });
+    }
+    $('#gridBody').on('change', 'select.f-itcd', function () {
+        var r = findRow($(this).closest('tr').data('cid'));
+        if (r) r.ITCD = $(this).val() || null;
+    });
 
     function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
 
@@ -430,7 +487,6 @@
         r.MFG_FROM = $tr.find('.f-mfgfrom').val() || null;
         r.SZ_CODE = $tr.find('.f-szcode').val();
         r.ALLOCATION = $tr.find('.f-alloc').val();
-        r.ITCD = $tr.find('.f-itcd').val();
         // MRP is a string server-side (T_BLEND_PACKING.MRP is VARCHAR2, not a number
         // column) -- keep it a formatted string here too. Sending a bare JS number
         // would serialize as a JSON number, which the API's strict JSON binder can't
@@ -510,6 +566,7 @@
         chestsize: { url: '@Url.Action("GetChestSize", "Packing")', cols: [['SZ_CODE', 'Code'], ['SZ_DESC', 'Description']] },
         allocation: { url: '@Url.Action("GetAllocation", "Packing")', cols: [['CODE', 'Code'], ['DESCN', 'Description']] },
         salescentre: { url: '@Url.Action("GetSalesCentre", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SaleCentre' },
+        party: { url: '@Url.Action("GetParty", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCODE', dispTarget: 'PartyName' },
     };
     var activePicker = null;
     var pickerXhr = null, pickerReqSeq = 0;
@@ -759,9 +816,15 @@
         });
     });
 
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
     renderGrid();
+    // Re-render once the item list is in, so each row's Item dropdown is filled.
+    loadItems().always(function () {
+        renderGrid();
+        if (IS_VIEW) $('#gridBody select').prop('disabled', true);
+    });
 
-    if (@Html.Raw(isView ? "true" : "false")) {
+    if (IS_VIEW) {
         $('.accordion-container :input').prop('disabled', true);
         $('[data-picker], #MasterBlendNo').off('click focus');
         $('#btnSave').prop('disabled', true);

@@ -130,17 +130,16 @@
                     <tr>
                         <th style="width:26px;"></th>
                         <th style="width:26px;"></th>
+                        @SortTh("UNIT", "Unit")
+                        @SortTh("BLEND_TYPE", "Packing Type")
                         @SortTh("DOCNO", "Doc No")
                         @SortTh("DOCDT", "Date")
                         @SortTh("BLEND_NO", "Blend No")
-                        @SortTh("BLEND_DATE", "Blend Date")
-                        @SortTh("PARTY", "Party")
-                        @SortTh("SHIP_MARK", "Shipping Mark")
+                        @SortTh("BLEND_DATE", "Date")
                         @SortTh("SALE_CENTRE", "Location")
-                        @SortTh("REMARKS", "Remarks")
+                        @SortTh("TOTAL_QTY", "Packing Qty.")
                         @SortTh("SHORT_EXCESS", "Short/Excess")
-                        @SortTh("TOTAL_BAG", "Total Bag")
-                        @SortTh("TOTAL_QTY", "Total Qty")
+                        @SortTh("PARTY", "Party")
                     </tr>
                 </thead>
                 <tbody>
@@ -165,6 +164,8 @@
                                 <td style="text-align:center;">
                                     <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show item lines" style="cursor:pointer;"></i>
                                 </td>
+                                <td>@row.UNIT</td>
+                                <td>@(rowBlendType != null && blendTypes != null && blendTypes.ContainsKey(rowBlendType) ? blendTypes[rowBlendType] : rowBlendType)</td>
                                 <td>
                                     <a href="@Url.Action("InsertOrUpdate", "Packing", new { docno = row.DOCNO, docdt = row.DOCDT?.ToString("yyyy-MM-dd"), blendType = rowBlendType })">@row.DOCNO</a>
                                 </td>
@@ -180,17 +181,14 @@
                                    default-format date), which crashed the whole list with a raw
                                    FormatException instead of just leaving that one cell blank. *@
                                 <td>@(DateTime.TryParse(row.BlendDocDate, out var blendDocDate) ? blendDocDate.ToString("dd/MM/yyyy") : "")</td>
-                                <td>@row.PartyName</td>
-                                <td>@row.ShipMark</td>
                                 <td>@row.SaleCentreName</td>
-                                <td>@row.Remarks</td>
-                                <td class="text-right">@row.ShortExcess</td>
-                                <td class="text-right">@row.TotalBag</td>
                                 <td class="text-right">@row.TotalQty</td>
+                                <td class="text-right">@row.ShortExcess</td>
+                                <td>@row.PartyName</td>
                             </tr>
                             <tr class="row-detail" id="@detailId" style="display:none;"
                                 data-docno="@row.DOCNO" data-docdt="@(row.DOCDT?.ToString("yyyy-MM-dd"))" data-blendtype="@rowBlendType">
-                                <td colspan="13" style="background:#f8f9fc;padding:10px 12px;">
+                                <td colspan="12" style="background:#f8f9fc;padding:10px 12px;">
                                     <div style="overflow-x:auto;">
                                         <table class="detail-sub-table">
                                             <thead>
@@ -228,7 +226,7 @@
                     }
                     else
                     {
-                        <tr><td colspan="13" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="12" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -299,7 +297,7 @@
                 return '<tr id="newUnitRow" class="new-entry-row">' +
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Packing Entry"></i></td>' +
                     '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
-                    '<td colspan="3"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
+                    '<td colspan="2"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
                     '<td colspan="6"></td>' +
                     '</tr>';
             }

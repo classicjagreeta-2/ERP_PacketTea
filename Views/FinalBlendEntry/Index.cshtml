@@ -144,20 +144,22 @@
                     <tr>
                         <th style="width:26px;"></th>
                         <th style="width:26px;"></th>
+                        @SortTh("UNIT", "Unit")
+                        @SortTh("BLEND_TYPE", "Blend Type")
                         @SortTh("DOCNO", "Doc No")
                         @SortTh("DOCDT", "Date")
-                        @SortTh("MASTER_BLEND_NO", "Master Blend No")
-                        @SortTh("MASTER_BLEND_DATE", "Master Blend Date")
                         @SortTh("BLEND_NO", "Final Blend No")
-                        @SortTh("PARTY", "Party")
-                        @SortTh("BLEND_DESCN", "Blend Details")
+                        @SortTh("BLEND_DATE", "Date")
+                        @SortTh("MASTER_BLEND_NO", "Master Blend No")
+                        @SortTh("MASTER_BLEND_DATE", "Date")
                         @SortTh("WAREHOUSE", "Warehouse")
-                        @SortTh("ALLOCATION", "Allocation")
                         @SortTh("BLEND_MARK", "Blend Mark")
                         @SortTh("BLEND_GRADE", "Blend Grade")
+                        @SortTh("ALLOCATION", "Allocation")
+                        @SortTh("PARTY", "Party")
                         @SortTh("BLEND_CHEST", "No of Chest")
-                        @SortTh("BLEND_CHEST_WT", "Net WT/Chest")
-                        @SortTh("BLEND_CHEST_GROSSWT", "Gross WT/Chest")
+                        @SortTh("BLEND_CHEST_WT", "Net Wt/Chest")
+                        @SortTh("CLOSED", "Closed")
                     </tr>
                 </thead>
                 <tbody>
@@ -178,29 +180,31 @@
                                 <td style="text-align:center;">
                                     <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show more details" style="cursor:pointer;"></i>
                                 </td>
+                                <td>@row.UNIT</td>
+                                <td>@(row.BLEND_TYPE != null && blendTypes != null && blendTypes.ContainsKey(row.BLEND_TYPE) ? blendTypes[row.BLEND_TYPE] : row.BLEND_TYPE)</td>
                                 <td>@row.DOCNO</td>
                                 <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <a href="@Url.Action("InsertOrUpdate", "FinalBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
+                                </td>
+                                <td>@(row.BLEND_DATE.HasValue ? row.BLEND_DATE.Value.ToString("dd/MM/yyyy") : "")</td>
                                 <td>@row.MasterBlendNo</td>
                                 @* DateTime.TryParse, not .Parse -- see Packing/Index.cshtml's comment
                                    on the same pattern: an unparseable legacy date string must not
                                    crash the whole list. *@
                                 <td>@(DateTime.TryParse(row.MasterBlendDate, out var masterBlendDate) ? masterBlendDate.ToString("dd/MM/yyyy") : "")</td>
-                                <td>
-                                    <a href="@Url.Action("InsertOrUpdate", "FinalBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
-                                </td>
-                                <td>@row.PartyName</td>
-                                <td>@row.BLEND_DESCN</td>
                                 <td>@row.WarehouseName</td>
-                                <td>@row.AllocationName</td>
                                 <td>@row.BlendMarkName</td>
                                 <td>@row.BlendGradeName</td>
+                                <td>@row.AllocationName</td>
+                                <td>@row.PartyName</td>
                                 <td class="text-right">@row.BLEND_CHEST</td>
                                 <td class="text-right">@row.BLEND_CHEST_WT</td>
-                                <td class="text-right">@row.BLEND_CHEST_GROSSWT</td>
+                                <td>@(row.CLOSED == "Y" ? "Yes" : "No")</td>
                             </tr>
                             <tr class="row-detail" id="@detailId" style="display:none;"
                                 data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
-                                <td colspan="16" style="background:#f8f9fc;padding:10px 12px;">
+                                <td colspan="18"style="background:#f8f9fc;padding:10px 12px;">
                                     <!-- Just the item-lines sub-grid -- matches Attendance Entry's own
                                          "+" expand (straight to the detail table, no label/value summary
                                          line above it), and Master Blend No/Export Ref No/Transporter/
@@ -236,7 +240,7 @@
                     }
                     else
                     {
-                        <tr><td colspan="16" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="18" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -367,7 +371,7 @@
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Final Blend Entry"></i></td>' +
                     '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
                     '<td colspan="2"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
-                    '<td colspan="10"></td>' +
+                    '<td colspan="12"></td>' +
                     '</tr>';
             }
 
