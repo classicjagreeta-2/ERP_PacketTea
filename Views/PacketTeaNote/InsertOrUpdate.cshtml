@@ -1,0 +1,831 @@
+@{
+    string tranName = (string)ViewBag.TranName;
+    string tran = (string)ViewBag.Tran;
+    string listAction = (string)ViewBag.ListAction;
+    ViewBag.Title = tranName;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    bool isEdit = ViewBag.IsEdit ?? false;
+    bool isView = ViewBag.IsView ?? false;
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+    <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <script src="~/libraries/assetspo/js/custom.js"></script>
+    <style>
+        input[readonly], input:disabled, select:disabled { background-color: #f3f4f7; color: #555; }
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
+        .accordion-container.main-accordion { height: auto; overflow-y: visible; }
+        #gridTable th, #gridTable td { white-space: nowrap; }
+        #gridTable td input, #gridTable td select { min-width: 70px; width: 90px; }
+        #gridTable td input.f-item { width: 100px; }
+        #gridTable td input.f-mrp { width: 60px; min-width: 60px; }
+        #gridTable td input.f-batch { width: 100px; }
+        #gridTable td input.f-date { width: 125px; }
+        #gridTable td select.f-flag { width: 70px; min-width: 70px; }
+        #gridTable td select.f-gst { width: 110px; }
+        #gridTable td.item-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+        #gridTable td.num, #gridTable th.num, #gridTable tfoot td { text-align: right; }
+        input.num { text-align: right; }
+        #gridTable td input[readonly] { cursor: default; }
+        #gridTable td input.pick { cursor: pointer; background: #fff; }
+        .picker-input { cursor: pointer; }
+        .chk-inline { display: inline-flex; gap: 6px; align-items: center; font-weight: normal; margin-top: 26px; }
+        .total-box { font-weight: bold; text-align: right; }
+        .popup-box.picker-box { width: 640px; max-width: 94vw; display: none; }
+        .popup-box.picker-box.wide { width: 980px; }
+        .popup-box .picker-body { max-height: 52vh; overflow: auto; margin-top: 8px; }
+        .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; position: sticky; top: 0; }
+        .popup-box .picker-body th.num, .popup-box .picker-body td.num { text-align: right; }
+        .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; white-space: nowrap; }
+        .popup-box .picker-body tr:hover td, .popup-box .picker-body tr.is-active td { background: #eef3ff; }
+        .popup-box .picker-empty { margin: 10px 4px 2px; font-size: 12px; color: #666; }
+        .popup-box.alert-box { width: 440px; max-width: 92vw; display: none; }
+        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
+        .action-btns li a.is-disabled, .action-btns li button:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div class="general-container">
+        <div class="purchase-details">
+            <div class="header-content">
+                <div class="action-btns">
+                    <ul>
+                        <li><a href="@Url.Action(listAction, "PacketTeaNote")"><i class="fa fa-arrow-left"></i> Back</a></li>
+                        <li><button type="button" id="btnSave" @(isView ? "disabled" : "")><i class="fa fa-floppy-o"></i> Save</button></li>
+                        <li><a href="@Url.Action(listAction, "PacketTeaNote")"><i class="fa fa-times"></i> Cancel</a></li>
+                        <li style="margin-left:auto">
+                            <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
+                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+                <div class="header-details">
+                    <div class="left">
+                        <div class="order-code">
+                            <div class="txt"><div class="title-heading">@tranName</div></div>
+                        </div>
+                        <div class="title-heading">DOC NO. : <span id="hdrDocNo"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-container compact-accordion">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Unit</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-40">
+                                <label>Unit</label>
+                                <input type="text" id="UNIT_disp" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>A/C Voucher No</label>
+                                <input type="text" id="VOU_NO" readonly />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-container main-accordion">
+
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Header</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Doc No</label>
+                                <input type="text" id="DOCNO" readonly placeholder="(auto)" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Doc Date <span>(*)</span></label>
+                                <input type="date" id="DOCDT" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Party Code <span>(*)</span></label>
+                                <input type="text" id="PCD" class="picker-input" readonly placeholder="Click to select" />
+                            </div>
+                            <div class="form-col-40">
+                                <label>Party Name</label>
+                                <input type="text" id="PCD_disp" readonly />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label class="chk-inline"><input type="checkbox" id="LAST_YR" /> Last Year Bill</label>
+                            </div>
+                            <div class="form-col-20">
+                                <label>Select Bill No. <span>(*)</span></label>
+                                <input type="text" id="BLNO" class="picker-input" readonly placeholder="Click to select" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Bill Date <span>(*)</span></label>
+                                <input type="date" id="BLDT" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Period From</label>
+                                <input type="date" id="FROM_DATE" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Period Upto</label>
+                                <input type="date" id="UPTO_DATE" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Party State</label>
+                                <input type="text" id="PARTY_STATE" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Party PAN</label>
+                                <input type="text" id="PARTY_PAN" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>TCS Applicable</label>
+                                <input type="text" id="PARTY_TCS" readonly />
+                            </div>
+                            <div class="form-col-20"></div>
+                            <div class="form-col-20">
+                                <label>Total Amount</label>
+                                <input type="text" id="TOTAL_disp" class="num total-box" readonly value="0.00" />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-col-50"><label>Remarks</label><input type="text" id="REM1" maxlength="50" /></div>
+                            <div class="form-col-50"><label>&nbsp;</label><input type="text" id="REM2" maxlength="50" /></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-col-50"><input type="text" id="REM3" maxlength="50" /></div>
+                            <div class="form-col-50"><input type="text" id="REM4" maxlength="50" /></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Item Details</span></div>
+                    <div class="accordion-body active" style="display:block;">
+                        <div class="action-btns">
+                            <ul>
+                                <li><a href="javascript:void(0)" id="btnSelectItems"><i class="fa fa-search"></i> Select Items</a></li>
+                                <li><a href="javascript:void(0)" id="btnAddLine"><i class="fa fa-plus"></i> Add Line</a></li>
+                                <li><a href="javascript:void(0)" id="btnRemoveRows"><i class="fa fa-trash-o"></i> Remove Selected</a></li>
+                            </ul>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="border" id="gridTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
+                                        <th style="width:30px;">Sl.</th>
+                                        <th>Item <span style="color:red;">(*)</span></th>
+                                        <th>Item Name</th>
+                                        <th>MRP <span style="color:red;">(*)</span></th>
+                                        <th>Mfg Date</th>
+                                        <th>Batch No</th>
+                                        <th>Rate Per</th>
+                                        <th class="num">Qty</th>
+                                        <th class="num">Gross Wt</th>
+                                        <th class="num">Net Wt</th>
+                                        <th class="num">Rate</th>
+                                        <th class="num">Disc %</th>
+                                        <th class="num">Discount</th>
+                                        <th class="num">Amount</th>
+                                        <th>GST Code</th>
+                                        <th class="num">CGST</th>
+                                        <th class="num">SGST</th>
+                                        <th class="num">IGST</th>
+                                        <th class="num">Cess</th>
+                                        <th class="num">TCS</th>
+                                        <th class="num">Total Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gridBody"></tbody>
+                                <tfoot>
+                                    <tr class="total">
+                                        <td colspan="8" style="text-align:right;">Total</td>
+                                        <td id="ftQty"></td>
+                                        <td></td>
+                                        <td id="ftWt"></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td id="ftDisc"></td>
+                                        <td id="ftAmt"></td>
+                                        <td></td>
+                                        <td id="ftCgst"></td>
+                                        <td id="ftSgst"></td>
+                                        <td id="ftIgst"></td>
+                                        <td id="ftCess"></td>
+                                        <td id="ftTcs"></td>
+                                        <td id="ftTot"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic searchable lookup (server-side search on every displayed column) -->
+    <div class="popup-overlay" id="pickerOverlay"></div>
+    <div class="popup-box picker-box" id="genericPicker">
+        <div class="popup-header">
+            <h2 id="pickerTitle">Select</h2>
+            <button type="button" class="close-btn" id="pickerClose">X</button>
+        </div>
+        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search any column..." autocomplete="off" />
+        <div class="picker-body" id="pickerBody"></div>
+    </div>
+
+    <!-- VB6 Frame6 "Select Item": the bill's lines -->
+    <div class="popup-box picker-box wide" id="itemPicker">
+        <div class="popup-header">
+            <h2>Select Item</h2>
+            <button type="button" class="close-btn" id="itemClose">X</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input type="text" id="itemSearch" placeholder="Find (any column)..." style="width:260px;" autocomplete="off" />
+            <button type="button" id="btnItemAll" class="btn-white" style="width:auto;padding:5px 14px;">Select All</button>
+            <button type="button" id="btnItemNone" class="btn-white" style="width:auto;padding:5px 14px;">De-Select All</button>
+        </div>
+        <div class="picker-body" id="itemBody"></div>
+        <div style="text-align:right;padding-top:10px;">
+            <button type="button" class="btn-blue" id="btnItemOk" style="width:auto;padding:5px 16px;">O.K.</button>
+            <button type="button" class="btn-white" id="btnItemCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+        </div>
+    </div>
+
+    <div class="popup-overlay" id="appAlertOverlay"></div>
+    <div class="popup-box alert-box" id="appAlertBox">
+        <div class="popup-header"><h2 id="appAlertTitle">Notice</h2></div>
+        <div class="alert-message" id="appAlertMessage"></div>
+        <div class="alert-actions">
+            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
+        </div>
+    </div>
+
+<script>
+(function () {
+    var TRAN = '@tran';
+    var IS_EDIT = @(isEdit ? "true" : "false");
+    var IS_VIEW = @(isView ? "true" : "false");
+    var DOC = @Html.Raw(ViewBag.DocJson ?? "{}");
+    var H = DOC.head || {};
+    var URL = {
+        party: '@Url.Action("GetParty", "PacketTeaNote")',
+        bills: '@Url.Action("GetBills", "PacketTeaNote")',
+        billLines: '@Url.Action("GetBillLines", "PacketTeaNote")',
+        item: '@Url.Action("GetItem", "PacketTeaNote")',
+        gst: '@Url.Action("GetGstCodes", "PacketTeaNote")',
+        save: '@Url.Action("Save", "PacketTeaNote")',
+        list: '@Url.Action(listAction, "PacketTeaNote")'
+    };
+
+    // ---------------------------------------------------------------- helpers
+    $('#pickerOverlay, #genericPicker, #itemPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
+    function r2(v) { v = num(v); var s = v < 0 ? -1 : 1; return s * Math.round(Math.abs(v) * 100 + 1e-7) / 100; }
+    function f2(v) { return r2(v).toFixed(2); }
+    function iso(d) { return d ? String(d).substring(0, 10) : ''; }
+    function dmy(d) { d = iso(d); return d ? d.substring(8, 10) + '/' + d.substring(5, 7) + '/' + d.substring(0, 4) : ''; }
+    function esc(s) { return $('<div>').text(s == null ? '' : s).html(); }
+
+    function closeAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
+    function showAlert(message, onOk) {
+        $('#appAlertTitle').text('Notice');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').hide();
+        $('#appAlertOk').off('click').on('click', function () { closeAlert(); if (onOk) onOk(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+        setTimeout(function () { $('#appAlertOk').focus(); }, 150);
+    }
+    function showConfirm(message, onYes) {
+        $('#appAlertTitle').text('Confirm');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').show().off('click').on('click', closeAlert);
+        $('#appAlertOk').off('click').on('click', function () { closeAlert(); onYes(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    }
+    function failMsg(x, fallback) {
+        if (x && x.status === 440) {
+            showAlert((x.responseJSON && x.responseJSON.message) || 'Your session has expired. Please log in again.', function () { window.location.reload(); });
+            return;
+        }
+        if (x && x.statusText === 'abort') return;
+        showAlert((x && x.responseJSON && x.responseJSON.message) || fallback || 'Could not load data. Please try again.');
+    }
+
+    // Numeric-only inputs: digits and one decimal point, at most 3 decimals, right aligned.
+    function sanitizeNum(el) {
+        var v = el.value, clean = v.replace(/[^0-9.]/g, '');
+        var dot = clean.indexOf('.');
+        if (dot >= 0) clean = clean.substring(0, dot + 1) + clean.substring(dot + 1).replace(/\./g, '').substring(0, 3);
+        if (clean !== v) el.value = clean;
+    }
+    $(document).on('keypress', 'input.num:not([readonly])', function (e) {
+        var ch = String.fromCharCode(e.which);
+        if (e.which < 32) return;
+        if (!/[0-9.]/.test(ch) || (ch === '.' && this.value.indexOf('.') >= 0 && this.selectionStart === this.selectionEnd)) e.preventDefault();
+    });
+    $(document).on('input paste', 'input.num:not([readonly])', function () { var el = this; setTimeout(function () { sanitizeNum(el); }, 0); });
+
+    // ---------------------------------------------------------------- state
+    var FY_START = iso(H.FY_START), FY_END = iso(H.FY_END);
+    var TODAY = iso(H.TODAY) || new Date().toISOString().substring(0, 10);
+    var UNIT = H.UNIT || '', UNIT_STATE = H.UNIT_STATE || '';
+    var PARTY = { STATE: H.PARTY_STATE || '', PAN: H.PARTY_PAN || '', TCS: H.PARTY_TCS || 'N' };
+    var GST = {};            // GST_CODE -> rates (GSTMAS of the unit's location)
+    var GST_LIST = [];
+    var rows = [], seq = 0;
+
+    function lastYr() { return $('#LAST_YR').is(':checked'); }
+
+    // ---------------------------------------------------------------- header
+    $('#UNIT_disp').val(UNIT + (H.UNIT_NAME ? ' - ' + H.UNIT_NAME : ''));
+    $('#DOCNO').val(H.DOCNO || '');
+    $('#hdrDocNo').text(H.DOCNO || '');
+    $('#VOU_NO').val(H.VOU_NO || '');
+    $('#PCD').val(H.PCD || ''); $('#PCD_disp').val(H.PARTY_NAME || '');
+    $('#BLNO').val(H.BLNO || ''); $('#BLDT').val(iso(H.BLDT));
+    $('#LAST_YR').prop('checked', !!H.LAST_YR);
+    ['REM1', 'REM2', 'REM3', 'REM4'].forEach(function (k) { $('#' + k).val(H[k] || ''); });
+    function showParty() {
+        $('#PARTY_STATE').val(PARTY.STATE); $('#PARTY_PAN').val(PARTY.PAN);
+        $('#PARTY_TCS').val(PARTY.TCS === 'Y' ? 'Yes' : 'No');
+    }
+    showParty();
+
+    if (IS_EDIT) {
+        $('#DOCDT').val(iso(H.DOCDT)).prop('disabled', true);
+    } else {
+        var maxDt = TODAY < FY_END ? TODAY : FY_END;
+        var minDt = FY_START;
+        if (H.LAST_DOCDT && iso(H.LAST_DOCDT) > minDt) minDt = iso(H.LAST_DOCDT);
+        $('#DOCDT').attr('min', minDt).attr('max', maxDt).val(maxDt < minDt ? minDt : maxDt);
+    }
+    $('#FROM_DATE').val(iso(H.FROM_DATE) || $('#DOCDT').val());
+    $('#UPTO_DATE').val(iso(H.UPTO_DATE) || $('#DOCDT').val());
+
+    function applyModeUi() {
+        var headLocked = IS_EDIT || IS_VIEW;
+        $('#LAST_YR').prop('disabled', headLocked || !H.LAST_YR_EXISTS && !H.LAST_YR);
+        $('#PCD').toggleClass('picker-input', !headLocked);
+        $('#BLNO').toggleClass('picker-input', !headLocked).attr('placeholder', headLocked ? '' : 'Click to select');
+        $('#btnSelectItems').toggleClass('is-disabled', IS_VIEW);
+        $('#btnAddLine').toggleClass('is-disabled', IS_VIEW);
+        $('#btnRemoveRows').toggleClass('is-disabled', IS_VIEW);
+        if (IS_VIEW) {
+            $('input, select, textarea').not('#pickerSearch, #itemSearch').prop('disabled', true);
+        }
+    }
+
+    // ---------------------------------------------------------------- lines
+    var NUM_COLS = ['QTY', 'GROSS_WEIGHT', 'WEIGHT', 'RATE', 'DISC', 'DISCOUNT'];
+    var CALC_COLS = ['AMT', 'CGST_AMT', 'SGST_AMT', 'IGST_AMT', 'GCESS_AMT', 'TCS_AMT', 'TOT_AMT'];
+
+    function newRow(src) {
+        var r = $.extend({
+            ITCD: '', IN_ORA: '', MRP: '', MFGDT: '', BATCHNO: '', FLAG: '2', CSTCD: '81', GST_CODE: '',
+            QTY: 0, GROSS_WEIGHT: 0, WEIGHT: 0, RATE: 0, DISC: 0, DISCOUNT: 0, AMT: 0,
+            CGST_RATE: 0, CGST_AMT: 0, SGST_RATE: 0, SGST_AMT: 0, IGST_RATE: 0, IGST_AMT: 0,
+            GCESS_RATE: 0, GCESS_AMT: 0, TCS_PER: 0, TCS_AMT: 0, TOT_AMT: 0, _manual: false
+        }, src || {});
+        NUM_COLS.concat(CALC_COLS, ['CGST_RATE', 'SGST_RATE', 'IGST_RATE', 'GCESS_RATE', 'TCS_PER']).forEach(function (k) { r[k] = num(r[k]); });
+        r.FLAG = String(r.FLAG || '2').trim() === '1' ? '1' : '2';
+        r.MFGDT = iso(r.MFGDT);
+        r._cid = ++seq;
+        return r;
+    }
+
+    // VB6 calcamt, as the API recomputes it on save: rate x qty (Per Qty) or rate x
+    // net weight, discount % (else the amount keyed), GST by party vs unit state,
+    // TCS on taxable + GST.
+    function calc(r) {
+        var basis = r.FLAG === '1' ? r.QTY : r.WEIGHT;
+        var whole = Math.trunc(basis);
+        r.AMT = r2(r.RATE * whole) + r2(r.RATE * (basis - whole));
+        if (r.DISC) r.DISCOUNT = r2(r.AMT * r.DISC / 100);
+        var g = GST[r.GST_CODE];
+        if (g) {
+            var local = PARTY.STATE === UNIT_STATE;
+            r.CGST_RATE = local ? num(g.CGST_RATE) : 0;
+            r.SGST_RATE = local ? num(g.SGST_RATE) : 0;
+            r.IGST_RATE = local ? 0 : num(g.IGST_RATE);
+            r.GCESS_RATE = num(g.GCESS_RATE);
+            var bl = $('#BLDT').val();
+            r.TCS_PER = (bl && bl < '2020-10-01') ? num(g.TCS_RATE) : PARTY.TCS !== 'Y' ? 0 : !PARTY.PAN ? num(g.TCS_RATE) : num(g.TCS_RATE_PAN);
+        }
+        var taxable = r.AMT - r.DISCOUNT;
+        r.CGST_AMT = r2(taxable * r.CGST_RATE / 100);
+        r.SGST_AMT = r2(taxable * r.SGST_RATE / 100);
+        r.IGST_AMT = r2(taxable * r.IGST_RATE / 100);
+        r.GCESS_AMT = r2(taxable * r.GCESS_RATE / 100);
+        var gstAmt = r.CGST_AMT + r.SGST_AMT + r.IGST_AMT + r.GCESS_AMT;
+        r.TCS_AMT = r.TCS_PER ? r2((taxable + gstAmt) * r.TCS_PER / 100) : 0;
+        r.TOT_AMT = r2(taxable + gstAmt + r.TCS_AMT);
+    }
+
+    function gstOptions(cur) {
+        var opts = '<option value="">--</option>';
+        GST_LIST.forEach(function (g) {
+            opts += '<option value="' + esc(g.CODE) + '"' + (g.CODE === cur ? ' selected' : '') + ' title="' + esc(g.NAME) + '">' + esc(g.CODE) + '</option>';
+        });
+        if (cur && !GST[cur]) opts += '<option value="' + esc(cur) + '" selected>' + esc(cur) + '</option>';
+        return opts;
+    }
+
+    function renderGrid() {
+        var $tb = $('#gridBody').empty();
+        var ro = IS_VIEW ? ' readonly tabindex="-1"' : '';
+        rows.forEach(function (r, i) {
+            r.SRLNO = i + 1;
+            var manual = r._manual && !IS_VIEW;
+            var tr = $('<tr data-cid="' + r._cid + '"></tr>');
+            tr.append('<td><input type="checkbox" class="rowChk" ' + (IS_VIEW ? 'disabled' : '') + ' /></td>');
+            tr.append('<td>' + r.SRLNO + '</td>');
+            tr.append('<td><input type="text" class="f-item' + (manual ? ' pick' : '') + '" readonly value="' + esc(r.ITCD) + '" placeholder="' + (manual ? 'Click' : '') + '" /></td>');
+            tr.append('<td class="item-name" title="' + esc(r.IN_ORA) + '">' + esc(r.IN_ORA) + '</td>');
+            tr.append('<td><input type="text" class="f-mrp" data-col="MRP" maxlength="4" value="' + esc(r.MRP) + '"' + (manual ? '' : ' readonly tabindex="-1"') + ' /></td>');
+            tr.append('<td><input type="date" class="f-date" data-col="MFGDT" value="' + esc(r.MFGDT) + '"' + (manual ? '' : ' readonly tabindex="-1"') + ' /></td>');
+            tr.append('<td><input type="text" class="f-batch" data-col="BATCHNO" maxlength="12" value="' + esc(r.BATCHNO) + '"' + (manual ? '' : ' readonly tabindex="-1"') + ' /></td>');
+            tr.append('<td><select class="f-flag"' + (IS_VIEW ? ' disabled' : '') + '><option value="1"' + (r.FLAG === '1' ? ' selected' : '') + '>Qty</option><option value="2"' + (r.FLAG !== '1' ? ' selected' : '') + '>Net Wt</option></select></td>');
+            NUM_COLS.forEach(function (c) {
+                tr.append('<td class="num"><input type="text" inputmode="decimal" class="num" data-col="' + c + '" value="' + f2(r[c]) + '"' + ro + ' /></td>');
+            });
+            tr.append('<td class="num c-AMT">' + f2(r.AMT) + '</td>');
+            tr.append('<td><select class="f-gst"' + (IS_VIEW ? ' disabled' : '') + '>' + gstOptions(r.GST_CODE) + '</select></td>');
+            ['CGST_AMT', 'SGST_AMT', 'IGST_AMT', 'GCESS_AMT', 'TCS_AMT', 'TOT_AMT'].forEach(function (c) {
+                tr.append('<td class="num c-' + c + '">' + f2(r[c]) + '</td>');
+            });
+            $tb.append(tr);
+        });
+        if (!rows.length) $tb.append('<tr><td colspan="22" style="text-align:center;color:#666;">Select the Party and Bill No.; its items open for selection. Use "Add Line" for an item not on the bill.</td></tr>');
+        refreshTotals();
+    }
+
+    function refreshRow(r, skipEl) {
+        var $tr = $('#gridBody tr[data-cid="' + r._cid + '"]');
+        NUM_COLS.forEach(function (c) {
+            var el = $tr.find('input[data-col="' + c + '"]')[0];
+            if (el && el !== skipEl) el.value = f2(r[c]);
+        });
+        CALC_COLS.forEach(function (c) { $tr.find('.c-' + c).text(f2(r[c])); });
+        refreshTotals();
+    }
+
+    function refreshTotals() {
+        var t = { QTY: 0, WEIGHT: 0, DISCOUNT: 0, AMT: 0, CGST_AMT: 0, SGST_AMT: 0, IGST_AMT: 0, GCESS_AMT: 0, TCS_AMT: 0, TOT_AMT: 0 };
+        rows.forEach(function (r) { Object.keys(t).forEach(function (k) { t[k] += num(r[k]); }); });
+        $('#ftQty').text(f2(t.QTY)); $('#ftWt').text(f2(t.WEIGHT)); $('#ftDisc').text(f2(t.DISCOUNT)); $('#ftAmt').text(f2(t.AMT));
+        $('#ftCgst').text(f2(t.CGST_AMT)); $('#ftSgst').text(f2(t.SGST_AMT)); $('#ftIgst').text(f2(t.IGST_AMT));
+        $('#ftCess').text(f2(t.GCESS_AMT)); $('#ftTcs').text(f2(t.TCS_AMT)); $('#ftTot').text(f2(t.TOT_AMT));
+        $('#TOTAL_disp').val(f2(t.TOT_AMT));
+    }
+
+    function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
+    function recalcAll() { rows.forEach(calc); renderGrid(); }
+
+    $('#gridBody').on('change', 'input.num', function () {
+        var r = findRow($(this).closest('tr').data('cid')); if (!r) return;
+        var col = $(this).data('col');
+        r[col] = Math.round(num(this.value) * 1000) / 1000;
+        if (col === 'DISCOUNT') r.DISC = 0;     // an amount keyed replaces the %
+        calc(r);
+        this.value = f2(r[col]);
+        refreshRow(r, this);
+    });
+    $('#gridBody').on('focus', 'input.num:not([readonly])', function () { var el = this; setTimeout(function () { el.select(); }, 0); });
+    $('#gridBody').on('change', 'select.f-flag', function () {
+        var r = findRow($(this).closest('tr').data('cid')); if (!r) return;
+        r.FLAG = this.value; calc(r); refreshRow(r);
+    });
+    $('#gridBody').on('change', 'select.f-gst', function () {
+        var r = findRow($(this).closest('tr').data('cid')); if (!r) return;
+        r.GST_CODE = this.value; calc(r); refreshRow(r);
+    });
+    $('#gridBody').on('change', 'input.f-mrp, input.f-batch', function () {
+        var r = findRow($(this).closest('tr').data('cid')); if (!r) return;
+        this.value = $.trim(this.value).toUpperCase();
+        r[$(this).data('col')] = this.value;
+    });
+    $('#gridBody').on('change', 'input.f-date', function () {
+        var r = findRow($(this).closest('tr').data('cid')); if (r) r.MFGDT = this.value;
+    });
+    // Enter moves to the next editable cell, as in the VB6 grid.
+    $('#gridBody').on('keydown', 'input', function (e) {
+        if (e.which !== 13) return;
+        e.preventDefault();
+        $(this).trigger('change');
+        var $all = $('#gridBody input:not([readonly]):not([type="checkbox"])');
+        var i = $all.index(this);
+        if (i >= 0 && i < $all.length - 1) $all.eq(i + 1).focus();
+    });
+
+    $('#gridBody').on('click', 'input.f-item.pick', function () {
+        var $inp = $(this), r = findRow($inp.closest('tr').data('cid')); if (!r) return;
+        openPicker('item', function (it) {
+            r.ITCD = it.CODE; r.IN_ORA = it.NAME || '';
+            renderGrid();
+        });
+    });
+
+    $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
+    $('#btnRemoveRows').on('click', function () {
+        if ($(this).hasClass('is-disabled')) return;
+        var cids = $('.rowChk:checked').map(function () { return $(this).closest('tr').data('cid'); }).get();
+        if (!cids.length) { showAlert('Select at least one row to remove.'); return; }
+        rows = rows.filter(function (r) { return cids.indexOf(r._cid) === -1; });
+        $('#chkAll').prop('checked', false);
+        renderGrid();
+    });
+    $('#btnAddLine').on('click', function () {
+        if ($(this).hasClass('is-disabled')) return;
+        if (!$('#PCD').val()) { showAlert('Select the Party first.'); return; }
+        rows.push(newRow({ _manual: true, MFGDT: $('#BLDT').val(), GST_CODE: rows.length ? rows[rows.length - 1].GST_CODE : '' }));
+        renderGrid();
+        $('#gridBody tr:last input.f-item').trigger('click');
+    });
+
+    // ---------------------------------------------------------------- lookups
+    var PICKERS = {
+        party: { title: 'Select Party', url: URL.party, cols: [['CODE', 'Code'], ['NAME', 'Name'], ['CITY', 'City'], ['STATE_CODE', 'State'], ['GST_NO', 'GST No'], ['PANNO', 'PAN No']],
+                 params: function () { return { unit: UNIT }; } },
+        bill: { title: 'Select Bill No.', url: URL.bills, cols: [['BLNO', 'Bill No'], ['BLDT', 'Bill Date', 'date'], ['RT', 'Type'], ['AMOUNT', 'Amount', 'num']],
+                params: function () { return { pcd: $('#PCD').val(), unit: UNIT, lastYear: lastYr() }; } },
+        item: { title: 'Select Item', url: URL.item, cols: [['CODE', 'Code'], ['NAME', 'Name'], ['HSN_CODE', 'HSN Code'], ['UOM', 'UOM']],
+                params: function () { return { unit: UNIT }; } }
+    };
+    var active = null, pickXhr = null, pickSeq = 0, pickTimer = null;
+    function cell(v, kind) {
+        if (kind === 'date') return '<td>' + esc(dmy(v)) + '</td>';
+        if (kind === 'num') return '<td class="num">' + f2(v) + '</td>';
+        if (kind === 'int') return '<td class="num">' + esc(v) + '</td>';
+        return '<td>' + esc(v) + '</td>';
+    }
+    function openPicker(key, onPick) {
+        active = { key: key, onPick: onPick, rows: [], idx: -1 };
+        $('#pickerTitle').text(PICKERS[key].title);
+        $('#pickerSearch').val('');
+        $('#pickerBody').html('<p class="picker-empty">Loading...</p>');
+        $('#pickerOverlay, #genericPicker').fadeIn(120);
+        loadPicker('');
+        setTimeout(function () { $('#pickerSearch').focus(); }, 150);
+    }
+    function closePicker() { if (pickXhr) pickXhr.abort(); $('#pickerOverlay, #genericPicker').fadeOut(120); active = null; }
+    $('#pickerClose').on('click', closePicker);
+    function loadPicker(term) {
+        var cfg = PICKERS[active.key], mySeq = ++pickSeq;
+        if (pickXhr) pickXhr.abort();
+        pickXhr = $.getJSON(cfg.url, $.extend({ search: term }, cfg.params ? cfg.params() : {}))
+            .done(function (data) {
+                if (!active || mySeq !== pickSeq) return;
+                data = data || [];
+                active.rows = data; active.idx = data.length ? 0 : -1;
+                var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th' + (c[2] === 'num' || c[2] === 'int' ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+                data.forEach(function (row, i) {
+                    html += '<tr data-i="' + i + '"' + (i === 0 ? ' class="is-active"' : '') + '>' + cfg.cols.map(function (c) { return cell(row[c[0]], c[2]); }).join('') + '</tr>';
+                });
+                html += '</tbody></table>';
+                if (!data.length) html += '<p class="picker-empty">No matching records.</p>';
+                else if (data.length >= 100) html += '<p class="picker-empty">Showing the first 100 matches - type more to narrow the search.</p>';
+                $('#pickerBody').html(html);
+            })
+            .fail(function (x) { if (mySeq === pickSeq) { closePicker(); failMsg(x); } });
+    }
+    $('#pickerSearch').on('input', function () {
+        var term = $(this).val();
+        clearTimeout(pickTimer);
+        pickTimer = setTimeout(function () { if (active) loadPicker(term); }, 300);
+    });
+    function choose(i) {
+        if (!active || i < 0 || i >= active.rows.length) return;
+        var row = active.rows[i], cb = active.onPick;
+        closePicker();
+        cb(row);
+    }
+    $('#pickerBody').on('click', 'tr[data-i]', function () { choose($(this).data('i')); });
+    $('#pickerSearch').on('keydown', function (e) {
+        if (!active) return;
+        if (e.which === 27) { closePicker(); return; }
+        if (e.which === 13) { e.preventDefault(); choose(active.idx); return; }
+        if (e.which !== 38 && e.which !== 40) return;
+        e.preventDefault();
+        var n = active.rows.length; if (!n) return;
+        active.idx = Math.max(0, Math.min(n - 1, active.idx + (e.which === 40 ? 1 : -1)));
+        var $tr = $('#pickerBody tr[data-i]').removeClass('is-active').eq(active.idx).addClass('is-active');
+        if ($tr[0]) $tr[0].scrollIntoView({ block: 'nearest' });
+    });
+
+    function clearBill() { $('#BLNO').val(''); $('#BLDT').val(''); rows = []; }
+
+    // Party (VB6 text_PARTY): changing it invalidates the bill and its lines.
+    $('#PCD').on('click', function () {
+        if (IS_EDIT || IS_VIEW) return;
+        openPicker('party', function (p) {
+            if (p.CODE === $('#PCD').val()) return;
+            var apply = function () {
+                $('#PCD').val(p.CODE); $('#PCD_disp').val(p.NAME || '');
+                PARTY = { STATE: p.STATE_CODE || '', PAN: p.PANNO || '', TCS: p.TCS_TAG || 'N' };
+                showParty();
+                if (!p.STATE_CODE) showAlert('State Code of ' + p.CODE + ' is blank ! Set it in the party master before saving.');
+                clearBill();
+                recalcAll();
+            };
+            if (rows.length) showConfirm('Changing the party clears the selected bill and its items. Continue?', apply); else apply();
+        });
+    });
+
+    // Bill (VB6 txtSelBillNo): pick, then its items open for selection.
+    $('#BLNO').on('click', function () {
+        if (IS_EDIT || IS_VIEW) return;
+        if (!$('#PCD').val()) { showAlert('Select the Party first.'); return; }
+        openPicker('bill', function (b) {
+            var apply = function () {
+                $('#BLNO').val(b.BLNO); $('#BLDT').val(iso(b.BLDT));
+                rows = [];
+                renderGrid();
+                openItems();
+            };
+            if (rows.length && b.BLNO !== $('#BLNO').val()) showConfirm('Changing the bill clears its items. Continue?', apply); else apply();
+        });
+    });
+    $('#btnSelectItems').on('click', function () {
+        if ($(this).hasClass('is-disabled')) return;
+        if (!$('#BLNO').val()) { showAlert('Select Bill No. first.'); return; }
+        openItems();
+    });
+
+    $('#LAST_YR').on('change', function () {
+        var turnOn = this.checked;
+        var apply = function () { $('#LAST_YR').prop('checked', turnOn); clearBill(); renderGrid(); };
+        if (rows.length || $('#BLNO').val()) {
+            // Stays as it was unless the user confirms.
+            $('#LAST_YR').prop('checked', !turnOn);
+            showConfirm('This clears the bill and its items. Continue?', apply);
+        } else apply();
+    });
+
+    $('#DOCDT').on('change', function () {
+        if (!$('#FROM_DATE').val() || $('#FROM_DATE').val() === $('#UPTO_DATE').val()) { $('#FROM_DATE').val(this.value); $('#UPTO_DATE').val(this.value); }
+    });
+
+    // ---------------------------------------------------------------- Select Item popup
+    var items = [];
+    function lineKey(d) { return [d.ITCD, d.MRP, iso(d.MFGDT), d.BATCHNO].join('|'); }
+    function openItems() {
+        $('#itemSearch').val('');
+        $('#itemBody').html('<p class="picker-empty">Loading...</p>');
+        $('#pickerOverlay, #itemPicker').fadeIn(120);
+        $.getJSON(URL.billLines, { blno: $('#BLNO').val(), bldt: $('#BLDT').val(), unit: UNIT, lastYear: lastYr() })
+            .done(function (data) {
+                var have = rows.map(lineKey);
+                items = (data || []).map(function (d, i) { d._i = i; d._sel = have.indexOf(lineKey(d)) >= 0; return d; });
+                renderItems();
+                setTimeout(function () { $('#itemSearch').focus(); }, 150);
+            })
+            .fail(function (x) { closeItems(); failMsg(x); });
+    }
+    function closeItems() { $('#pickerOverlay, #itemPicker').fadeOut(120); }
+    var ITEM_COLS = [['ITCD', 'Item'], ['IN_ORA', 'Name'], ['MRP', 'MRP'], ['MFGDT', 'Mfg Date', 'date'], ['BATCHNO', 'Batch'],
+                     ['QTY', 'Qty', 'num'], ['WEIGHT', 'Net Wt', 'num'], ['RATE', 'Rate', 'num'], ['AMT', 'Amount', 'num'], ['GST_CODE', 'GST']];
+    function itemText(d) {
+        return ITEM_COLS.map(function (c) { return c[2] === 'date' ? dmy(d[c[0]]) : c[2] === 'num' ? f2(d[c[0]]) : (d[c[0]] || ''); }).join(' ').toUpperCase();
+    }
+    function renderItems() {
+        var term = $.trim($('#itemSearch').val()).toUpperCase();
+        var shown = items.filter(function (d) { return !term || itemText(d).indexOf(term) >= 0; });
+        var html = '<table><thead><tr><th style="width:30px;">SEL</th>' + ITEM_COLS.map(function (c) { return '<th' + (c[2] === 'num' ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+        shown.forEach(function (d) {
+            html += '<tr data-i="' + d._i + '"><td><input type="checkbox" class="itemChk"' + (d._sel ? ' checked' : '') + ' /></td>' +
+                ITEM_COLS.map(function (c) { return cell(d[c[0]], c[2]); }).join('') + '</tr>';
+        });
+        html += '</tbody></table>';
+        if (!items.length) html += '<p class="picker-empty">No items on this bill.</p>';
+        else if (!shown.length) html += '<p class="picker-empty">No item matches the search.</p>';
+        $('#itemBody').html(html);
+    }
+    $('#itemSearch').on('input', renderItems);
+    $('#itemBody').on('click', 'tr[data-i]', function (e) {
+        var d = items[$(this).data('i')];
+        if (!$(e.target).is('.itemChk')) $(this).find('.itemChk').prop('checked', !d._sel);
+        d._sel = $(this).find('.itemChk').is(':checked');
+    });
+    $('#btnItemAll, #btnItemNone').on('click', function () {
+        var on = this.id === 'btnItemAll';
+        $('#itemBody tr[data-i]').each(function () { items[$(this).data('i')]._sel = on; $(this).find('.itemChk').prop('checked', on); });
+    });
+    $('#itemClose, #btnItemCancel').on('click', closeItems);
+    // VB6 Command3_Click: the bill's lines are rebuilt from the selection; lines
+    // already on the note keep what was keyed, and hand-added lines stay.
+    $('#btnItemOk').on('click', function () {
+        var sel = items.filter(function (d) { return d._sel; });
+        if (!sel.length) { showAlert('Select at least one item.'); return; }
+        var byKey = {};
+        rows.forEach(function (r) { if (!r._manual) byKey[lineKey(r)] = r; });
+        var fromBill = sel.map(function (d) {
+            var old = byKey[lineKey(d)];
+            if (old) return old;
+            var r = newRow(d); calc(r); return r;
+        });
+        rows = fromBill.concat(rows.filter(function (r) { return r._manual; }));
+        closeItems();
+        renderGrid();
+    });
+
+    // ---------------------------------------------------------------- save
+    function payload() {
+        return {
+            TRAN_CODE: TRAN, UNIT: UNIT,
+            DOCNO: $('#DOCNO').val() || null, DOCDT: $('#DOCDT').val() || null,
+            PCD: $('#PCD').val(), BLNO: $.trim($('#BLNO').val()), BLDT: $('#BLDT').val() || null,
+            LAST_YR: lastYr(),
+            FROM_DATE: $('#FROM_DATE').val() || null, UPTO_DATE: $('#UPTO_DATE').val() || null,
+            REM1: $('#REM1').val(), REM2: $('#REM2').val(), REM3: $('#REM3').val(), REM4: $('#REM4').val(),
+            LINES: rows.map(function (r) {
+                return {
+                    ITCD: r.ITCD, MRP: r.MRP, MFGDT: r.MFGDT || null, BATCHNO: r.BATCHNO,
+                    QTY: r.QTY, GROSS_WEIGHT: r.GROSS_WEIGHT, WEIGHT: r.WEIGHT, RATE: r.RATE,
+                    DISC: r.DISC, DISCOUNT: r.DISCOUNT, FLAG: r.FLAG, CSTCD: r.CSTCD, GST_CODE: r.GST_CODE
+                };
+            })
+        };
+    }
+
+    function validate() {
+        var d = $('#DOCDT').val();
+        if (!d) return 'Doc Date is required.';
+        if (!IS_EDIT && (d < ($('#DOCDT').attr('min') || '') || d > ($('#DOCDT').attr('max') || '9999'))) {
+            return 'Doc Date must be between ' + dmy($('#DOCDT').attr('min')) + ' and ' + dmy($('#DOCDT').attr('max')) + '.';
+        }
+        if (!$('#PCD').val()) return 'Cannot Save without party name.';
+        if (!$.trim($('#BLNO').val())) return 'Select Bill No.';
+        if (!$('#BLDT').val()) return 'Cannot Save without bill date.';
+        if ($('#BLDT').val() > d) return 'Bill Date cannot be after the Doc Date.';
+        if ($('#FROM_DATE').val() && $('#UPTO_DATE').val() && $('#FROM_DATE').val() > $('#UPTO_DATE').val()) return 'Period From cannot be after Period Upto.';
+        var live = rows.filter(function (r) { return r.ITCD && (r.QTY || r.WEIGHT || r.RATE); });
+        if (!live.length) return 'Cannot Save ! Please enter Item Details.';
+        for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
+            if (!r.ITCD) return 'Line ' + r.SRLNO + ': select the Item.';
+            if (!$.trim(r.MRP)) return 'Line ' + r.SRLNO + ': enter MRP.';
+            if (!r.GST_CODE) return 'Line ' + r.SRLNO + ': select the GST Code.';
+            if (r.GROSS_WEIGHT > 0 && r.WEIGHT > r.GROSS_WEIGHT) return 'Line ' + r.SRLNO + ': Net Weight cannot be more than Gross Weight.';
+            if (!r.RATE || !r.AMT) return 'Amount cannot be 0 for item ' + r.ITCD + '. Cannot Save.';
+            if (r.DISCOUNT > r.AMT) return 'Line ' + r.SRLNO + ': discount is more than the amount.';
+        }
+        if (!(num($('#TOTAL_disp').val()) > 0)) return 'Total Amount must be greater than zero.';
+        return null;
+    }
+
+    var saving = false;
+    $('#btnSave').on('click', function () {
+        if (IS_VIEW || saving) return;
+        $('#gridBody input:focus').trigger('change');
+        var err = validate();
+        if (err) { showAlert(err); return; }
+        showConfirm('Are you sure? The note and its accounts voucher will be saved.', function () {
+            saving = true;
+            $('#btnSave').prop('disabled', true);
+            $.ajax({ url: URL.save, type: 'POST', contentType: 'application/json', data: JSON.stringify(payload()) })
+                .done(function (resp) {
+                    if (resp && resp.success) {
+                        var no = resp.data && resp.data.docno ? resp.data.docno : '';
+                        var vou = resp.data && resp.data.vouNo ? resp.data.vouNo : '';
+                        showAlert('Saved successfully.' + (no ? '\n' + '@tranName' + ' No. ' + no : '') + (vou ? '\nVoucher No. ' + vou : ''),
+                                  function () { window.location.href = URL.list; });
+                    } else {
+                        showAlert((resp && resp.message) || 'Save failed.');
+                    }
+                })
+                .fail(function (x) { failMsg(x, 'Save failed.'); })
+                .always(function () { saving = false; $('#btnSave').prop('disabled', false); });
+        });
+    });
+
+    // ---------------------------------------------------------------- init
+    rows = (DOC.lines || []).map(function (l) { return newRow(l); });   // saved figures shown as loaded
+    applyModeUi();
+    renderGrid();
+    $.getJSON(URL.gst, { unit: UNIT })
+        .done(function (d) {
+            GST_LIST = d || [];
+            GST_LIST.forEach(function (g) { GST[g.CODE] = g; });
+            renderGrid();
+        })
+        .fail(function (x) { failMsg(x, 'Could not load the GST codes.'); });
+    if (!IS_EDIT && !IS_VIEW) setTimeout(function () { $('#PCD').trigger('click'); }, 300);
+})();
+</script>
+</body>
+</html>
