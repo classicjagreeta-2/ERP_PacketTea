@@ -622,6 +622,13 @@
                     '<td style="text-align:right;">' + fmt2(m.BLEND_QTY) + '</td>' +
                     '<td style="text-align:right;">' + fmt2(m.REMAINING_QTY) + '</td></tr>';
             });
+            // An empty table otherwise reads as a broken lookup -- say why it's empty.
+            if (!data.length) {
+                html += '<tr><td colspan="5" style="text-align:center;padding:12px;">' +
+                    (term ? 'No Master Blend matches "' + $('<div>').text(term).html() + '".'
+                          : 'No open Master Blend with remaining qty for Unit ' + $('#UNIT_disp').val() +
+                            ' / Blend Type ' + $('#BLEND_TYPE').val() + '.') + '</td></tr>';
+            }
             html += '</tbody></table>';
             $('#masterPickerBody').html(html);
             $('#masterPickerBody').data('rows', data);
