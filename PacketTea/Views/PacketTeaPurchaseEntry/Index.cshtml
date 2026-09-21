@@ -45,8 +45,8 @@
     <input type="hidden" id="isLoading" value="0" />
     <input type="hidden" id="totalRows" value="@Model.TotalItemCount" />
     <input type="hidden" id="pageSize" value="@ViewBag.PageSize" />
-    <input type="hidden" id="hiddenUNIT" />
-    <input type="hidden" id="hiddenGLOCA" />
+    @*<input type="hidden" id="hiddenUNIT" />
+    <input type="hidden" id="hiddenGLOCA" />*@
 
 
     <!-- first screen start -->
@@ -58,8 +58,8 @@
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
                 <li>
                     <button type="button"
-                            class="IdaddNewRecord btn btn-link"
-                            disabled="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false))">
+                            class="IdaddNewRecord btn btn-link">
+                        @*disabled="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false))">*@
                         <i class="fa fa-plus"></i> New
                     </button>
                 </li>
@@ -129,7 +129,7 @@
             <input type="hidden" name="sortOrder" value="@ViewBag.CurrentSort" />
             <input type="hidden" id="hiddenUNIT" />
             <input type="hidden" id="hiddenDOCTYPE" />
-
+            <input type="hidden" id="hiddenDOCTYPETYPE" />
         }
 
 
@@ -538,210 +538,874 @@
 
     </script>
     <script>
-        function loadDocType(unitCode) {
-    console.log('📡 Loading DocTypes for UNIT:', unitCode);
 
-    // ✅ destroy safely
-    if ($('#ListingDocType').data('inputpicker')) {
-        $('#ListingDocType').inputpicker('destroy');
+    // =========================================================
+    // LOAD DOCTYPE PICKER
+    // =========================================================
+    function loadDocType() {
+
+        console.log("=================================");
+        console.log("📡 LOAD DOCTYPE");
+        console.log("=================================");
+
+        var $input = $('#ListingDocType');
+
+        // -----------------------------------------------------
+        // Destroy existing inputpicker
+        // -----------------------------------------------------
+        if ($input.data('inputpicker')) {
+            $input.inputpicker('destroy');
+        }
+
+        // -----------------------------------------------------
+        // Clear old values
+        // -----------------------------------------------------
+        $input.val('');
+
+        $('#hiddenDOCTYPE').val('');
+        $('#hiddenDOCTYPETYPE').val('');
+
+
+        // =====================================================
+        // INITIALIZE DOCTYPE PICKER
+        // =====================================================
+        $input.inputpicker({
+
+            // IMPORTANT:
+            // No ?unit= here.
+            //
+            // GetDocType() internally calls:
+            // /api/TeaPurchase/GetType?
+            //
+            url: '@Url.Action("GetDocType", "PacketTeaPurchaseEntry")',
+
+            // Only these two are displayed
+            fields: [
+                { name: 'CODE', text: 'CODE' },
+                { name: 'DESCN', text: 'DESCN' }
+            ],
+
+            // Show only CODE after selection
+            fieldText: 'CODE',
+
+            // Input value = CODE
+            fieldValue: 'CODE',
+
+            headShow: true,
+            autoOpen: true,
+
+            pagination: true,
+
+            pageField: 'p',
+            pageLimitField: 'limit',
+
+            pageLimit: 10,
+            pageCountField: 'count',
+
+            width: '140px',
+
+            urlDelay: 1
+        });
+
+
+        // =====================================================
+        // DOCTYPE SELECT
+        // =====================================================
+        $input
+            .off('inputpicker.select')
+            .on('inputpicker.select', function (e, item) {
+
+                console.log("=================================");
+                console.log("📌 DOCTYPE SELECTED");
+                console.log("Full Item:", item);
+                console.log("CODE:", item ? item.CODE : '');
+                console.log("DESCN:", item ? item.DESCN : '');
+                console.log("TYPE:", item ? item.TYPE : '');
+                console.log("=================================");
+
+
+                // -------------------------------------------------
+                // Invalid selection
+                // -------------------------------------------------
+                if (!item || !item.CODE) {
+
+                    $('#hiddenDOCTYPE').val('');
+                    $('#hiddenDOCTYPETYPE').val('');
+
+                    return;
+                }
+
+
+                // -------------------------------------------------
+                // Store CODE
+                // -------------------------------------------------
+                $('#hiddenDOCTYPE').val(item.CODE);
+
+
+                // -------------------------------------------------
+                // Display only CODE
+                // -------------------------------------------------
+                $input.val(item.CODE);
+
+
+                // -------------------------------------------------
+                // If inputpicker provides TYPE, store it.
+                //
+                // This is optional.
+                // We DO NOT depend on it.
+                // -------------------------------------------------
+                if (item.TYPE) {
+
+                    $('#hiddenDOCTYPETYPE').val(item.TYPE);
+
+                    console.log(
+                        "✅ TYPE received from picker:",
+                        item.TYPE
+                    );
+
+                }
+                else {
+
+                    // TYPE is not available from picker.
+                    // Leave it empty.
+                    //
+                    // It will be loaded when Go New is clicked.
+
+                    $('#hiddenDOCTYPETYPE').val('');
+
+                    console.log(
+                        "⚠️ TYPE not available in picker."
+                    );
+                }
+
+
+                console.log(
+                    "hiddenDOCTYPE:",
+                    $('#hiddenDOCTYPE').val()
+                );
+
+                console.log(
+                    "hiddenDOCTYPETYPE:",
+                    $('#hiddenDOCTYPETYPE').val()
+                );
+
+
+                // Hide picker
+                $input.inputpicker('hide');
+
+            });
+
+
+        // =====================================================
+        // BACKUP CHANGE EVENT
+        // =====================================================
+        $input
+            .off('change')
+            .on('change', function () {
+
+                var value = $(this).val();
+
+                console.log(
+                    "📌 DOCTYPE CHANGE:",
+                    value
+                );
+
+
+                if (value) {
+
+                    $('#hiddenDOCTYPE').val(value);
+
+                }
+
+            });
+
     }
 
-    $('#ListingDocType').inputpicker({
-        url: '@Url.Action("GetDocType", "Purchase_Requisition")' + '?unit=' + unitCode,
-        fields: [
-            { name: 'CODE', text: 'CODE' },
-            { name: 'DESCN', text: 'DESCN' }
-        ],
-        fieldText: 'CODE',
-        fieldValue: 'CODE',
-        headShow: true,
-        autoOpen: true,
-        pagination: true,
-        pageField: 'p',
-        pageLimitField: 'limit',
-        pageLimit: 10,
-        pageCountField: 'count',
-        width: '140px',
-        urlDelay: 1
+
+
+    // =========================================================
+    // BUILD NEW ROW
+    // =========================================================
+    function buildNewRow() {
+
+        return `
+            <tr id="newUnitRow" class="new-entry-row">
+
+                <!-- GO NEW -->
+                <td class="text-center">
+                    <i class="fa fa-pencil go-new"
+                       style="cursor:pointer;color:black;"
+                       title="Go to New Entry"></i>
+                </td>
+
+                <!-- EMPTY -->
+                <td></td>
+
+                <!-- UNIT -->
+                <td>
+                    <input type="text"
+                           id="ListingUnitCode"
+                           class="form-control"
+                           placeholder="Select Unit"
+                           autocomplete="off"
+                           style="width:140px;" />
+                </td>
+
+                <!-- DOCTYPE -->
+                <td>
+                    <input type="text"
+                           id="ListingDocType"
+                           class="form-control"
+                           placeholder="Select DocType"
+                           autocomplete="off"
+                           style="width:140px;"
+                           disabled />
+                </td>
+
+                <td colspan="8"></td>
+
+            </tr>
+        `;
+    }
+
+
+
+    // =========================================================
+    // ADD NEW ROW
+    // =========================================================
+    $(document).on('click', '.IdaddNewRecord', function () {
+
+        // Prevent duplicate row
+        if ($('#newUnitRow').length) {
+            return;
+        }
+
+
+        // Clear hidden values
+        $('#hiddenUNIT').val('');
+        $('#hiddenDOCTYPE').val('');
+        $('#hiddenDOCTYPETYPE').val('');
+
+
+        // Add row
+        $('#prContainer').prepend(
+            buildNewRow()
+        );
+
+
+        // Initialize Unit picker
+        initUnitPicker();
+
+
+        // Focus Unit
+        setTimeout(function () {
+
+            $('#ListingUnitCode').focus();
+
+        }, 100);
+
     });
 
-    // ✅ prevent duplicate binding
-            $('#ListingDocType').off('inputpicker.select');
 
-            $('#ListingDocType').on('inputpicker.select', function (e, item) {
-                if (item && item.CODE) {
-                    console.log('📌 Selected DOCTYPE (event):', item.CODE);
-                    $('#hiddenDOCTYPE').val(item.CODE);
+
+    // =========================================================
+    // UNIT PICKER
+    // =========================================================
+    function initUnitPicker() {
+
+        var $input = $('#ListingUnitCode');
+
+
+        // =====================================================
+        // INITIALIZE UNIT INPUTPICKER
+        // =====================================================
+        $input.inputpicker({
+
+            url: '@Url.Action("GetUnit", "PacketTeaPurchaseEntry")',
+
+            fields: [
+                { name: 'code', text: 'CODE' }
+            ],
+
+            fieldText: 'code',
+
+            fieldValue: 'code',
+
+            headShow: true,
+
+            autoOpen: true,
+
+            pagination: true,
+
+            pageField: 'p',
+
+            pageLimitField: 'limit',
+
+            pageLimit: 10,
+
+            pageCountField: 'count',
+
+            width: '140px',
+
+            urlDelay: 1
+        });
+
+
+        // =====================================================
+        // UNIT SELECT
+        // =====================================================
+        $input
+            .off('inputpicker.select')
+            .on('inputpicker.select', function (e, item) {
+
+                console.log(
+                    "📌 UNIT SELECTED:",
+                    item
+                );
+
+
+                if (item && item.code) {
+
+                    saveUnitData(item.code);
+
                 }
+
             });
 
-            // ✅ BACKUP FIX (THIS WILL SOLVE YOUR ISSUE)
-            $('#ListingDocType').on('change', function () {
-                var val = $(this).val();
-                console.log('📌 Selected DOCTYPE (change):', val);
 
-                if (val) {
-                    $('#hiddenDOCTYPE').val(val);
+        // =====================================================
+        // UNIT CHANGE
+        // =====================================================
+        $input
+            .off('change')
+            .on('change', function () {
+
+                var selectedCode = $(this).val();
+
+                console.log(
+                    "📌 UNIT CHANGE:",
+                    selectedCode
+                );
+
+
+                if (selectedCode) {
+
+                    fetchUnitByCode(selectedCode);
+
                 }
+
             });
-}
+
+    }
 
 
-// Build New Row
-function buildNewRow() {
-    return `
-<tr id="newUnitRow" class="new-entry-row">
-    <td class="text-center">
-        <i class="fa fa-pencil go-new"
-           style="cursor:pointer;color:#black;"
-           title="Go to New Entry"></i>
-    </td>
-    <td></td>
 
-    <!-- UNIT -->
-    <td>
-        <input type="text"
-               id="ListingUnitCode"
-               class="form-control"
-               placeholder="Select Unit"
-               autocomplete="off"
-               style="width:140px;" />
-    </td>
+    // =========================================================
+    // FETCH UNIT BY CODE
+    // =========================================================
+    function fetchUnitByCode(code) {
 
-    <!-- DOCTYPE -->
-    <td>
-        <input type="text"
-               id="ListingDocType"
-               class="form-control"
-               placeholder="Select DocType"
-               autocomplete="off"
-               style="width:140px;"
-               disabled />
-    </td>
+        $.ajax({
 
-    <td colspan="8"></td>
-</tr>`;
-}
+            url: '@Url.Action("GetUnit", "PacketTeaPurchaseEntry")',
+
+            type: 'GET',
+
+            data: {
+                q: code,
+                limit: 1,
+                p: 1
+            },
+
+            dataType: 'json',
+
+            success: function (response) {
+
+                console.log(
+                    "GetUnit response:",
+                    response
+                );
 
 
-// Add New Row
-$(document).on('click', '.IdaddNewRecord', function () {
-    if ($('#newUnitRow').length) return;
+                if (
+                    response &&
+                    response.data &&
+                    response.data.length > 0
+                ) {
 
-    $('#hiddenUNIT').val('');
-    $('#hiddenDOCTYPE').val('');
+                    saveUnitData(
+                        response.data[0].code
+                    );
 
-    $('#prContainer').prepend(buildNewRow());
-    initUnitPicker();
+                }
 
-    setTimeout(() => {
-        $('#ListingUnitCode').focus();
-    }, 100);
-});
+            },
 
+            error: function (xhr) {
 
-// Unit Picker
-function initUnitPicker() {
+                console.error(
+                    "GetUnit ERROR:",
+                    xhr.status,
+                    xhr.responseText
+                );
 
-    $('#ListingUnitCode').inputpicker({
-        url: '@Url.Action("GetUnit", "Purchase_Requisition")',
-        fields: [
-            { name: 'code', text: 'CODE' },
-            { name: 'descn', text: 'NAME' }
-        ],
-        fieldText: 'code',
-        fieldValue: 'code',
-        headShow: true,
-        autoOpen: true,
-        pagination: true,
-        pageField: 'p',
-        pageLimitField: 'limit',
-        pageLimit: 10,
-        pageCountField: 'count',
-        width: '140px',
-        urlDelay: 1
-    });
-
-    // select event
-    $('#ListingUnitCode').on('inputpicker.select', function (e, item) {
-        if (item && item.code) {
-            saveUnitData(item.code);
-        }
-    });
-
-    // change fallback
-    $('#ListingUnitCode').on('change', function () {
-        var selectedCode = $(this).val();
-        if (selectedCode) {
-            fetchUnitByCode(selectedCode);
-        }
-    });
-}
-
-
-// Fetch Unit
-function fetchUnitByCode(code) {
-    $.ajax({
-        url: '@Url.Action("GetUnit", "Purchase_Requisition")',
-        data: { q: code, limit: 1, p: 1 },
-        method: 'GET',
-        success: function (response) {
-            if (response.data && response.data.length > 0) {
-                saveUnitData(response.data[0].code);
             }
+
+        });
+
+    }
+
+
+
+    // =========================================================
+    // SAVE UNIT + LOAD DOCTYPE
+    // =========================================================
+    function saveUnitData(code) {
+
+        console.log(
+            "💾 Saving UNIT:",
+            code
+        );
+
+
+        // -----------------------------------------------------
+        // Store UNIT
+        // -----------------------------------------------------
+        $('#hiddenUNIT').val(code);
+
+
+        // -----------------------------------------------------
+        // Enable DocType
+        // -----------------------------------------------------
+        $('#ListingDocType')
+            .prop('disabled', false);
+
+
+        // -----------------------------------------------------
+        // Clear previous DocType
+        // -----------------------------------------------------
+        $('#ListingDocType').val('');
+
+        $('#hiddenDOCTYPE').val('');
+
+        $('#hiddenDOCTYPETYPE').val('');
+
+
+        // -----------------------------------------------------
+        // Load DocType
+        // -----------------------------------------------------
+        loadDocType();
+
+
+        // -----------------------------------------------------
+        // Open DocType picker
+        // -----------------------------------------------------
+        setTimeout(function () {
+
+            $('#ListingDocType').click();
+
+        }, 300);
+
+    }
+
+
+
+    // =========================================================
+    // GET TYPE FOR SELECTED DOCTYPE
+    // =========================================================
+    function getDocTypeType(docType, callback) {
+
+        console.log("=================================");
+        console.log("📡 GET DOCTYPE TYPE");
+        console.log("DOCTYPE:", docType);
+        console.log("=================================");
+
+
+        if (!docType) {
+
+            $('#hiddenDOCTYPETYPE').val('');
+
+            callback('');
+
+            return;
         }
+
+
+        $.ajax({
+
+            url: '@Url.Action("GetDocType", "PacketTeaPurchaseEntry")',
+
+            type: 'GET',
+
+            data: {
+                q: docType,
+                limit: 10,
+                p: 1
+            },
+
+            dataType: 'json',
+
+            success: function (response) {
+
+                console.log(
+                    "GetDocType response:",
+                    response
+                );
+
+
+                var typeValue = '';
+
+
+                // -------------------------------------------------
+                // Find selected CODE
+                // -------------------------------------------------
+                if (
+                    response &&
+                    response.data &&
+                    response.data.length > 0
+                ) {
+
+                    var selected = null;
+
+
+                    for (
+                        var i = 0;
+                        i < response.data.length;
+                        i++
+                    ) {
+
+                        if (
+                            response.data[i].CODE &&
+                            response.data[i].CODE.toUpperCase() ===
+                            docType.toUpperCase()
+                        ) {
+
+                            selected = response.data[i];
+
+                            break;
+                        }
+
+                    }
+
+
+                    // If exact match wasn't found,
+                    // use first result
+                    if (!selected) {
+
+                        selected =
+                            response.data[0];
+
+                    }
+
+
+                    if (selected) {
+
+                        typeValue =
+                            selected.TYPE || '';
+
+                    }
+
+                }
+
+
+                console.log(
+                    "Selected TYPE:",
+                    typeValue
+                );
+
+
+                // -------------------------------------------------
+                // Store TYPE
+                // -------------------------------------------------
+                $('#hiddenDOCTYPETYPE')
+                    .val(typeValue);
+
+
+                console.log(
+                    "hiddenDOCTYPETYPE:",
+                    $('#hiddenDOCTYPETYPE').val()
+                );
+
+
+                // Return TYPE
+                callback(typeValue);
+
+            },
+
+
+            error: function (xhr) {
+
+                console.error(
+                    "❌ GetDocType TYPE ERROR:",
+                    xhr.status,
+                    xhr.responseText
+                );
+
+
+                $('#hiddenDOCTYPETYPE').val('');
+
+                callback('');
+
+            }
+
+        });
+
+    }
+
+
+
+    // =========================================================
+    // GO TO NEW ENTRY
+    // =========================================================
+    $(document).on('click', '.go-new', function (e) {
+
+        e.preventDefault();
+
+
+        // =====================================================
+        // READ UNIT
+        // =====================================================
+        var UNIT =
+            $('#hiddenUNIT').val();
+
+
+        // =====================================================
+        // READ DOCTYPE
+        // =====================================================
+        var DOCTYPE =
+            $('#hiddenDOCTYPE').val();
+
+
+        // =====================================================
+        // READ TYPE
+        // =====================================================
+        var DOCTYPE_TYPE =
+            $('#hiddenDOCTYPETYPE').val();
+
+
+        console.log("=================================");
+        console.log("GO NEW");
+        console.log("UNIT:", UNIT);
+        console.log("DOCTYPE:", DOCTYPE);
+        console.log("DOCTYPE TYPE:", DOCTYPE_TYPE);
+        console.log("=================================");
+
+
+        // =====================================================
+        // UNIT VALIDATION
+        // =====================================================
+        if (!UNIT) {
+
+            $.confirm({
+
+                title: "Required Unit",
+
+                type: "orange",
+
+                content:
+                    "<b>Please select Unit.</b>",
+
+                buttons: {
+
+                    OK: {
+                        btnClass: "btn-orange"
+                    }
+
+                }
+
+            });
+
+            return;
+        }
+
+
+
+        // =====================================================
+        // DOCTYPE VALIDATION
+        // =====================================================
+        if (!DOCTYPE) {
+
+            $.confirm({
+
+                title: "Required DocType",
+
+                type: "orange",
+
+                content:
+                    "<b>Please select DocType.</b>",
+
+                buttons: {
+
+                    OK: {
+                        btnClass: "btn-orange"
+                    }
+
+                }
+
+            });
+
+            return;
+        }
+
+
+
+        // =====================================================
+        // IMPORTANT:
+        //
+        // If TYPE is already available,
+        // redirect directly.
+        // =====================================================
+        if (DOCTYPE_TYPE) {
+
+            redirectToInsert(
+                UNIT,
+                DOCTYPE,
+                DOCTYPE_TYPE
+            );
+
+            return;
+        }
+
+
+
+        // =====================================================
+        // TYPE IS EMPTY
+        //
+        // Get TYPE now and ONLY THEN redirect.
+        //
+        // This removes the AJAX race-condition.
+        // =====================================================
+        console.log(
+            "⚠️ hiddenDOCTYPETYPE is empty."
+        );
+
+        console.log(
+            "📡 Getting TYPE before redirect..."
+        );
+
+
+        // Disable Go New while loading
+        $('.go-new').css({
+            'pointer-events': 'none',
+            'opacity': '0.5'
+        });
+
+
+        getDocTypeType(
+            DOCTYPE,
+            function (typeValue) {
+
+
+                // Re-enable button
+                $('.go-new').css({
+                    'pointer-events': '',
+                    'opacity': ''
+                });
+
+
+                // -------------------------------------------------
+                // TYPE NOT FOUND
+                // -------------------------------------------------
+                if (!typeValue) {
+
+                    $.confirm({
+
+                        title: "Invalid DocType",
+
+                        type: "orange",
+
+                        content:
+                            "<b>TYPE was not found for DocType: "
+                            + DOCTYPE +
+                            "</b>",
+
+                        buttons: {
+
+                            OK: {
+                                btnClass: "btn-orange"
+                            }
+
+                        }
+
+                    });
+
+                    return;
+                }
+
+
+                // -------------------------------------------------
+                // TYPE FOUND
+                // -------------------------------------------------
+                console.log(
+                    "✅ TYPE found before redirect:",
+                    typeValue
+                );
+
+
+                redirectToInsert(
+                    UNIT,
+                    DOCTYPE,
+                    typeValue
+                );
+
+            }
+        );
+
     });
-}
 
 
-// ✅ MAIN FIX HERE
-function saveUnitData(code, gloca) {
-    console.log('💾 Saving unit data:', code);
 
-    $('#hiddenUNIT').val(code);
+    // =========================================================
+    // REDIRECT TO INSERT / UPDATE
+    // =========================================================
+    function redirectToInsert(
+        UNIT,
+        DOCTYPE,
+        DOCTYPE_TYPE
+    ) {
 
-    // enable doctype
-    $('#ListingDocType').prop('disabled', false);
-
-    // clear
-    $('#ListingDocType').val('');
-    $('#hiddenDOCTYPE').val('');
-
-    // load picker
-    loadDocType(code);
-
-    // 🔥 IMPORTANT: OPEN DROPDOWN
-    setTimeout(() => {
-        $('#ListingDocType').click();
-    }, 300);
-}
+        console.log("=================================");
+        console.log("REDIRECT TO INSERT/UPDATE");
+        console.log("UNIT:", UNIT);
+        console.log("DOCTYPE:", DOCTYPE);
+        console.log("DOCTYPE TYPE:", DOCTYPE_TYPE);
+        console.log("=================================");
 
 
-// Go New
-$(document).on('click', '.go-new', function (e) {
-    e.preventDefault();
+        // Store one final time
+        $('#hiddenUNIT').val(UNIT);
 
-    var UNIT = $('#hiddenUNIT').val();
-    var DOCTYPE = $('#hiddenDOCTYPE').val();
+        $('#hiddenDOCTYPE').val(DOCTYPE);
 
-    if (!UNIT) {
-        alert("Please select Unit first");
-        return;
+        $('#hiddenDOCTYPETYPE')
+            .val(DOCTYPE_TYPE);
+
+
+        // Build URL
+        var url =
+            '@Url.Action("InsertOrUpdate", "PacketTeaPurchaseEntry")'
+            + '?unit='
+            + encodeURIComponent(UNIT)
+            + '&doctype='
+            + encodeURIComponent(DOCTYPE)
+            + '&doctypeType='
+            + encodeURIComponent(DOCTYPE_TYPE);
+
+
+        console.log(
+            "Final Redirect URL:",
+            url
+        );
+
+
+        // Redirect
+        window.location.href = url;
     }
 
-    if (!DOCTYPE) {
-        alert("Please select DocType first");
-        return;
-    }
-
-    window.location.href =
-        '@Url.Action("Purchase_RequisitionSaveOrUpate", "Purchase_Requisition")'
-        + '?unit=' + encodeURIComponent(UNIT)
-        + '&doctype=' + encodeURIComponent(DOCTYPE);
-});
-    </script>
-
-
+    </script>  
+    
+    
+    
     <script>
                 $(document).on('click', '#deleteBtn', function () {
 

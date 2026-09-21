@@ -34,14 +34,22 @@ namespace PacketTea.Controllers
                 var response = await Services.GetAsync<JObject>(string.Format("/api/Menu/GetAll?moduleCode={0}", Utility.SessionHelper.GetUser().ModuleCode)); // Utility.SessionHelper.GetUser().ModuleCode
                 if (response.IsSuccessStatusCode)
                 {
-                    var dbResp = await Services.GetAsync<CLASSIC_CONTROL>("/api/Invoice/boughtleafbcheck");
+                    //var dbResp = await Services.GetAsync<CLASSIC_CONTROL>("/api/Invoice/boughtleafbcheck");
+
+                    //if (dbResp?.Data == null)
+                    //{
+                    //    throw new Exception("PacketTea database mapping not found.");
+                    //}
+                    //var userinfo = Utility.SessionHelper.GetUser();
+                    var dbResp = await Services.GetAsync<CLASSIC_CONTROL>("/api/Inv_TrnPo/financedbcheckuniversal");
 
                     if (dbResp?.Data == null)
                     {
-                        throw new Exception("PacketTea database mapping not found.");
+                        throw new Exception("Finance schema not declare in control file .");
                     }
                     var userinfo = Utility.SessionHelper.GetUser();
-                    //userinfo.Factorydb = dbResp.Data.SCHEMA_FACTORY;
+                    userinfo.Financedb = dbResp.Data.SCHEMA_FINANCE;
+                    userinfo.Factorydb = dbResp.Data.SCHEMA_FACTORY;
 
                     //var expiresMin = Session["expiresMin"];
                     //var expiresTime = (TimeSpan)Session["expiresTime"];
@@ -69,20 +77,20 @@ namespace PacketTea.Controllers
                     var AEDVJson = (JsonConvert.SerializeObject(User_AEDV));
                     var _AEDV = JsonConvert.DeserializeObject<List<AEDV>>(AEDVJson);
                     Session["User_AEDV"] = _AEDV;
-                   
+
                     return View();
                 }
                 else
                 {
-                    TempData["toastrError"]= response.Message;
+                    TempData["toastrError"] = response.Message;
                 }
             }
             catch (TaskCanceledException)
             {
-                
+
                 //return RedirectToAction("Index");
             }
-            
+
             return RedirectToAction("Login", "Auth");
         }
 

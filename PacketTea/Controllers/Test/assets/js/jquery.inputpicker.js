@@ -920,9 +920,22 @@
             // Move to the first if not selected
 
             // Select first if not any selected
-            if ( wrapped_elements.length && _getWrappedListElements(true).length == 0){
-                wrapped_elements.first().addClass('inputpicker-active');
-                original.trigger('change_highlight.inputpicker');
+            //if ( wrapped_elements.length && _getWrappedListElements(true).length == 0){
+            //    wrapped_elements.first().addClass('inputpicker-active');
+            //    original.trigger('change_highlight.inputpicker');
+            //}
+            if (wrapped_elements.length && _getWrappedListElements(true).length == 0) {
+
+                if (offset > 0) {
+                    wrapped_elements.first().addClass('inputpicker-active');
+                    original.trigger('change_highlight.inputpicker');
+                }
+                else if (offset < 0) {
+                    wrapped_elements.last().addClass('inputpicker-active');
+                    original.trigger('change_highlight.inputpicker');
+                }
+
+                return;
             }
             else{
                 var tr_active = _getWrappedListElements(true);
@@ -2163,10 +2176,10 @@
     function _eventKeyDown(e) {
         var input = $(this);
         var _searchTerm = input.val();
-        if (_searchTerm.length >0 && _searchTerm.length < 3) {
-            return;
-            // Do nothing if it's less than 3 characters   
-        }
+        //if (_searchTerm.length >0 && _searchTerm.length < 3) {
+        //    return;
+        //    // Do nothing if it's less than 3 characters   
+        //}
         var wrapped_list = _getWrappedList();
         // // Close if the wrapped list is invisible
         // if(!_isWrappedListVisible()){
