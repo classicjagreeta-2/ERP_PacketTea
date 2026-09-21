@@ -610,8 +610,10 @@
 
     $('#MST_BLEND_NO').on('click focus', openMasterPicker);
 
+    // Master Blends are offered only for this sheet's own Unit + Blend Type (the pair
+    // chosen on the list page) -- not the session's logged-in unit.
     function loadMasterList(term) {
-        $.getJSON('@Url.Action("GetMasterBlendList", "FinalBlendEntry")', { blendType: $('#BLEND_TYPE').val(), search: term }, function (data) {
+        $.getJSON('@Url.Action("GetMasterBlendList", "FinalBlendEntry")', { blendType: $('#BLEND_TYPE').val(), unit: $('#UNIT_disp').val(), search: term }, function (data) {
             data = data || [];
             var html = '<table><thead><tr><th>Blend No</th><th>Doc No</th><th>Blend Date</th><th>Blend Qty</th><th>Remaining Qty</th></tr></thead><tbody>';
             data.forEach(function (m, i) {
@@ -632,7 +634,7 @@
         closeMasterPicker();
 
         function apply() {
-            $.get('@Url.Action("GetMasterBlendDetail", "FinalBlendEntry")', { docno: m.DOCNO, docdt: m.DOCDT }, function (r) {
+            $.get('@Url.Action("GetMasterBlendDetail", "FinalBlendEntry")', { docno: m.DOCNO, docdt: m.DOCDT, blendType: $('#BLEND_TYPE').val(), unit: $('#UNIT_disp').val() }, function (r) {
                 if (!r || !r.success || !r.head) { showAlert((r && r.message) || 'Unable to load that Master Blend.'); return; }
                 // Field names here match T_TEA_BLEND/T_TEA_BLEND_DET's actual C#
                 // property names (PascalCase, e.g. BLEND_NO) -- the controller
@@ -800,6 +802,7 @@
         pending.forEach(function (r) { if (need.indexOf(whKey(r)) === -1) need.push(whKey(r)); });
         var qs = $.param({
             blendType: $('#BLEND_TYPE').val(),
+            unit: $('#UNIT_disp').val(),
             fyShortFrom: $('#fyShortFrom').val(),
             fyShortTo: $('#fyShortTo').val(),
             whCodes: need

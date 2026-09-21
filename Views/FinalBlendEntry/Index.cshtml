@@ -175,7 +175,8 @@
                                     <input type="checkbox" class="row-check"
                                            value="@row.DOCNO"
                                            data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")"
-                                           data-blendtype="@row.BLEND_TYPE" />
+                                           data-blendtype="@row.BLEND_TYPE"
+                                           data-unit="@row.UNIT" />
                                 </td>
                                 <td style="text-align:center;">
                                     <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show more details" style="cursor:pointer;"></i>
@@ -185,7 +186,7 @@
                                 <td>@row.DOCNO</td>
                                 <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
                                 <td>
-                                    <a href="@Url.Action("InsertOrUpdate", "FinalBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
+                                    <a href="@Url.Action("InsertOrUpdate", "FinalBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE, unit = row.UNIT })">@row.BLEND_NO</a>
                                 </td>
                                 <td>@(row.BLEND_DATE.HasValue ? row.BLEND_DATE.Value.ToString("dd/MM/yyyy") : "")</td>
                                 <td>@row.MasterBlendNo</td>
@@ -203,7 +204,7 @@
                                 <td>@(row.CLOSED == "Y" ? "Yes" : "No")</td>
                             </tr>
                             <tr class="row-detail" id="@detailId" style="display:none;"
-                                data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
+                                data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE" data-unit="@row.UNIT">
                                 <td colspan="18"style="background:#f8f9fc;padding:10px 12px;">
                                     <!-- Just the item-lines sub-grid -- matches Attendance Entry's own
                                          "+" expand (straight to the detail table, no label/value summary
@@ -302,7 +303,8 @@
                 $.get('@Url.Action("GetRowDetail", "FinalBlendEntry")', {
                     docno: $detail.data('docno'),
                     docdt: $detail.data('docdt'),
-                    blendType: $detail.data('blendtype')
+                    blendType: $detail.data('blendtype'),
+                    unit: $detail.data('unit')
                 }).done(function (r) {
                     if (!r || !r.success) {
                         $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
@@ -414,7 +416,8 @@
                 window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
                     + '?docno=' + encodeURIComponent($c.val())
                     + '&docdt=' + encodeURIComponent($c.data('docdt'))
-                    + '&blendType=' + encodeURIComponent($c.data('blendtype'));
+                    + '&blendType=' + encodeURIComponent($c.data('blendtype'))
+                    + '&unit=' + encodeURIComponent($c.data('unit') || '');
             });
 
             $('#viewBtn').on('click', function () {
@@ -424,6 +427,7 @@
                     + '?docno=' + encodeURIComponent($c.val())
                     + '&docdt=' + encodeURIComponent($c.data('docdt'))
                     + '&blendType=' + encodeURIComponent($c.data('blendtype'))
+                    + '&unit=' + encodeURIComponent($c.data('unit') || '')
                     + '&view=true';
             });
 
@@ -436,6 +440,7 @@
                     .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
                     .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
                     .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
+                    .append($('<input>', { type: 'hidden', name: 'unit', value: $c.data('unit') || '' }))
                     .appendTo('body').submit();
             });
         });

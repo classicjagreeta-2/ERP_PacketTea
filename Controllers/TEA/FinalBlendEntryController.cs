@@ -46,6 +46,11 @@ namespace Finance.Controllers.TEA
             !string.IsNullOrEmpty(CurrentUnit) ? CurrentUnit :
             (blendType != null && BlendTypeUnit.TryGetValue(blendType, out var u) ? u : "");
 
+        // The Unit picked on the list page (the "New" row, or the row being edited/viewed/
+        // deleted) wins over the session's CurrentUnit, so every lookup on the entry screen
+        // is narrowed to the sheet's own unit rather than whichever unit the user logged into.
+        private string UnitOrCurrent(string unit) => !string.IsNullOrEmpty(unit) ? unit : CurrentUnit;
+
         // Packet/Blend Type codes (M_SALETYPE.CODE, TRN_TYPE='P') the current user has
         // rights to, per FACT_JSTIL2027.M_UNIT_USER_RIGHT -- identical rule to Master
         // Blend Entry's list (see MasterBlendEntryController.GetAllowedBlendTypesAsync
@@ -163,7 +168,7 @@ namespace Finance.Controllers.TEA
 
             // Edit mode
             var response = await Services.GetAsync<dynamic>(
-                $"/api/FinalBlend/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}");
+                $"/api/FinalBlend/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={UnitOrCurrent(unit)}");
 
             if (!response.IsSuccessStatusCode || response.Data == null)
             {
@@ -213,10 +218,10 @@ namespace Finance.Controllers.TEA
 
         // POST: FinalBlendEntry/Delete
         [HttpPost]
-        public async Task<ActionResult> Delete(string docno, string docdt, string blendType)
+        public async Task<ActionResult> Delete(string docno, string docdt, string blendType, string unit = "")
         {
             var response = await Services.PostAsync<dynamic>(
-                $"/api/FinalBlend/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}", new { });
+                $"/api/FinalBlend/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={UnitOrCurrent(unit)}", new { });
 
             TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");
@@ -226,10 +231,10 @@ namespace Finance.Controllers.TEA
 
         // GET: FinalBlendEntry/GetRowDetail (AJAX, Index list's "+" toggle)
         [HttpGet]
-        public async Task<ActionResult> GetRowDetail(string docno = "", string docdt = "", string blendType = "")
+        public async Task<ActionResult> GetRowDetail(string docno = "", string docdt = "", string blendType = "", string unit = "")
         {
             var r = await Services.GetAsync<dynamic>(
-                $"/api/FinalBlend/GetRowDetail?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}");
+                $"/api/FinalBlend/GetRowDetail?docno={docno}&docdt={docdt}&blendType={blendType}&unit={UnitOrCurrent(unit)}");
             if (!r.IsSuccessStatusCode || r.Data == null)
                 return JsonExact(new { success = false, message = r.Message ?? "Record not found." });
 
@@ -237,7 +242,7 @@ namespace Finance.Controllers.TEA
             obj["success"] = true;
 
             var detResp = await Services.GetAsync<dynamic>(
-                $"/api/FinalBlend/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}");
+                $"/api/FinalBlend/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={UnitOrCurrent(unit)}");
             List<T_TEA_BLEND_DET> details = null;
             if (detResp.IsSuccessStatusCode && detResp.Data != null)
             {
@@ -272,18 +277,18 @@ namespace Finance.Controllers.TEA
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetMasterBlendList(string blendType = "", string search = "")
+        public async Task<ActionResult> GetMasterBlendList(string blendType = "", string unit = "", string search = "")
         {
             var r = await Services.GetAsync<dynamic>(
-                $"/api/FinalBlend/GetMasterBlendList?blendType={blendType}&unit={CurrentUnit}&search={search}");
+                $"/api/FinalBlend/GetMasterBlendList?blendType={blendType}&unit={UnitOrCurrent(unit)}&search={search}");
             return JsonExactOrSessionExpired(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetMasterBlendDetail(string docno, string docdt)
+        public async Task<ActionResult> GetMasterBlendDetail(string docno, string docdt, string blendType = "", string unit = "")
         {
             var r = await Services.GetAsync<dynamic>(
-                $"/api/FinalBlend/GetMasterBlendDetail?docno={docno}&docdt={docdt}&unit={CurrentUnit}");
+                $"/api/FinalBlend/GetMasterBlendDetail?docno={docno}&docdt={docdt}&blendType={blendType}&unit={UnitOrCurrent(unit)}");
             if (!r.IsSuccessStatusCode || r.Data == null)
                 return JsonExact(new { success = false, message = r.Message ?? "Master Blend not found." });
 
@@ -349,11 +354,11 @@ namespace Finance.Controllers.TEA
         }
 
         [HttpGet]
-        public async Task<ActionResult> GenerateDoNo(string blendType, string fyShortFrom, string fyShortTo, string[] whCodes)
+        public async Task<ActionResult> GenerateDoNo(string blendType, string fyShortFrom, string fyShortTo, string[] whCodes, string unit = "")
         {
             var qs = string.Join("&", (whCodes ?? new string[0]).Select(w => "whCodes=" + Uri.EscapeDataString(w)));
             var r = await Services.GetAsync<dynamic>(
-                $"/api/TeaBlend/GenerateDoNo?blendType={blendType}&unit={CurrentUnit}&fyShortFrom={fyShortFrom}&fyShortTo={fyShortTo}&{qs}");
+                $"/api/TeaBlend/GenerateDoNo?blendType={blendType}&unit={UnitOrCurrent(unit)}&fyShortFrom={fyShortFrom}&fyShortTo={fyShortTo}&{qs}");
             return JsonExactOrSessionExpired(r);
         }
     }
