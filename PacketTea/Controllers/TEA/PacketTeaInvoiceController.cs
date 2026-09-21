@@ -265,10 +265,12 @@ namespace PacketTea.Controllers.PacketTea
                 string finalYear = DateTime.ParseExact(dates[1].Trim(), "dd/MM/yyyy", CultureInfo.InvariantCulture).ToString("yyyy-MM-dd");
                 foreach(var i in model.unblplt)
                 {
+                    i.PLCRCD = "01";
                     i.BLNO = string.Empty;
                 }
-                var response = await Services.FinancePostAsync<UNBLDATA>($"/api/Invoice/SaveOrUpdateAll?Stdt1={startYear}&Stdt2={finalYear}", model);
                 var json = JsonSerializer.Serialize(model);
+                var response = await Services.FinancePostAsync<UNBLDATA>($"/api/Invoice/SaveOrUpdateAll?Stdt1={startYear}&Stdt2={finalYear}", model);
+                
                 if (response.IsSuccessStatusCode)
                 {
                     return Json(new

@@ -17,7 +17,7 @@
         <td><a href="@Url.Action("InsertOrUpdate", "PacketTeaInvoice")?id=@urlEncodedId" style="@inlineStyle"> @(pt.blno)</a></td>
         <td>@DateHelper.DateFormatter(pt.bldt)</td>
         <td>@(string.IsNullOrEmpty(pt.pcd) || string.IsNullOrEmpty(pt.delivery) ? " " : pt.pcd + " - " + pt.delivery)</td>
-        <td>@pt.partY_ORDER_NO</td>
+        <td>@pt.ordeR_NO</td>
         <td>@(string.IsNullOrEmpty(pt.BillTo) || string.IsNullOrEmpty(pt.BillToPartyName) ? " " : pt.BillTo + " - " + pt.BillToPartyName)</td>
     </tr>
     <tr class="child-row" style="display:none; background:#f9f9f9;">

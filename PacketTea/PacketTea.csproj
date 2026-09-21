@@ -342,15 +342,19 @@
     <Compile Include="Models\PT\App_Start\RouteConfig.cs" />
     <Compile Include="Models\PT\BLEND_PACKING_DATA.cs" />
     <Compile Include="Models\PT\FreeDetail.cs" />
+    <Compile Include="Models\PT\GetByPageSubCodeDDL.cs" />
+    <Compile Include="Models\PT\GetUnit.cs" />
     <Compile Include="Models\PT\ItemStock.cs" />
     <Compile Include="Models\PT\ITMAS.cs" />
     <Compile Include="Models\PT\M_BH21.cs" />
     <Compile Include="Models\PT\M_Broker.cs" />
+    <Compile Include="Models\PT\M_CHESTSZ.cs" />
     <Compile Include="Models\PT\M_GRADE.cs" />
     <Compile Include="Models\PT\M_GSTMAS.cs" />
     <Compile Include="Models\PT\M_MARK.cs" />
     <Compile Include="Models\PT\M_PMAST.cs" />
     <Compile Include="Models\PT\M_SALESCENTRE.cs" />
+    <Compile Include="Models\PT\M_SALETYPE.cs" />
     <Compile Include="Models\PT\M_Transp.cs" />
     <Compile Include="Models\PT\PT_ALL_LIST.cs" />
     <Compile Include="Models\PT\SLMAS.cs" />
@@ -2663,7 +2667,6 @@
     <Content Include="Controllers\Test\assets\js\custom.js" />
     <Content Include="Controllers\Test\assets\js\jquery-3.7.1.min.js" />
     <Content Include="Controllers\Test\assets\js\jquery-ui.js" />
-    <Content Include="Controllers\Test\assets\js\jquery.inputpicker.css" />
     <Content Include="Controllers\Test\assets\js\jquery.inputpicker.js" />
     <Content Include="libraries\assetspo\css\font-awesome.min.css" />
     <Content Include="libraries\assetspo\css\jquery-ui.css" />
@@ -3918,6 +3921,8 @@
     <Content Include="libraries\assets\pages\x-editable\js\tm_editable.js" />
     <Content Include="libraries\assets\pages\x-editable\js\tm_validator.js" />
     <Content Include="libraries\assets\pages\x-editable\js\xeditable.js" />
+    <Content Include="libraries\MULTI_SELECT_DROPDOWN\jquery.inputpicker.css" />
+    <Content Include="libraries\MULTI_SELECT_DROPDOWN\jquery.inputpicker.js" />
     <Content Include="libraries\Scripts\bootstrap.bundle.js" />
     <Content Include="libraries\Scripts\bootstrap.bundle.min.js" />
     <Content Include="libraries\Scripts\bootstrap.esm.js" />

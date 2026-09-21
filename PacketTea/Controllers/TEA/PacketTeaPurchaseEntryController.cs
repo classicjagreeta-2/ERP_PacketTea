@@ -6,6 +6,7 @@ using PagedList;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
@@ -74,24 +75,78 @@ namespace PacketTea.Controllers.TEA
                 return View(pagedList);
             }
         }
-        public async Task<JsonResult> GetVendor(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        public async Task<JsonResult> GetVendor(
+       string q = "",
+       int limit = 25,
+       string fieldValue = "",
+       string fieldText = "",
+       string value = "",
+       int p = 1)
         {
             if (string.IsNullOrEmpty(q))
             {
                 q = value;
             }
 
-            var resp = await Services.GetAsync<PageValue<M_PMAST>>(
-                $"/api/TeaPurchase/GetVendor?search={q}&page={p}&pageSize={limit}"
+            string acode = "72000200";
+
+            var resp = await Services.FinanceGetAsync<PageModel<GetByPageSubCodeDDL>>(
+                $"/api/BH21/GetByPageSubCodeDDLWithGST" +
+                $"?Acode={acode}" +
+                $"&search={q}" +
+                $"&page={p}" +
+                $"&pageSize={limit}"
             );
 
-            var data = resp?.Data.results;
+            var data = resp?.Data?.value;
 
-            return Json(new
+            var firstVendor = data?.results?.FirstOrDefault();
+
+            if (firstVendor != null)
             {
-                data = data ?? new List<M_PMAST>(),
-                count = resp?.Data.rowCount ?? 0
-            }, JsonRequestBehavior.AllowGet);
+                System.Diagnostics.Debug.WriteLine(
+                    "========== VENDOR =========="
+                );
+
+                System.Diagnostics.Debug.WriteLine(
+                    "ACODE    = " + firstVendor.acode
+                );
+
+                System.Diagnostics.Debug.WriteLine(
+                    "ACNAME   = " + firstVendor.acname
+                );
+
+                System.Diagnostics.Debug.WriteLine(
+                    "SUBCODE  = " + firstVendor.subcode
+                );
+
+                System.Diagnostics.Debug.WriteLine(
+                    "GST      = " + firstVendor.gsT_NO
+                );
+
+                System.Diagnostics.Debug.WriteLine(
+                    "STATE    = " + firstVendor.statE_CODE
+                );
+
+                System.Diagnostics.Debug.WriteLine(
+                    "UNIT     = " + firstVendor.uniT_CODE
+                );
+
+                System.Diagnostics.Debug.WriteLine(
+                    "============================"
+                );
+            }
+
+            return Json(
+                new
+                {
+                    data = data?.results ??
+                           new List<GetByPageSubCodeDDL>(),
+
+                    count = data?.rowCount ?? 0
+                },
+                JsonRequestBehavior.AllowGet
+            );
         }
         public async Task<JsonResult> GetMark(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
@@ -108,6 +163,63 @@ namespace PacketTea.Controllers.TEA
                 count = resp?.Data.rowCount ?? 0
             }, JsonRequestBehavior.AllowGet);
         }
+        public async Task<JsonResult> GetSize(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        {
+            if (string.IsNullOrEmpty(q))
+            {
+                q = value;
+            }
+            var resp = await Services.GetAsync<PageValue<M_CHESTSZ>>($"/api/TeaPurchase/GetSize?search={q}&page={p}&pageSize={limit}");
+            var data = resp?.Data.results;
+
+            return Json(new
+            {
+                data = data ?? new List<M_CHESTSZ>(),
+                count = resp?.Data.rowCount ?? 0
+            }, JsonRequestBehavior.AllowGet);
+        }
+        //    public async Task<JsonResult> GetSize(
+        //string q = "",
+        //int limit = 50,
+        //string fieldValue = "",
+        //string fieldText = "",
+        //string value = "",
+        //int p = 1)
+        //    {
+        //        try
+        //        {
+        //            // Do NOT replace empty q with value.
+        //            // Empty q means: show all records.
+        //            q = q ?? "";
+
+        //            // Make sure page size is never 0
+        //            if (limit <= 0)
+        //            {
+        //                limit = 50;
+        //            }
+
+        //            var resp = await Services.GetAsync<PageValue<M_CHESTSZ>>(
+        //                $"/api/TeaPurchase/GetSize?search={Uri.EscapeDataString(q)}&page={p}&pageSize={limit}"
+        //            );
+
+        //            var data = resp?.Data?.results ?? new List<M_CHESTSZ>();
+
+        //            return Json(new
+        //            {
+        //                data = data,
+        //                count = resp?.Data?.rowCount ?? 0
+        //            }, JsonRequestBehavior.AllowGet);
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            return Json(new
+        //            {
+        //                data = new List<M_CHESTSZ>(),
+        //                count = 0,
+        //                error = ex.Message
+        //            }, JsonRequestBehavior.AllowGet);
+        //        }
+        //    }
         public async Task<JsonResult> GetGrade(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             if (string.IsNullOrEmpty(q))
@@ -123,6 +235,106 @@ namespace PacketTea.Controllers.TEA
                 count = resp?.Data.rowCount ?? 0
             }, JsonRequestBehavior.AllowGet);
         }
+
+        public async Task<JsonResult> GetUnit(
+            string q = "",
+            int limit = 10,
+            string fieldValue = "",
+            string fieldText = "",
+            string value = "",
+            int p = 1)
+        {
+            var resp = await Services.GetAsync<List<string>>(
+                "/api/TeaPurchase/GetUnit"
+            );
+
+            var all = resp?.Data ?? new List<string>();
+
+            // Search
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                q = q.Trim();
+
+                all = all
+                    .Where(x => !string.IsNullOrEmpty(x) &&
+                                x.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
+                    .ToList();
+            }
+
+            var count = all.Count;
+
+            // Paging
+            var data = all
+                .Skip((p - 1) * limit)
+                .Take(limit)
+                .Select(x => new
+                {
+                    code = x
+                })
+                .ToList();
+
+            return Json(new
+            {
+                data = data,
+                count = count
+            }, JsonRequestBehavior.AllowGet);
+        }
+        public async Task<JsonResult> GetDocType(
+            string q = "",
+            int limit = 10,
+            string fieldValue = "",
+            string fieldText = "",
+            string value = "",
+            int p = 1,
+            string unit = "")
+        {
+            if (string.IsNullOrEmpty(q))
+            {
+                q = value;
+            }
+
+            var resp = await Services.GetAsync<List<M_SALETYPE>>(
+                "/api/TeaPurchase/GetType?"
+            );
+
+            var all = resp?.Data ?? new List<M_SALETYPE>();
+
+            if (!string.IsNullOrEmpty(q))
+            {
+                q = q.ToLower();
+
+                all = all.Where(x =>
+                    (!string.IsNullOrEmpty(x.CODE) &&
+                     x.CODE.ToLower().Contains(q))
+                    ||
+                    (!string.IsNullOrEmpty(x.DESCN) &&
+                     x.DESCN.ToLower().Contains(q))
+                    ||
+                    (!string.IsNullOrEmpty(x.TYPE) &&
+                     x.TYPE.ToLower().Contains(q))
+                ).ToList();
+            }
+
+            var count = all.Count;
+
+            var data = all
+                .Skip((p - 1) * limit)
+                .Take(limit)
+                .Select(x => new
+                {
+                    CODE = x.CODE,
+                    DESCN = x.DESCN,
+                    TYPE = x.TYPE
+                })
+                .ToList();
+
+            return Json(new
+            {
+                data = data,
+                count = count
+            }, JsonRequestBehavior.AllowGet);
+        }
+
         public async Task<JsonResult> GetLocation(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             if (string.IsNullOrEmpty(q))
@@ -218,7 +430,7 @@ namespace PacketTea.Controllers.TEA
                 return Json(new List<T_TEA_PURCHASE>(), JsonRequestBehavior.AllowGet);
             }
         }
-        public async Task<ActionResult> InsertOrUpdate(string unit = "", string docdt = "", string docno = "")
+        public async Task<ActionResult> InsertOrUpdate(string unit = "", string docdt = "", string docno = "", string doctype = "", string doctypeType = "")
         {
             // ===============================
             // FINANCIAL YEAR SETUP
@@ -297,7 +509,8 @@ namespace PacketTea.Controllers.TEA
                 {
                     T_TEA_HEAD = new T_TEA_PURCHASE
                     {
-                        UNIT = unit
+                        UNIT = unit,
+                        PUR_TYPE = doctypeType
                     },
 
                     T_TEA_DETAIL = new List<T_TEA_PURCHASE>()
@@ -398,6 +611,145 @@ namespace PacketTea.Controllers.TEA
             return PartialView("_Product_Details", model);
         }
 
+
+        [HttpPost]
+        public async Task<ActionResult> SaveForm(PT_ALL_LIST model)
+        {
+            if (model == null || model.T_TEA_HEAD == null)
+            {
+                TempData["toastrError"] = "Invalid header data.";
+                return RedirectToAction("Index");
+            }
+
+            if (model.T_TEA_DETAIL == null || !model.T_TEA_DETAIL.Any())
+            {
+                TempData["toastrError"] = "Please add at least one detail row.";
+                return RedirectToAction("Index");
+            }
+
+            var head = model.T_TEA_HEAD;
+            var details = model.T_TEA_DETAIL;
+
+            var user = Utility.SessionHelper.GetUser();
+
+            int slNo = 1;
+
+            foreach (var detail in details)
+            {
+                //head.DOCNO = "000117";
+                head.GLOCA = "G00099";
+                detail.LOCA = user.Loca;
+                detail.PUR_TYPE = head.PUR_TYPE;
+                detail.GLOCA = head.GLOCA;
+                detail.UNIT = head.UNIT;
+              
+                detail.DOCDT = head.DOCDT;
+
+                head.PACK_DATE = DateTime.Now;
+
+                detail.PACK_DATE = head.PACK_DATE;
+                detail.SALE_CENTRE = head.SALE_CENTRE;
+                detail.BILLNO = head.BILLNO;
+                detail.BILLDT = head.BILLDT;
+
+                detail.EWAYBILLNO = head.EWAYBILLNO;
+                detail.EWAYBILLDT = head.EWAYBILLDT;
+
+                detail.PCODE = head.PCODE;
+                detail.VENDORNAME = head.VENDORNAME;
+                detail.TPT = head.TPT;
+                detail.VEH_NO = head.VEH_NO;
+                detail.PCODE_TYPE = detail.SZ_CODE;
+                detail.GRADE_TYPE = head.GRADE_TYPE;
+
+                detail.SEASON = head.SEASON;
+
+                detail.CONS_NO = head.CONS_NO;
+                detail.CONS_DT = head.CONS_DT;
+                detail.PROMPT_DATE = head.PROMPT_DATE;
+
+                detail.BROK_CODE = head.BROK_CODE;
+                detail.WAREHOUSE = head.WAREHOUSE;
+
+                detail.DO_NO = head.DO_NO;
+                detail.DO_DT = head.DO_DT;
+
+                detail.ALLOCATION = head.ALLOCATION;
+
+                detail.REMARKS = head.REMARKS;
+
+                detail.SALE_CENTRE = head.SALE_CENTRE;
+                detail.SALE_TYPE = head.SALE_TYPE;
+
+                detail.FLAVOUR = head.FLAVOUR;
+                detail.ORGANIC_TEA_TYPE = head.ORGANIC_TEA_TYPE;
+
+                // DETAIL
+                detail.SL_NO = slNo.ToString();
+
+                detail.AMOUNT =
+                    (detail.QTY ?? 0) * (detail.RATE ?? 0);
+
+                detail.TOT_AMT = detail.AMOUNT;
+
+                // AUDIT
+                detail.U_NAME = user.getUserName;
+                detail.O_USER = Environment.UserName;
+                detail.T_ID = Environment.MachineName;
+
+                detail.USER_NAME = user.getUserName;
+                detail.USER_ENTDT = DateTime.Now;
+
+                detail.U_ENTDT = DateTime.Now;
+
+                detail.U_NAMENEW = user.getUserName;
+                detail.U_ENTDTNEW = DateTime.Now;
+
+                detail.O_USERNEW = Environment.UserName;
+                detail.T_IDNEW = Environment.MachineName;
+
+                detail.USER_NAME_NEW = user.getUserName;
+                detail.USER_ENTDT_NEW = DateTime.Now;
+
+                detail.OS_USER = Environment.UserName;
+                detail.TERMINAL_ID = Environment.MachineName;
+
+                detail.LOCKEDBYUSERID = user.getUserName;
+                detail.LOCKEDUNTIL = DateTime.Now;
+
+                slNo++;
+            }
+
+            try
+            {
+                // Send ONLY details because API expects:
+                // IEnumerable<T_TEA_PURCHASE>
+                var json = JsonSerializer.Serialize(details);
+                var purchases = details;
+                var response = await Services.PostAsync<List<T_TEA_PURCHASE>>(
+        "/api/TeaPurchase/SaveOrUpdateAll",
+        details
+    );
+
+                if (response.IsSuccessStatusCode)
+                {
+                    TempData["toastrSuccess"] =
+                        $"{head.DOCNO} Packet Tea Purchase Entry Saved Successfully";
+                }
+                else
+                {
+                    TempData["toastrError"] =
+                        "Packet Tea Purchase Entry was not saved successfully.";
+                }
+            }
+            catch (Exception ex)
+            {
+                TempData["toastrError"] =
+                    "Error while saving Packet Tea Purchase Entry: " + ex.Message;
+            }
+
+            return RedirectToAction("Index");
+        }
 
     }
 }

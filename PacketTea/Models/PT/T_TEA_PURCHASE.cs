@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 
-namespace Finance.Models.PT
+namespace PacketTea.Models.PT
 {
     public class T_TEA_PURCHASE
     {
@@ -28,7 +28,7 @@ namespace Finance.Models.PT
 
         // ==================== NULLABLE ====================
 
-        public virtual decimal? ID { get; set; }
+        public virtual int? ID { get; set; } = 0;
 
         public virtual string BILLNO { get; set; }
         public virtual DateTime? BILLDT { get; set; }
