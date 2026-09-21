@@ -319,7 +319,7 @@
             function buildNewRow() {
                 var unitOpts = '<option value="">Select Unit</option>' +
                     UNIT_LIST.map(function (u) { return '<option value="' + esc(u.CODE) + '">' + esc(u.CODE) + ' - ' + esc(u.NAME || '') + '</option>'; }).join('');
-                var typeOpts = (typeKeys.length === 1 ? '' : '<option value="">Select Type</option>') +
+                var typeOpts = '<option value="">Select Type</option>' +
                     typeKeys.map(function (k) { return '<option value="' + esc(k) + '">' + esc(k) + ' - ' + esc(TYPES[k]) + '</option>'; }).join('');
                 return '<tr id="newUnitRow" class="new-entry-row">' +
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open @tranName"></i></td>' +

@@ -58,7 +58,8 @@
         tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
         tr.new-entry-row .go-new.is-ready { cursor: pointer; color: #404e68; }
         .list-filters { display: flex; justify-content: flex-end; gap: 10px; width: 100%; margin-bottom: 15px; flex-wrap: wrap; }
-        .list-filters select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .list-filters { align-items: center; }
+        .list-filters select { width: 220px !important; flex: 0 0 220px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -87,7 +88,7 @@
                 }
             </select>
             <div style="position: relative; width: 280px;">
-                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No / Party / Bill No / Date"
+                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search any column (Doc No, Party, Bill, Date, Amount)"
                        style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
                 <i class="fa fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333;"></i>
             </div>
@@ -189,6 +190,7 @@
         $(function () {
             var TRAN = '@tran';
             function f2(v) { v = parseFloat(v); return (isNaN(v) ? 0 : v).toFixed(2); }
+            function f3(v) { v = parseFloat(v); return (isNaN(v) ? 0 : v).toFixed(3); }
             function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
             function esc(s) { return $('<div>').text(s == null ? '' : s).html(); }
 
@@ -232,7 +234,7 @@
                             '<td>' + esc(d.ITCD) + (d.IN_ORA ? ' - ' + esc(d.IN_ORA) : '') + '</td>',
                             '<td>' + esc(d.MRP) + '</td>',
                             '<td class="num">' + f2(d.QTY) + '</td>',
-                            '<td class="num">' + f2(d.WEIGHT) + '</td>',
+                            '<td class="num">' + f3(d.WEIGHT) + '</td>',
                             '<td class="num">' + f2(d.RATE) + '</td>',
                             '<td class="num">' + f2(d.AMT) + '</td>',
                             '<td class="num">' + f2(d.DISCOUNT) + '</td>',
@@ -260,18 +262,24 @@
                 $btns.each(function () { anyClosed ? openDetail($(this)) : closeDetail($(this)); });
             });
 
-            // "New" row: Unit (USER_SCHEMA_LINK, else the Sales manufacturing units).
+            // "New" row, same as the Master Blend Entry list: Unit (USER_SCHEMA_LINK, else the
+            // Sales manufacturing units) + Type. The menu fixes the note type (VB6 trn_credit_note:
+            // Debit Note = TRAN_CODE 34, Credit Note = 35), so Type offers that one value, preselected.
             var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
+            var NOTE_TYPES = { '@tran': '@tranName' };
             function buildNewRow() {
                 var unitOpts = '<option value="">Select Unit</option>' +
                     UNIT_LIST.map(function (u) { return '<option value="' + esc(u.CODE) + '">' + esc(u.CODE) + ' - ' + esc(u.NAME || '') + '</option>'; }).join('');
+                var typeOpts = '<option value="">Select Type</option>' +
+                    Object.keys(NOTE_TYPES).map(function (k) { return '<option value="' + esc(k) + '">' + esc(NOTE_TYPES[k]) + ' (' + esc(k) + ')</option>'; }).join('');
                 return '<tr id="newUnitRow" class="new-entry-row">' +
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open @tranName"></i></td>' +
-                    '<td colspan="4"><select id="newRowUnit">' + unitOpts + '</select></td>' +
+                    '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
+                    '<td colspan="2"><select id="newRowType">' + typeOpts + '</select></td>' +
                     '<td colspan="4"></td>' +
                     '</tr>';
             }
-            function refreshGoNewState() { $('.go-new').toggleClass('is-ready', !!$('#newRowUnit').val()); }
+            function refreshGoNewState() { $('.go-new').toggleClass('is-ready', !!$('#newRowUnit').val() && !!$('#newRowType').val()); }
             $('#btnNew').on('click', function () {
                 if ($('#newUnitRow').length) return;
                 if (!UNIT_LIST.length) { alert('No unit is available to you in the Sales unit master.'); return; }
@@ -279,14 +287,17 @@
                 var cur = $('#unitFilter').val();
                 if (UNIT_LIST.length === 1) $('#newRowUnit').val(UNIT_LIST[0].CODE);
                 else if (cur) $('#newRowUnit').val(cur);
+                $('#newRowType').val(TRAN);
                 refreshGoNewState();
             });
-            $('#noteTable').on('change', '#newRowUnit', refreshGoNewState);
+            $('#noteTable').on('change', '#newRowUnit, #newRowType', refreshGoNewState);
             $('#noteTable').on('click', '.go-new', function () {
                 var unit = $('#newRowUnit').val();
                 if (!unit) { alert('Please select Unit first'); return; }
+                var type = $('#newRowType').val();
+                if (!type) { alert('Please select Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "PacketTeaNote")'
-                    + '?tran=' + TRAN + '&unit=' + encodeURIComponent(unit);
+                    + '?tran=' + encodeURIComponent(type) + '&unit=' + encodeURIComponent(unit);
             });
 
             function getSingleChecked(action) {

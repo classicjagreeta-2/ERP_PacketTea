@@ -297,6 +297,8 @@
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function r2(v) { v = num(v); var s = v < 0 ? -1 : 1; return s * Math.round(Math.abs(v) * 100 + 1e-7) / 100; }
     function f2(v) { return r2(v).toFixed(2); }
+    function rn(v, d) { v = num(v); var p = Math.pow(10, d), s = v < 0 ? -1 : 1; return s * Math.round(Math.abs(v) * p + 1e-7) / p; }
+    function fn(v, d) { return rn(v, d).toFixed(d); }
     function iso(d) { return d ? String(d).substring(0, 10) : ''; }
     function dmy(d) { d = iso(d); return d ? d.substring(8, 10) + '/' + d.substring(5, 7) + '/' + d.substring(0, 4) : ''; }
     function esc(s) { return $('<div>').text(s == null ? '' : s).html(); }
@@ -326,11 +328,13 @@
         showAlert((x && x.responseJSON && x.responseJSON.message) || fallback || 'Could not load data. Please try again.');
     }
 
-    // Numeric-only inputs: digits and one decimal point, at most 3 decimals, right aligned.
+    // Numeric-only inputs: digits and one decimal point, at most data-dec decimals
+    // (2 unless stated), right aligned. Typed and pasted/dropped text are both cleaned.
     function sanitizeNum(el) {
+        var dec = parseInt($(el).data('dec'), 10); if (isNaN(dec)) dec = 2;
         var v = el.value, clean = v.replace(/[^0-9.]/g, '');
         var dot = clean.indexOf('.');
-        if (dot >= 0) clean = clean.substring(0, dot + 1) + clean.substring(dot + 1).replace(/\./g, '').substring(0, 3);
+        if (dot >= 0) clean = clean.substring(0, dot + 1) + clean.substring(dot + 1).replace(/\./g, '').substring(0, dec);
         if (clean !== v) el.value = clean;
     }
     $(document).on('keypress', 'input.num:not([readonly])', function (e) {
@@ -338,7 +342,7 @@
         if (e.which < 32) return;
         if (!/[0-9.]/.test(ch) || (ch === '.' && this.value.indexOf('.') >= 0 && this.selectionStart === this.selectionEnd)) e.preventDefault();
     });
-    $(document).on('input paste', 'input.num:not([readonly])', function () { var el = this; setTimeout(function () { sanitizeNum(el); }, 0); });
+    $(document).on('input paste drop', 'input.num:not([readonly])', function () { var el = this; setTimeout(function () { sanitizeNum(el); }, 0); });
 
     // ---------------------------------------------------------------- state
     var FY_START = iso(H.FY_START), FY_END = iso(H.FY_END);
@@ -393,6 +397,9 @@
     // ---------------------------------------------------------------- lines
     var NUM_COLS = ['QTY', 'GROSS_WEIGHT', 'WEIGHT', 'RATE', 'DISC', 'DISCOUNT'];
     var CALC_COLS = ['AMT', 'CGST_AMT', 'SGST_AMT', 'IGST_AMT', 'GCESS_AMT', 'TCS_AMT', 'TOT_AMT'];
+    // Decimals keyed and shown per column; the API rounds to the same on save.
+    // Qty / Rate / money 2 dp; weights 3 dp as in VB6 (#0.000).
+    var DEC = { QTY: 2, RATE: 2, DISC: 2, DISCOUNT: 2, GROSS_WEIGHT: 3, WEIGHT: 3 };
 
     function newRow(src) {
         var r = $.extend({
@@ -402,6 +409,7 @@
             GCESS_RATE: 0, GCESS_AMT: 0, TCS_PER: 0, TCS_AMT: 0, TOT_AMT: 0, _manual: false
         }, src || {});
         NUM_COLS.concat(CALC_COLS, ['CGST_RATE', 'SGST_RATE', 'IGST_RATE', 'GCESS_RATE', 'TCS_PER']).forEach(function (k) { r[k] = num(r[k]); });
+        NUM_COLS.forEach(function (k) { r[k] = rn(r[k], DEC[k]); });   // e.g. a 4-dp bill rate becomes the 2-dp rate shown
         r.FLAG = String(r.FLAG || '2').trim() === '1' ? '1' : '2';
         r.MFGDT = iso(r.MFGDT);
         r._cid = ++seq;
@@ -461,7 +469,7 @@
             tr.append('<td><input type="text" class="f-batch" data-col="BATCHNO" maxlength="12" value="' + esc(r.BATCHNO) + '"' + (manual ? '' : ' readonly tabindex="-1"') + ' /></td>');
             tr.append('<td><select class="f-flag"' + (IS_VIEW ? ' disabled' : '') + '><option value="1"' + (r.FLAG === '1' ? ' selected' : '') + '>Qty</option><option value="2"' + (r.FLAG !== '1' ? ' selected' : '') + '>Net Wt</option></select></td>');
             NUM_COLS.forEach(function (c) {
-                tr.append('<td class="num"><input type="text" inputmode="decimal" class="num" data-col="' + c + '" value="' + f2(r[c]) + '"' + ro + ' /></td>');
+                tr.append('<td class="num"><input type="text" inputmode="decimal" class="num" data-col="' + c + '" data-dec="' + DEC[c] + '" value="' + fn(r[c], DEC[c]) + '"' + ro + ' /></td>');
             });
             tr.append('<td class="num c-AMT">' + f2(r.AMT) + '</td>');
             tr.append('<td><select class="f-gst"' + (IS_VIEW ? ' disabled' : '') + '>' + gstOptions(r.GST_CODE) + '</select></td>');
@@ -478,7 +486,7 @@
         var $tr = $('#gridBody tr[data-cid="' + r._cid + '"]');
         NUM_COLS.forEach(function (c) {
             var el = $tr.find('input[data-col="' + c + '"]')[0];
-            if (el && el !== skipEl) el.value = f2(r[c]);
+            if (el && el !== skipEl) el.value = fn(r[c], DEC[c]);
         });
         CALC_COLS.forEach(function (c) { $tr.find('.c-' + c).text(f2(r[c])); });
         refreshTotals();
@@ -487,7 +495,7 @@
     function refreshTotals() {
         var t = { QTY: 0, WEIGHT: 0, DISCOUNT: 0, AMT: 0, CGST_AMT: 0, SGST_AMT: 0, IGST_AMT: 0, GCESS_AMT: 0, TCS_AMT: 0, TOT_AMT: 0 };
         rows.forEach(function (r) { Object.keys(t).forEach(function (k) { t[k] += num(r[k]); }); });
-        $('#ftQty').text(f2(t.QTY)); $('#ftWt').text(f2(t.WEIGHT)); $('#ftDisc').text(f2(t.DISCOUNT)); $('#ftAmt').text(f2(t.AMT));
+        $('#ftQty').text(f2(t.QTY)); $('#ftWt').text(fn(t.WEIGHT, 3)); $('#ftDisc').text(f2(t.DISCOUNT)); $('#ftAmt').text(f2(t.AMT));
         $('#ftCgst').text(f2(t.CGST_AMT)); $('#ftSgst').text(f2(t.SGST_AMT)); $('#ftIgst').text(f2(t.IGST_AMT));
         $('#ftCess').text(f2(t.GCESS_AMT)); $('#ftTcs').text(f2(t.TCS_AMT)); $('#ftTot').text(f2(t.TOT_AMT));
         $('#TOTAL_disp').val(f2(t.TOT_AMT));
@@ -499,10 +507,10 @@
     $('#gridBody').on('change', 'input.num', function () {
         var r = findRow($(this).closest('tr').data('cid')); if (!r) return;
         var col = $(this).data('col');
-        r[col] = Math.round(num(this.value) * 1000) / 1000;
+        r[col] = rn(this.value, DEC[col]);
         if (col === 'DISCOUNT') r.DISC = 0;     // an amount keyed replaces the %
         calc(r);
-        this.value = f2(r[col]);
+        this.value = fn(r[col], DEC[col]);
         refreshRow(r, this);
     });
     $('#gridBody').on('focus', 'input.num:not([readonly])', function () { var el = this; setTimeout(function () { el.select(); }, 0); });
@@ -570,43 +578,61 @@
     function cell(v, kind) {
         if (kind === 'date') return '<td>' + esc(dmy(v)) + '</td>';
         if (kind === 'num') return '<td class="num">' + f2(v) + '</td>';
+        if (kind === 'num3') return '<td class="num">' + fn(v, 3) + '</td>';
         if (kind === 'int') return '<td class="num">' + esc(v) + '</td>';
         return '<td>' + esc(v) + '</td>';
     }
+    // The server filters on every displayed column and returns PAGE_SIZE rows a page;
+    // "Load more" fetches the next page of the same search.
+    var PAGE_SIZE = 100;
     function openPicker(key, onPick) {
-        active = { key: key, onPick: onPick, rows: [], idx: -1 };
+        active = { key: key, onPick: onPick, rows: [], idx: -1, term: '', page: 1 };
         $('#pickerTitle').text(PICKERS[key].title);
         $('#pickerSearch').val('');
         $('#pickerBody').html('<p class="picker-empty">Loading...</p>');
         $('#pickerOverlay, #genericPicker').fadeIn(120);
-        loadPicker('');
+        loadPicker('', 1);
         setTimeout(function () { $('#pickerSearch').focus(); }, 150);
     }
     function closePicker() { if (pickXhr) pickXhr.abort(); $('#pickerOverlay, #genericPicker').fadeOut(120); active = null; }
     $('#pickerClose').on('click', closePicker);
-    function loadPicker(term) {
+    function pickerRowHtml(cfg, row, i) {
+        return '<tr data-i="' + i + '"' + (i === active.idx ? ' class="is-active"' : '') + '>' + cfg.cols.map(function (c) { return cell(row[c[0]], c[2]); }).join('') + '</tr>';
+    }
+    function loadPicker(term, page) {
         var cfg = PICKERS[active.key], mySeq = ++pickSeq;
         if (pickXhr) pickXhr.abort();
-        pickXhr = $.getJSON(cfg.url, $.extend({ search: term }, cfg.params ? cfg.params() : {}))
+        $('#pickerMore').prop('disabled', true).text('Loading...');
+        pickXhr = $.getJSON(cfg.url, $.extend({ search: term, page: page }, cfg.params ? cfg.params() : {}))
             .done(function (data) {
                 if (!active || mySeq !== pickSeq) return;
                 data = data || [];
-                active.rows = data; active.idx = data.length ? 0 : -1;
-                var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th' + (c[2] === 'num' || c[2] === 'int' ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
-                data.forEach(function (row, i) {
-                    html += '<tr data-i="' + i + '"' + (i === 0 ? ' class="is-active"' : '') + '>' + cfg.cols.map(function (c) { return cell(row[c[0]], c[2]); }).join('') + '</tr>';
-                });
-                html += '</tbody></table>';
-                if (!data.length) html += '<p class="picker-empty">No matching records.</p>';
-                else if (data.length >= 100) html += '<p class="picker-empty">Showing the first 100 matches - type more to narrow the search.</p>';
-                $('#pickerBody').html(html);
+                var start = page === 1 ? 0 : active.rows.length;
+                active.term = term; active.page = page;
+                active.rows = page === 1 ? data : active.rows.concat(data);
+                if (page === 1) active.idx = data.length ? 0 : -1;
+                var more = data.length >= PAGE_SIZE
+                    ? '<p class="picker-empty" style="text-align:center;"><button type="button" id="pickerMore" class="btn-white" style="width:auto;padding:4px 14px;">Load more (showing ' + active.rows.length + ')</button></p>'
+                    : '';
+                if (page === 1) {
+                    var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th' + (c[2] === 'num' || c[2] === 'num3' || c[2] === 'int' ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+                    data.forEach(function (row, i) { html += pickerRowHtml(cfg, row, i); });
+                    html += '</tbody></table>';
+                    if (!data.length) html += '<p class="picker-empty">No matching records.</p>';
+                    $('#pickerBody').html(html + more);
+                } else {
+                    $('#pickerMore').closest('p').remove();
+                    $('#pickerBody tbody').append(data.map(function (row, i) { return pickerRowHtml(cfg, row, start + i); }).join(''));
+                    $('#pickerBody').append(more);
+                }
             })
             .fail(function (x) { if (mySeq === pickSeq) { closePicker(); failMsg(x); } });
     }
+    $('#pickerBody').on('click', '#pickerMore', function () { if (active) loadPicker(active.term, active.page + 1); });
     $('#pickerSearch').on('input', function () {
         var term = $(this).val();
         clearTimeout(pickTimer);
-        pickTimer = setTimeout(function () { if (active) loadPicker(term); }, 300);
+        pickTimer = setTimeout(function () { if (active) loadPicker(term, 1); }, 300);
     });
     function choose(i) {
         if (!active || i < 0 || i >= active.rows.length) return;
@@ -698,14 +724,16 @@
     }
     function closeItems() { $('#pickerOverlay, #itemPicker').fadeOut(120); }
     var ITEM_COLS = [['ITCD', 'Item'], ['IN_ORA', 'Name'], ['MRP', 'MRP'], ['MFGDT', 'Mfg Date', 'date'], ['BATCHNO', 'Batch'],
-                     ['QTY', 'Qty', 'num'], ['WEIGHT', 'Net Wt', 'num'], ['RATE', 'Rate', 'num'], ['AMT', 'Amount', 'num'], ['GST_CODE', 'GST']];
+                     ['QTY', 'Qty', 'num'], ['WEIGHT', 'Net Wt', 'num3'], ['RATE', 'Rate', 'num'], ['AMT', 'Amount', 'num'], ['GST_CODE', 'GST']];
+    // One bill's lines only (a few dozen at most), loaded once so ticks survive the
+    // filter; the find box matches every column exactly as displayed.
     function itemText(d) {
-        return ITEM_COLS.map(function (c) { return c[2] === 'date' ? dmy(d[c[0]]) : c[2] === 'num' ? f2(d[c[0]]) : (d[c[0]] || ''); }).join(' ').toUpperCase();
+        return ITEM_COLS.map(function (c) { return c[2] === 'date' ? dmy(d[c[0]]) : c[2] === 'num' ? f2(d[c[0]]) : c[2] === 'num3' ? fn(d[c[0]], 3) : (d[c[0]] || ''); }).join(' ').toUpperCase();
     }
     function renderItems() {
         var term = $.trim($('#itemSearch').val()).toUpperCase();
         var shown = items.filter(function (d) { return !term || itemText(d).indexOf(term) >= 0; });
-        var html = '<table><thead><tr><th style="width:30px;">SEL</th>' + ITEM_COLS.map(function (c) { return '<th' + (c[2] === 'num' ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+        var html = '<table><thead><tr><th style="width:30px;">SEL</th>' + ITEM_COLS.map(function (c) { return '<th' + (c[2] === 'num' || c[2] === 'num3' ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
         shown.forEach(function (d) {
             html += '<tr data-i="' + d._i + '"><td><input type="checkbox" class="itemChk"' + (d._sel ? ' checked' : '') + ' /></td>' +
                 ITEM_COLS.map(function (c) { return cell(d[c[0]], c[2]); }).join('') + '</tr>';

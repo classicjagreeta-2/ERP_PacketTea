@@ -159,7 +159,7 @@ namespace Finance.Controllers.TEA
         }
 
         // =====================================================================
-        // AJAX passthroughs (lookups search every displayed column)
+        // AJAX passthroughs (lookups search every displayed column, paged server-side)
         // =====================================================================
         private ActionResult JsonExact(object data) =>
             Content(JsonConvert.SerializeObject(data), "application/json");
@@ -187,14 +187,14 @@ namespace Finance.Controllers.TEA
 
         [HttpGet] public Task<ActionResult> GetRowDetail(string tran = "34", string unit = "", string docno = "", string docdt = "") =>
             Lookup($"GetRowDetail?tran={TranOf(tran)}&unit={E(unit)}&docno={E(docno)}&docdt={E(docdt)}");
-        [HttpGet] public Task<ActionResult> GetParty(string search = "", string unit = "", string code = "") =>
-            Lookup($"GetParty?search={E(search)}&unit={E(unit)}&code={E(code)}");
-        [HttpGet] public Task<ActionResult> GetBills(string pcd = "", string unit = "", bool lastYear = false, string search = "") =>
-            Lookup($"GetBills?pcd={E(pcd)}&unit={E(unit)}&lastYear={lastYear}&search={E(search)}");
+        [HttpGet] public Task<ActionResult> GetParty(string search = "", string unit = "", string code = "", int page = 1) =>
+            Lookup($"GetParty?search={E(search)}&unit={E(unit)}&code={E(code)}&page={page}");
+        [HttpGet] public Task<ActionResult> GetBills(string pcd = "", string unit = "", bool lastYear = false, string search = "", int page = 1) =>
+            Lookup($"GetBills?pcd={E(pcd)}&unit={E(unit)}&lastYear={lastYear}&search={E(search)}&page={page}");
         [HttpGet] public Task<ActionResult> GetBillLines(string blno = "", string bldt = "", string unit = "", bool lastYear = false) =>
             Lookup($"GetBillLines?blno={E(blno)}&bldt={E(bldt)}&unit={E(unit)}&lastYear={lastYear}");
-        [HttpGet] public Task<ActionResult> GetItem(string search = "", string unit = "", string code = "") =>
-            Lookup($"GetItem?search={E(search)}&unit={E(unit)}&code={E(code)}");
+        [HttpGet] public Task<ActionResult> GetItem(string search = "", string unit = "", string code = "", int page = 1) =>
+            Lookup($"GetItem?search={E(search)}&unit={E(unit)}&code={E(code)}&page={page}");
         [HttpGet] public Task<ActionResult> GetGstCodes(string unit = "") =>
             Lookup($"GetGstCodes?unit={E(unit)}");
     }
