@@ -313,7 +313,8 @@
                     unit: $detail.data('unit')
                 }).done(function (r) {
                     if (!r || !r.success) {
-                        $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
+                        $body.html('<tr><td colspan="13" style="text-align:center;color:#666;"></td></tr>')
+                             .find('td').text((r && r.message) || 'Unable to load item lines.');
                         return;
                     }
                     var items = r.details || [];
