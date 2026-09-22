@@ -240,6 +240,8 @@
     <Compile Include="Controllers\TEA\TeaSampleDrawEntryController.cs" />
     <Compile Include="Controllers\TEA\ProductionEntryController.cs" />
     <Compile Include="Controllers\TEA\MarketReturnController.cs" />
+    <Compile Include="Controllers\TEA\FullsStockActualController.cs" />
+    <Compile Include="Controllers\TEA\StockReportController.cs" />
     <Compile Include="Controllers\TEA\OtherInvoiceController.cs" />
     <Compile Include="Controllers\TEA\TeaPurchaseNoteController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaNoteController.cs" />
@@ -271,6 +273,8 @@
     <Compile Include="Models\PT\App_Start\RouteConfig.cs" />
     <Compile Include="Models\PT\BLEND_PACKING_DATA.cs" />
     <Compile Include="Models\PT\FreeDetail.cs" />
+    <Compile Include="Models\PT\FullsStockActual.cs" />
+    <Compile Include="Models\PT\StockReport.cs" />
     <Compile Include="Models\PT\ItemStock.cs" />
     <Compile Include="Models\PT\ITMAS.cs" />
     <Compile Include="Models\PT\M_BH21.cs" />
@@ -318,6 +322,8 @@
     <Compile Include="UnAuthorize.cs" />
     <Compile Include="Utility\AuthAttribute.cs" />
     <Compile Include="Utility\Cryptography.cs" />
+    <Compile Include="Utility\CrystalPdf.cs" />
+    <Compile Include="Utility\ClassicExcel.cs" />
     <Compile Include="Utility\DateHelper.cs" />
     <Compile Include="Utility\Helpers.cs" />
     <Compile Include="Utility\ActionFilterSessionCheck.cs" />
@@ -343,6 +349,10 @@
     <Content Include="bin\BouncyCastle.Cryptography.dll" />
     <Content Include="bin\BusinessLayer.jaguar.dll" />
     <Content Include="bin\ClosedXML.dll" />
+    <Content Include="CrystalReport\FullsStockActual.xsd" />
+    <Content Include="CrystalReport\StockReport.xsd" />
+    <Content Include="CrystalReport\FullsStockActual.rpt" />
+    <Content Include="CrystalReport\StockReport.rpt" />
     <Content Include="bin\ClosedXML.Parser.dll" />
     <Content Include="bin\CrystalDecisions.CrystalReports.Engine.dll" />
     <Content Include="bin\CrystalDecisions.ReportSource.dll" />

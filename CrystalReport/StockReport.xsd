@@ -1,0 +1,40 @@
+<?xml version="1.0" standalone="yes"?>
+<xs:schema id="ReportDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+  <xs:element name="ReportDataSet" msdata:IsDataSet="true" msdata:UseCurrentLocale="true">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="StockRpt">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="SEQ" type="xs:int" minOccurs="0" />
+              <xs:element name="ROW_KIND" type="xs:string" minOccurs="0" />
+              <xs:element name="ITCD" type="xs:string" minOccurs="0" />
+              <xs:element name="DESCN" type="xs:string" minOccurs="0" />
+              <xs:element name="TYP" type="xs:string" minOccurs="0" />
+              <xs:element name="TYPE_TEXT" type="xs:string" minOccurs="0" />
+              <xs:element name="OP" type="xs:decimal" minOccurs="0" />
+              <xs:element name="PROD" type="xs:decimal" minOccurs="0" />
+              <xs:element name="PURCH" type="xs:decimal" minOccurs="0" />
+              <xs:element name="MRETU" type="xs:decimal" minOccurs="0" />
+              <xs:element name="TOTAL_RECT" type="xs:decimal" minOccurs="0" />
+              <xs:element name="LOADOUT" type="xs:decimal" minOccurs="0" />
+              <xs:element name="CHECKIN" type="xs:decimal" minOccurs="0" />
+              <xs:element name="DIRECT_SALE" type="xs:decimal" minOccurs="0" />
+              <xs:element name="INDIRECT_SALE" type="xs:decimal" minOccurs="0" />
+              <xs:element name="TRANS" type="xs:decimal" minOccurs="0" />
+              <xs:element name="PURCH_RETU" type="xs:decimal" minOccurs="0" />
+              <xs:element name="TOTAL_DESP" type="xs:decimal" minOccurs="0" />
+              <xs:element name="ADJ" type="xs:decimal" minOccurs="0" />
+              <xs:element name="SAMPLE" type="xs:decimal" minOccurs="0" />
+              <xs:element name="BKG_LKG" type="xs:decimal" minOccurs="0" />
+              <xs:element name="SHT" type="xs:decimal" minOccurs="0" />
+              <xs:element name="TOTAL_OUT" type="xs:decimal" minOccurs="0" />
+              <xs:element name="CL_STOCK" type="xs:decimal" minOccurs="0" />
+              <xs:element name="GAIN_LOSS" type="xs:decimal" minOccurs="0" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

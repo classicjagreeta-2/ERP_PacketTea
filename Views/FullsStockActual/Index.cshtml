@@ -1,0 +1,206 @@
+@{
+    ViewBag.Title = "Fulls Stock Actual";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+<link rel="stylesheet" href="~/libraries/assetspo/css/jquery-ui.css">
+<link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+<link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+
+<style>
+    .form-col-30 { width: 30%; padding: 0 10px; margin-bottom: 10px; }
+    .fsa-radio { display: flex; gap: 22px; align-items: center; height: 30px; }
+    .fsa-radio label { font-weight: normal; margin: 0; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .fsa-radio input { margin: 0; }
+    .rpt-btn { background-color: #404E67; color: #fff; }
+    .rpt-btn[disabled] { opacity: .5; cursor: wait; }
+</style>
+
+<div class="general-container">
+    <div class="rpt-details">
+
+        <div class="header-content">
+            <div class="action-btns">
+                <ul>
+                    <li>
+                        <a href="@Url.Action("Index", "FullsStockActual", new { area = "" })">
+                            <i class="fa fa-times"></i> Cancel
+                        </a>
+                    </li>
+                    <li>
+                        <a href="@Url.Action("Index", "Menu", new { area = "" })">
+                            <i class="fa fa-arrow-left"></i> Close
+                        </a>
+                    </li>
+                    <li style="margin-left:auto">
+                        <label class="btn btn-inverse pull-right" style="margin:10px;">REPORT</label>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="header-details">
+            <div class="row">
+                <div class="col-md-3 align-items-center">
+                    <div class="header-left">
+                        <div class="title-heading">Fulls Stock Actual</div>
+                    </div>
+                </div>
+                <div class="col-md-9 d-flex justify-content-end align-items-center" style="padding-right:2.2%">
+                    <button type="button" id="graphics" class="btn btn-primary mr-2 rpt-btn" title="Crystal report (PDF)">Graphics</button>
+                    <button type="button" id="html" class="btn btn-primary mr-2 rpt-btn" title="Printable HTML page">HTML</button>
+                    <button type="button" id="text" class="btn btn-primary mr-2 rpt-btn" title="Character format (dot-matrix text)">Text</button>
+                    <button type="button" id="excel" class="btn btn-primary mr-2 rpt-btn">Excel</button>
+                </div>
+            </div>
+
+            <div class="accordion-container">
+                <div class="accordion">
+                    <div class="accordion-header">
+                        <span class="txt">Header</span>
+                    </div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+
+                            <div class="form-col-10">
+                                <label>As On <span>(*)</span></label>
+                                <div class="date-field">
+                                    <input type="text" id="AsOn" class="form-control asOn-date" autocomplete="off" />
+                                    <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
+                                         alt="calendar" class="calendar-icon" data-target="#AsOn" />
+                                </div>
+                            </div>
+
+                            <div class="form-col-20">
+                                <label>Unit <span>(*)</span></label>
+                                <select id="Unit" class="form-control">
+                                    <option value="All">All</option>
+                                </select>
+                            </div>
+
+                            <div class="form-col-30">
+                                <label>Order <span>(*)</span></label>
+                                <div class="fsa-radio">
+                                    <label><input type="radio" name="Order" value="CODE" /> Item Code</label>
+                                    <label><input type="radio" name="Order" value="NAME" /> Item Name</label>
+                                    <label><input type="radio" name="Order" value="CUSTOM" checked /> Custom</label>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <br />
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="~/Controllers/Test/assets/js/jquery-ui.js"></script>
+<script src="~/Controllers/Test/assets/js/custom.js"></script>
+<script>
+    $(function () {
+
+        function pad(n) { return String(n).padStart(2, "0"); }
+        var today = new Date();
+        $("#AsOn").val(pad(today.getDate()) + "/" + pad(today.getMonth() + 1) + "/" + today.getFullYear());
+
+        $("#AsOn").datepicker({
+            dateFormat: "dd/mm/yy",
+            changeMonth: true,
+            changeYear: true,
+            showAnim: "",
+            beforeShow: function () {
+                setTimeout(function () { $("#ui-datepicker-div").css("z-index", 99999); }, 0);
+            }
+        });
+        $(document).on("click", ".calendar-icon[data-target='#AsOn']", function () {
+            $("#AsOn").datepicker("show");
+        });
+
+        // VB6 Form_Load: "All" + manufacturing units.
+        $.getJSON('@Url.Action("GetUnits", "FullsStockActual")', function (list) {
+            $.each(list || [], function (_, u) {
+                $("#Unit").append($("<option>").val(u.CODE).text(u.CODE + " - " + u.NAME));
+            });
+        });
+
+        function alertBox(msg, type) {
+            $.confirm({
+                title: 'Fulls Stock Actual',
+                type: type || 'red',
+                content: msg,
+                typeAnimated: true,
+                buttons: { Okay: function () { } }
+            });
+        }
+
+        function params() {
+            var asOn = $.trim($("#AsOn").val());
+            if (!/^\d{2}\/\d{2}\/\d{4}$/.test(asOn)) {
+                alertBox("Please enter the As On date (dd/mm/yyyy).");
+                return null;
+            }
+            return $.param({
+                asOn: asOn,
+                unit: $("#Unit").val() || "All",
+                order: $("input[name='Order']:checked").val() || "CUSTOM"
+            });
+        }
+
+        $("#graphics").on("click", function () {
+            var q = params();
+            if (!q) return;
+            window.open('@Url.Action("Graphics", "FullsStockActual")?' + q, "_blank");
+        });
+
+        $("#html").on("click", function () {
+            var q = params();
+            if (!q) return;
+            window.open('@Url.Action("Html", "FullsStockActual")?' + q, "_blank");
+        });
+
+        // Text (VB6 Character Format): saved to C:\classic and opened; downloaded when it
+        // cannot be opened on this machine.
+        $("#text").on("click", function () {
+            var q = params();
+            if (!q) return;
+            var $btn = $(this).prop("disabled", true).text("Please wait...");
+            $.getJSON('@Url.Action("Text", "FullsStockActual")?' + q)
+                .done(function (r) {
+                    if (!r || !r.success) {
+                        alertBox((r && r.message) || "Unable to generate the report.");
+                        return;
+                    }
+                    if (!r.opened) {
+                        window.location.href = '@Url.Action("DownloadText", "FullsStockActual")?file=' + encodeURIComponent(r.fileName);
+                    }
+                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report generated: ") + r.fileName, "green");
+                })
+                .fail(function () { alertBox("Unable to generate the report."); })
+                .always(function () { $btn.prop("disabled", false).text("Text"); });
+        });
+
+        $("#excel").on("click", function () {
+            var q = params();
+            if (!q) return;
+            var $btn = $(this).prop("disabled", true).text("Please wait...");
+            // Server deletes earlier Excel files in C:\classic, saves the new one there and
+            // opens it in Excel; if it could not open it on this machine, download it.
+            $.getJSON('@Url.Action("Excel", "FullsStockActual")?' + q)
+                .done(function (r) {
+                    if (!r || !r.success) {
+                        alertBox((r && r.message) || "Unable to generate the report.");
+                        return;
+                    }
+                    if (!r.opened) {
+                        window.location.href = '@Url.Action("DownloadExcel", "FullsStockActual")?file=' + encodeURIComponent(r.fileName);
+                    }
+                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report generated: ") + r.fileName, "green");
+                })
+                .fail(function () { alertBox("Unable to generate the report."); })
+                .always(function () { $btn.prop("disabled", false).text("Excel"); });
+        });
+    });
+</script>

@@ -1,0 +1,282 @@
+@{
+    ViewBag.Title = "Stock Report";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+<link rel="stylesheet" href="~/libraries/assetspo/css/jquery-ui.css">
+<link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+<link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+<link rel="stylesheet" href="~/libraries/MULTI_SELECT_DROPDOWN/jquery.inputpicker.css">
+
+<style>
+    .form-col-30 { width: 30%; padding: 0 10px; margin-bottom: 10px; }
+    .form-col-40 { width: 40%; padding: 0 10px; margin-bottom: 10px; }
+    .sr-radio { display: flex; flex-wrap: wrap; gap: 22px; align-items: center; min-height: 30px; }
+    .sr-radio label { font-weight: normal; margin: 0; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .sr-radio input { margin: 0; }
+    .rpt-btn { background-color: #404E67; color: #fff; }
+    .rpt-btn[disabled] { opacity: .5; cursor: wait; }
+    .inputpicker-div.inputpicker-multiple { box-sizing: border-box !important; overflow: hidden !important; width: 100% !important; max-width: 100% !important; height: 30px !important; max-height: 30px !important; }
+    .inputpicker-multiple { white-space: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; }
+    .inputpicker-multiple ul { display: flex !important; flex-wrap: nowrap !important; white-space: nowrap !important; overflow: hidden !important; margin: 0; padding: 0; }
+    .inputpicker-multiple ul > li { flex: 0 0 auto; }
+</style>
+
+<div class="general-container">
+    <div class="rpt-details">
+
+        <div class="header-content">
+            <div class="action-btns">
+                <ul>
+                    <li>
+                        <a href="@Url.Action("Index", "StockReport", new { area = "" })">
+                            <i class="fa fa-times"></i> Cancel
+                        </a>
+                    </li>
+                    <li>
+                        <a href="@Url.Action("Index", "Menu", new { area = "" })">
+                            <i class="fa fa-arrow-left"></i> Close
+                        </a>
+                    </li>
+                    <li style="margin-left:auto">
+                        <label class="btn btn-inverse pull-right" style="margin:10px;">REPORT</label>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="header-details">
+            <div class="row">
+                <div class="col-md-3 align-items-center">
+                    <div class="header-left">
+                        <div class="title-heading">Stock Report</div>
+                    </div>
+                </div>
+                <div class="col-md-9 d-flex justify-content-end align-items-center" style="padding-right:2.2%">
+                    <button type="button" id="graphics" class="btn btn-primary mr-2 rpt-btn" title="Crystal report (PDF)">Graphics</button>
+                    <button type="button" id="html" class="btn btn-primary mr-2 rpt-btn" title="Printable HTML page">HTML</button>
+                    <button type="button" id="text" class="btn btn-primary mr-2 rpt-btn" title="Character format (dot-matrix text)">Text</button>
+                    <button type="button" id="excel" class="btn btn-primary mr-2 rpt-btn" title="VB6: Excel Upload">Excel</button>
+                </div>
+            </div>
+
+            <div class="accordion-container">
+                <div class="accordion">
+                    <div class="accordion-header">
+                        <span class="txt">Header</span>
+                    </div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+
+                            <div class="form-col-10">
+                                <label>From <span>(*)</span></label>
+                                <div class="date-field">
+                                    <input type="text" id="FromDate" class="form-control sr-date" autocomplete="off" />
+                                    <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
+                                         alt="calendar" class="calendar-icon sr-cal" data-target="#FromDate" />
+                                </div>
+                            </div>
+
+                            <div class="form-col-10">
+                                <label>To <span>(*)</span></label>
+                                <div class="date-field">
+                                    <input type="text" id="ToDate" class="form-control sr-date" autocomplete="off" />
+                                    <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
+                                         alt="calendar" class="calendar-icon sr-cal" data-target="#ToDate" />
+                                </div>
+                            </div>
+
+                            <div class="form-col-20">
+                                <label>Unit <span>(*)</span></label>
+                                <input type="text" id="Unit" class="form-control unit-code" autocomplete="off" />
+                            </div>
+
+                            <div class="form-col-40">
+                                <label>Quantity / Weight <span>(*)</span></label>
+                                <div class="sr-radio">
+                                    <label><input type="radio" name="QtyWt" value="QTY" /> Only Packet Quantity</label>
+                                    <label><input type="radio" name="QtyWt" value="WT" /> Only Net Weight</label>
+                                    <label><input type="radio" name="QtyWt" value="BOTH" checked /> Both</label>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="form-row">
+
+                            <div class="form-col-40">
+                                <label>Reporting Sequence <span>(*)</span></label>
+                                <div class="sr-radio">
+                                    <label><input type="radio" name="Order" value="CODE" checked /> Product Code</label>
+                                    <label><input type="radio" name="Order" value="NAME" /> Product Name</label>
+                                    <label title="Setting to be done in F.G. Master"><input type="radio" name="Order" value="CUSTOM" /> Custom</label>
+                                </div>
+                            </div>
+
+                            <div class="form-col-20">
+                                <label>Report Type</label>
+                                <div class="sr-radio">
+                                    <label><input type="radio" name="ReportType" value="ITEM" checked /> Item Wise</label>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <br />
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="~/Controllers/Test/assets/js/jquery-ui.js"></script>
+<script src="~/Controllers/Test/assets/js/custom.js"></script>
+<script src="~/libraries/MULTI_SELECT_DROPDOWN/jquery.inputpicker.js"></script>
+<script>
+    $(function () {
+
+        function pad(n) { return String(n).padStart(2, "0"); }
+        function fmt(d) { return pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear(); }
+
+        // VB6 Form_Load: From = start of the financial year, To = today.
+        var today = new Date();
+        var fyStart = new Date(today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1, 3, 1);
+        $("#FromDate").val(fmt(fyStart));
+        $("#ToDate").val(fmt(today));
+        $("#Unit").val("All");
+
+        $(".sr-date").datepicker({
+            dateFormat: "dd/mm/yy",
+            changeMonth: true,
+            changeYear: true,
+            showAnim: "",
+            beforeShow: function () {
+                setTimeout(function () { $("#ui-datepicker-div").css("z-index", 99999); }, 0);
+            }
+        });
+        $(document).on("click", ".sr-cal", function () {
+            $($(this).data("target")).datepicker("show");
+        });
+
+        // Unit: "All" or a checked list of manufacturing units (VB6 checkbox list).
+        var unitData = null;
+        $.getJSON('@Url.Action("GetUnits", "FullsStockActual")', function (list) {
+            unitData = $.map(list || [], function (u) { return { CODE: u.CODE, NAME: u.NAME }; });
+        });
+
+        $(document).on("click", ".unit-code", function () {
+            var $input = $(this);
+            $(".inputpicker-wrapped-list").remove();
+            if ($input.data("inputpicker")) {
+                $input.inputpicker("show");
+                return;
+            }
+            if (unitData === null) return;
+            if ($input.val() === "All") $input.val("");
+            $input.inputpicker({
+                data: unitData,
+                fields: [
+                    { name: "CODE", text: "CODE", width: "70px" },
+                    { name: "NAME", text: "NAME", width: "180px" }
+                ],
+                fieldValue: "CODE",
+                fieldText: "CODE",
+                multiple: true,
+                checkbox: true,
+                selectAll: true,
+                selectAllText: "All",
+                delimiter: ",",
+                filterOpen: true,
+                headShow: true,
+                autoOpen: true,
+                width: "auto",
+                height: "220px"
+            });
+        });
+
+        function alertBox(msg, type) {
+            $.confirm({
+                title: 'Stock Report',
+                type: type || 'red',
+                content: msg,
+                typeAnimated: true,
+                buttons: { Okay: function () { } }
+            });
+        }
+
+        function parseDate(s) {
+            var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
+            return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+        }
+
+        function params() {
+            var from = $.trim($("#FromDate").val()), to = $.trim($("#ToDate").val());
+            var f = parseDate(from), t = parseDate(to);
+            if (!f) { alertBox("Please enter the From date (dd/mm/yyyy)."); return null; }
+            if (!t) { alertBox("Please enter the To date (dd/mm/yyyy)."); return null; }
+            if (f > t) { alertBox("From date cannot be after To date."); return null; }
+            var units = $.trim($("#Unit").val() || "");
+            return $.param({
+                fromDate: from,
+                toDate: to,
+                units: units === "" ? "All" : units,
+                qtyWt: $("input[name='QtyWt']:checked").val() || "BOTH",
+                order: $("input[name='Order']:checked").val() || "CODE"
+            });
+        }
+
+        $("#graphics").on("click", function () {
+            var q = params();
+            if (!q) return;
+            window.open('@Url.Action("Graphics", "StockReport")?' + q, "_blank");
+        });
+
+        $("#html").on("click", function () {
+            var q = params();
+            if (!q) return;
+            window.open('@Url.Action("Html", "StockReport")?' + q, "_blank");
+        });
+
+        // Text (character format): saved to C:\classic and opened; downloaded when it
+        // cannot be opened on this machine.
+        $("#text").on("click", function () {
+            var q = params();
+            if (!q) return;
+            var $btn = $(this).prop("disabled", true).text("Please wait...");
+            $.getJSON('@Url.Action("Text", "StockReport")?' + q)
+                .done(function (r) {
+                    if (!r || !r.success) {
+                        alertBox((r && r.message) || "Unable to generate the report.");
+                        return;
+                    }
+                    if (!r.opened) {
+                        window.location.href = '@Url.Action("DownloadText", "StockReport")?file=' + encodeURIComponent(r.fileName);
+                    }
+                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report generated: ") + r.fileName, "green");
+                })
+                .fail(function () { alertBox("Unable to generate the report."); })
+                .always(function () { $btn.prop("disabled", false).text("Text"); });
+        });
+
+        $("#excel").on("click", function () {
+            var q = params();
+            if (!q) return;
+            var $btn = $(this).prop("disabled", true).text("Please wait...");
+            // Server deletes earlier Excel files in C:\classic, saves the new one there and
+            // opens it in Excel; if it could not open it on this machine, download it.
+            $.getJSON('@Url.Action("Excel", "StockReport")?' + q)
+                .done(function (r) {
+                    if (!r || !r.success) {
+                        alertBox((r && r.message) || "Unable to generate the report.");
+                        return;
+                    }
+                    if (!r.opened) {
+                        window.location.href = '@Url.Action("DownloadExcel", "StockReport")?file=' + encodeURIComponent(r.fileName);
+                    }
+                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report generated: ") + r.fileName, "green");
+                })
+                .fail(function () { alertBox("Unable to generate the report."); })
+                .always(function () { $btn.prop("disabled", false).text("Excel"); });
+        });
+    });
+</script>
