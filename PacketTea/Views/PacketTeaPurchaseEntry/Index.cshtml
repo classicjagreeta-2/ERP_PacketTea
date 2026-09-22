@@ -50,137 +50,138 @@
 
 
     <!-- first screen start -->
-    <div class="general-container">
+<div class="general-container">
 
 
-        <div class="action-btns">
-            <ul>
-                <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
-                <li>
-                    <button type="button"
-                            class="IdaddNewRecord btn btn-link">
-                        @*disabled="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false))">*@
-                        <i class="fa fa-plus"></i> New
-                    </button>
-                </li>
+    <div class="action-btns">
+        <ul>
+            <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
+            <li>
+                <button type="button"
+                        class="IdaddNewRecord btn btn-link">
+                    @*disabled="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false))">*@
+                    <i class="fa fa-plus"></i> New
+                </button>
+            </li>
 
-                <li>
-                    <a href="javascript:void(0)" id="editBtn"
-                       @*style="@( !((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false)
+            <li>
+                <a href="javascript:void(0)" id="editBtn"
+                   @*style="@( !((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false)
                         ? "pointer-events:none; opacity:0.5;"
                         : "" )"*@>
-                        <i class="fa fa-pencil"></i> Edit
-                    </a>
-                </li>
+                    <i class="fa fa-pencil"></i> Edit
+                </a>
+            </li>
 
-                <li>
-                    <a href="javascript:void(0)"
-                       id="deleteBtn"
-                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Delete ?? false)
+            <li>
+                <a href="javascript:void(0)"
+                   id="deleteBtn"
+                   style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Delete ?? false)
                         ? "pointer-events:none; opacity:0.5;"
                         : "")">
-                        <i class="fa fa-trash-o"></i> Delete
-                    </a>
-                </li>
+                    <i class="fa fa-trash-o"></i> Delete
+                </a>
+            </li>
 
-                <li><a href="#"><i class="fa fa-eye"></i> View</a></li>
-                <li><a href="#"><i class="fa fa-list-ul"></i> Lines</a></li>
-                <li style="margin-left:auto">
-                    <label class="btn btn-inverse pull-right" style="margin: 10px;">
-                        LIST
-                    </label>
-                </li>
-            </ul>
-        </div>
-        <!-- action btns end -->
+            <li><a href="#"><i class="fa fa-eye"></i> View</a></li>
+            <li><a href="#"><i class="fa fa-list-ul"></i> Lines</a></li>
+            <li style="margin-left:auto">
+                <label class="btn btn-inverse pull-right" style="margin: 10px;">
+                    LIST
+                </label>
+            </li>
+        </ul>
+    </div>
+    <!-- action btns end -->
 
-        <div class="title-heading">
-            Packet Tea Purchase
+    <div class="title-heading">
+        Packet Tea Purchase
 
-            <!-- Your existing search form - NO CHANGES to your current code -->
-            <!-- Just add id="searchIcon" to your search icon -->
+        <!-- Your existing search form - NO CHANGES to your current code -->
+        <!-- Just add id="searchIcon" to your search icon -->
 
-            <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
-                <div style="position: relative; width: 250px;">
-                    <input type="text"
-                           name="searchString"
-                           value="@ViewBag.CurrentFilter"
-                           placeholder="Search"
-                           style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
-                    <i class="fa fa-search"
-                       id="searchInput"
-                       style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333; cursor: pointer;"></i>
-                </div>
-            </div>
-        </div>
-        @using (Ajax.BeginForm("Index", "PacketTeaPurchaseEntry",
-                new AjaxOptions
-                {
-                    HttpMethod = "POST",
-                    InsertionMode = InsertionMode.InsertAfter,
-                    UpdateTargetId = "prContainer",
-                    OnSuccess = "onLoadSuccess"
-                },
-                new { id = "loadMoreForm" }))
-        {
-            <input type="hidden" id="page" name="page" value="@ViewBag.Page" />
-            <input type="hidden" name="pageSize" value="@ViewBag.PageSize" />
-            <input type="hidden" name="searchString" value="@ViewBag.CurrentFilter" />
-            <input type="hidden" name="sortOrder" value="@ViewBag.CurrentSort" />
-            <input type="hidden" id="hiddenUNIT" />
-            <input type="hidden" id="hiddenDOCTYPE" />
-            <input type="hidden" id="hiddenDOCTYPETYPE" />
-        }
-
-
-        <!-- Make sure your table has an ID -->
-        <table id="mainTable" class="table table-bordered">
-            <!-- your thead and tbody -->
-        </table>
-
-
-        <div class="table-responsive" id="tableScroll">
-            <table class="border main-table" id="poTable">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" id="selectAll" class="checkbox-round" /></th>
-                        <th></th>
-                        <th>Document No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Pur. Location <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Bill No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Prompt Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Vendor Code <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Broker <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Auction Sale No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Vehicle No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Transporter <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>CN No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>E-Way Bill No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Flavour Purchase <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-
-                        <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                    </tr>
-                </thead>
-                <tbody id="prContainer">
-                    @Html.Partial("_TeaPurchase_LIST", Model)
-                </tbody>
-
-            </table>
-            <div id="loading" style="display:none; text-align:center; padding:20px;">
-                Loading...
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-xs-12 col-sm-12 col-md-5">
-                <div class="dataTables_info" id="dom-jqry_info" role="status" aria-live="polite">
-                    Showing <span id="shownCount">@Model.LastItemOnPage</span> of @Model.TotalItemCount
-                </div>
+        <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
+            <div style="position: relative; width: 250px;">
+                <input type="text"
+                       name="searchString"
+                       value="@ViewBag.CurrentFilter"
+                       placeholder="Search"
+                       style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
+                <i class="fa fa-search"
+                   id="searchInput"
+                   style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333; cursor: pointer;"></i>
             </div>
         </div>
     </div>
+    @using (Ajax.BeginForm("Index", "PacketTeaPurchaseEntry",
+            new AjaxOptions
+            {
+                HttpMethod = "POST",
+                InsertionMode = InsertionMode.InsertAfter,
+                UpdateTargetId = "prContainer",
+                OnSuccess = "onLoadSuccess"
+            },
+            new { id = "loadMoreForm" }))
+    {
+        <input type="hidden" id="page" name="page" value="@ViewBag.Page" />
+        <input type="hidden" name="pageSize" value="@ViewBag.PageSize" />
+        <input type="hidden" name="searchString" value="@ViewBag.CurrentFilter" />
+        <input type="hidden" name="sortOrder" value="@ViewBag.CurrentSort" />
+        <input type="hidden" id="hiddenUNIT" />
+        <input type="hidden" id="hiddenDOCTYPE" />
+        <input type="hidden" id="hiddenDOCTYPETYPE" />
+        <input type="hidden" id="hiddenGLOCA" />
+    }
+
+
+    <!-- Make sure your table has an ID -->
+    <table id="mainTable" class="table table-bordered">
+        <!-- your thead and tbody -->
+    </table>
+
+
+    <div class="table-responsive" id="tableScroll">
+        <table class="border main-table" id="poTable">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll" class="checkbox-round" /></th>
+                    <th></th>
+                    <th>Document No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Pur. Location <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Bill No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Prompt Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Vendor Code <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Broker <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Auction Sale No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Vehicle No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Transporter <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>CN No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>E-Way Bill No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Flavour Purchase <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+
+                    <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                </tr>
+            </thead>
+            <tbody id="prContainer">
+                @Html.Partial("_TeaPurchase_LIST", Model)
+            </tbody>
+
+        </table>
+        <div id="loading" style="display:none; text-align:center; padding:20px;">
+            Loading...
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xs-12 col-sm-12 col-md-5">
+            <div class="dataTables_info" id="dom-jqry_info" role="status" aria-live="polite">
+                Showing <span id="shownCount">@Model.LastItemOnPage</span> of @Model.TotalItemCount
+            </div>
+        </div>
+    </div>
+</div>
     <script src="~/libraries/assetspo/js/jquery-ui.js"></script>
     <script src="~/libraries/assetspo/js/custom.js"></script>
 
@@ -783,6 +784,7 @@
 
         // Clear hidden values
         $('#hiddenUNIT').val('');
+        $('#hiddenGLOCA').val('');
         $('#hiddenDOCTYPE').val('');
         $('#hiddenDOCTYPETYPE').val('');
 
@@ -811,149 +813,100 @@
     // =========================================================
     // UNIT PICKER
     // =========================================================
-    function initUnitPicker() {
+     function initUnitPicker() {
+      console.log('🔧 Initializing inputpicker...');
 
-        var $input = $('#ListingUnitCode');
+      $('#ListingUnitCode').inputpicker({
+          url: '@Url.Action("GetUnit", "PacketTeaPurchaseEntry")',
+          fields: [
+              { name: 'CODE', text: 'CODE' },
+              { name: 'NAME', text: 'NAME' }
+          ],
+          fieldText: 'CODE',
+          fieldValue: 'CODE',
+          headShow: true,
+          autoOpen: true,
+          pagination: true,
+          pageField: 'p',
+          pageLimitField: 'limit',
+          pageLimit: 10,
+          pageCountField: 'count',
+          width: '140px',
+          urlDelay: 1
+      });
 
+      console.log('✅ Inputpicker initialized');
 
-        // =====================================================
-        // INITIALIZE UNIT INPUTPICKER
-        // =====================================================
-        $input.inputpicker({
+      // ✅ Method 1: Try inputpicker.select event
+      $('#ListingUnitCode').on('inputpicker.select', function (e, item) {
+          console.log('✅ inputpicker.select event fired!', item);
+          if (item && item.CODE) {
+              saveUnitData(item.CODE, item.GLOCA);
+          }
+      });
 
-            url: '@Url.Action("GetUnit", "PacketTeaPurchaseEntry")',
+      // ✅ Method 2: Listen to the 'change' event
+      $('#ListingUnitCode').on('change', function () {
+          var selectedCode = $(this).val();
+          console.log('✅ change event fired, selectedCode:', selectedCode);
 
-            fields: [
-                { name: 'code', text: 'CODE' }
-            ],
+          if (selectedCode) {
+              // Fetch the full unit data including GLOCA
+              fetchUnitByCode(selectedCode);
+          }
+      });
 
-            fieldText: 'code',
+      // ✅ Method 3: Backup - Listen to clicks on dropdown items
+      setTimeout(function() {
+          $(document).off('click.unitpicker'); // Remove old listeners
 
-            fieldValue: 'code',
+          $(document).on('click.unitpicker', '.inputpicker-list li, .inputpicker-item', function() {
+              console.log('✅ Dropdown item clicked (backup method)');
 
-            headShow: true,
+              // Get the clicked text
+              var selectedText = $(this).text().trim();
+              console.log('   Clicked text:', selectedText);
 
-            autoOpen: true,
+              // Extract CODE (first word before space/dash)
+              var code = selectedText.split(/[\s-]/)[0].trim();
+              console.log('   Extracted CODE:', code);
 
-            pagination: true,
+              if (code) {
+                  // Small delay to let inputpicker set its value
+                  setTimeout(function() {
+                      fetchUnitByCode(code);
+                  }, 100);
+              }
+          });
 
-            pageField: 'p',
+          console.log('✅ Backup click listener attached');
+      }, 500);
+  }
 
-            pageLimitField: 'limit',
+  // Fetch unit by CODE to get GLOCA
+  function fetchUnitByCode(code) {
+      console.log('🔍 Fetching unit data for CODE:', code);
 
-            pageLimit: 10,
+      $.ajax({
+          url: '@Url.Action("GetUnit", "PacketTeaPurchaseEntry")',
+          data: { q: code, limit: 1, p: 1 },
+          method: 'GET',
+          success: function(response) {
+              console.log('✅ API response:', response);
 
-            pageCountField: 'count',
-
-            width: '140px',
-
-            urlDelay: 1
-        });
-
-
-        // =====================================================
-        // UNIT SELECT
-        // =====================================================
-        $input
-            .off('inputpicker.select')
-            .on('inputpicker.select', function (e, item) {
-
-                console.log(
-                    "📌 UNIT SELECTED:",
-                    item
-                );
-
-
-                if (item && item.code) {
-
-                    saveUnitData(item.code);
-
-                }
-
-            });
-
-
-        // =====================================================
-        // UNIT CHANGE
-        // =====================================================
-        $input
-            .off('change')
-            .on('change', function () {
-
-                var selectedCode = $(this).val();
-
-                console.log(
-                    "📌 UNIT CHANGE:",
-                    selectedCode
-                );
-
-
-                if (selectedCode) {
-
-                    fetchUnitByCode(selectedCode);
-
-                }
-
-            });
-
-    }
-
-
-
-    // =========================================================
-    // FETCH UNIT BY CODE
-    // =========================================================
-    function fetchUnitByCode(code) {
-
-        $.ajax({
-
-            url: '@Url.Action("GetUnit", "PacketTeaPurchaseEntry")',
-
-            type: 'GET',
-
-            data: {
-                q: code,
-                limit: 1,
-                p: 1
-            },
-
-            dataType: 'json',
-
-            success: function (response) {
-
-                console.log(
-                    "GetUnit response:",
-                    response
-                );
-
-
-                if (
-                    response &&
-                    response.data &&
-                    response.data.length > 0
-                ) {
-
-                    saveUnitData(
-                        response.data[0].code
-                    );
-
-                }
-
-            },
-
-            error: function (xhr) {
-
-                console.error(
-                    "GetUnit ERROR:",
-                    xhr.status,
-                    xhr.responseText
-                );
-
-            }
-
-        });
-
-    }
+              if (response.data && response.data.length > 0) {
+                  var unit = response.data[0];
+                  console.log('   Found unit:', unit);
+                  saveUnitData(unit.CODE, unit.GLOCA);
+              } else {
+                  console.warn('⚠️ No unit found for CODE:', code);
+              }
+          },
+          error: function(err) {
+              console.error('❌ Error fetching unit:', err);
+          }
+      });
+  }
 
 
 
@@ -1157,251 +1110,369 @@
     // =========================================================
     // GO TO NEW ENTRY
     // =========================================================
-    $(document).on('click', '.go-new', function (e) {
+$(document).on('click', '.go-new', function (e) {
 
-        e.preventDefault();
+    e.preventDefault();
+    e.stopPropagation();
 
+    // =====================================================
+    // READ UNIT
+    // =====================================================
+    var UNIT = $('#hiddenUNIT').val();
 
-        // =====================================================
-        // READ UNIT
-        // =====================================================
-        var UNIT =
-            $('#hiddenUNIT').val();
+    // =====================================================
+    // READ DOCTYPE
+    // =====================================================
+    var DOCTYPE = $('#hiddenDOCTYPE').val();
 
+    // =====================================================
+    // READ DOCTYPE TYPE
+    // =====================================================
+    var DOCTYPE_TYPE = $('#hiddenDOCTYPETYPE').val();
 
-        // =====================================================
-        // READ DOCTYPE
-        // =====================================================
-        var DOCTYPE =
-            $('#hiddenDOCTYPE').val();
-
-
-        // =====================================================
-        // READ TYPE
-        // =====================================================
-        var DOCTYPE_TYPE =
-            $('#hiddenDOCTYPETYPE').val();
-
-
-        console.log("=================================");
-        console.log("GO NEW");
-        console.log("UNIT:", UNIT);
-        console.log("DOCTYPE:", DOCTYPE);
-        console.log("DOCTYPE TYPE:", DOCTYPE_TYPE);
-        console.log("=================================");
+    console.log("=================================");
+    console.log("GO NEW");
+    console.log("UNIT:", UNIT);
+    console.log("DOCTYPE:", DOCTYPE);
+    console.log("DOCTYPE TYPE:", DOCTYPE_TYPE);
+    console.log("=================================");
 
 
-        // =====================================================
-        // UNIT VALIDATION
-        // =====================================================
-        if (!UNIT) {
+    // =====================================================
+    // UNIT VALIDATION
+    // =====================================================
+    if (!UNIT) {
 
-            $.confirm({
-
-                title: "Required Unit",
-
-                type: "orange",
-
-                content:
-                    "<b>Please select Unit.</b>",
-
-                buttons: {
-
-                    OK: {
-                        btnClass: "btn-orange"
-                    }
-
+        $.confirm({
+            title: "Required Unit",
+            type: "orange",
+            content: "<b>Please select Unit.</b>",
+            buttons: {
+                OK: {
+                    btnClass: "btn-orange"
                 }
-
-            });
-
-            return;
-        }
-
-
-
-        // =====================================================
-        // DOCTYPE VALIDATION
-        // =====================================================
-        if (!DOCTYPE) {
-
-            $.confirm({
-
-                title: "Required DocType",
-
-                type: "orange",
-
-                content:
-                    "<b>Please select DocType.</b>",
-
-                buttons: {
-
-                    OK: {
-                        btnClass: "btn-orange"
-                    }
-
-                }
-
-            });
-
-            return;
-        }
-
-
-
-        // =====================================================
-        // IMPORTANT:
-        //
-        // If TYPE is already available,
-        // redirect directly.
-        // =====================================================
-        if (DOCTYPE_TYPE) {
-
-            redirectToInsert(
-                UNIT,
-                DOCTYPE,
-                DOCTYPE_TYPE
-            );
-
-            return;
-        }
-
-
-
-        // =====================================================
-        // TYPE IS EMPTY
-        //
-        // Get TYPE now and ONLY THEN redirect.
-        //
-        // This removes the AJAX race-condition.
-        // =====================================================
-        console.log(
-            "⚠️ hiddenDOCTYPETYPE is empty."
-        );
-
-        console.log(
-            "📡 Getting TYPE before redirect..."
-        );
-
-
-        // Disable Go New while loading
-        $('.go-new').css({
-            'pointer-events': 'none',
-            'opacity': '0.5'
+            }
         });
 
-
-        getDocTypeType(
-            DOCTYPE,
-            function (typeValue) {
+        return;
+    }
 
 
-                // Re-enable button
-                $('.go-new').css({
-                    'pointer-events': '',
-                    'opacity': ''
-                });
+    // =====================================================
+    // DOCTYPE VALIDATION
+    // =====================================================
+    if (!DOCTYPE) {
+
+        $.confirm({
+            title: "Required DocType",
+            type: "orange",
+            content: "<b>Please select DocType.</b>",
+            buttons: {
+                OK: {
+                    btnClass: "btn-orange"
+                }
+            }
+        });
+
+        return;
+    }
 
 
-                // -------------------------------------------------
-                // TYPE NOT FOUND
-                // -------------------------------------------------
-                if (!typeValue) {
+    // =====================================================
+    // DISABLE GO NEW WHILE PROCESSING
+    // =====================================================
+    $('.go-new').css({
+        'pointer-events': 'none',
+        'opacity': '0.5'
+    });
 
-                    $.confirm({
 
-                        title: "Invalid DocType",
+    // =====================================================
+    // STEP 1:
+    // GET GLOCA FOR SELECTED UNIT
+    //
+    // We are NOT changing Unit picker.
+    // We simply fetch the selected Unit again here.
+    // =====================================================
+    $.ajax({
 
-                        type: "orange",
+        url: '@Url.Action("GetUnit", "PacketTeaPurchaseEntry")',
 
-                        content:
-                            "<b>TYPE was not found for DocType: "
-                            + DOCTYPE +
-                            "</b>",
+        type: 'GET',
 
-                        buttons: {
+        data: {
+            q: UNIT,
+            limit: 10,
+            p: 1
+        },
 
-                            OK: {
-                                btnClass: "btn-orange"
-                            }
+        dataType: 'json',
 
-                        }
+        success: function (response) {
 
-                    });
+            console.log("=================================");
+            console.log("GET UNIT FOR GLOCA");
+            console.log("Response:", response);
+            console.log("=================================");
 
-                    return;
+
+            var GLOCA = '';
+
+
+            // =================================================
+            // FIND EXACT UNIT
+            // =================================================
+            if (
+                response &&
+                response.data &&
+                response.data.length > 0
+            ) {
+
+                var selectedUnit = null;
+
+                for (
+                    var i = 0;
+                    i < response.data.length;
+                    i++
+                ) {
+
+                    var currentUnit = response.data[i];
+
+                    // Support CODE or code
+                    var currentCode =
+                        currentUnit.CODE ||
+                        currentUnit.code ||
+                        '';
+
+                    if (
+                        currentCode.toUpperCase() ===
+                        UNIT.toUpperCase()
+                    ) {
+
+                        selectedUnit = currentUnit;
+                        break;
+                    }
                 }
 
 
-                // -------------------------------------------------
-                // TYPE FOUND
-                // -------------------------------------------------
-                console.log(
-                    "✅ TYPE found before redirect:",
-                    typeValue
-                );
+                // =================================================
+                // GLOCA FOUND
+                // =================================================
+                if (selectedUnit) {
 
+                    GLOCA =
+                        selectedUnit.GLOCA ||
+                        selectedUnit.gloca ||
+                        '';
+
+                }
+            }
+
+
+            console.log("UNIT:", UNIT);
+            console.log("GLOCA:", GLOCA);
+
+
+            // =================================================
+            // STORE GLOCA
+            // =================================================
+            $('#hiddenGLOCA').val(GLOCA);
+
+
+            // =================================================
+            // STEP 2:
+            // IF TYPE ALREADY EXISTS
+            // REDIRECT DIRECTLY
+            // =================================================
+            if (DOCTYPE_TYPE) {
 
                 redirectToInsert(
                     UNIT,
+                    GLOCA,
                     DOCTYPE,
-                    typeValue
+                    DOCTYPE_TYPE
                 );
 
+                return;
             }
-        );
+
+
+            // =================================================
+            // STEP 3:
+            // TYPE NOT AVAILABLE
+            // GET TYPE FIRST
+            // =================================================
+            console.log(
+                "⚠️ hiddenDOCTYPETYPE is empty."
+            );
+
+            console.log(
+                "📡 Getting TYPE before redirect..."
+            );
+
+
+            getDocTypeType(
+                DOCTYPE,
+                function (typeValue) {
+
+                    // =============================================
+                    // TYPE NOT FOUND
+                    // =============================================
+                    if (!typeValue) {
+
+                        $('.go-new').css({
+                            'pointer-events': '',
+                            'opacity': ''
+                        });
+
+                        $.confirm({
+
+                            title: "Invalid DocType",
+
+                            type: "orange",
+
+                            content:
+                                "<b>TYPE was not found for DocType: "
+                                + DOCTYPE +
+                                "</b>",
+
+                            buttons: {
+
+                                OK: {
+                                    btnClass: "btn-orange"
+                                }
+
+                            }
+
+                        });
+
+                        return;
+                    }
+
+
+                    // =============================================
+                    // TYPE FOUND
+                    // =============================================
+                    console.log(
+                        "✅ TYPE found before redirect:",
+                        typeValue
+                    );
+
+
+                    redirectToInsert(
+                        UNIT,
+                        GLOCA,
+                        DOCTYPE,
+                        typeValue
+                    );
+
+                }
+            );
+
+        },
+
+
+        error: function (xhr) {
+
+            console.error(
+                "❌ GetUnit GLOCA ERROR:",
+                xhr.status,
+                xhr.responseText
+            );
+
+
+            $('.go-new').css({
+                'pointer-events': '',
+                'opacity': ''
+            });
+
+
+            $.confirm({
+
+                title: "Error",
+
+                type: "red",
+
+                content:
+                    "<b>Unable to get GLOCA for selected Unit.</b>",
+
+                buttons: {
+
+                    OK: {
+                        btnClass: "btn-danger"
+                    }
+
+                }
+
+            });
+
+        }
 
     });
 
+});
 
 
     // =========================================================
     // REDIRECT TO INSERT / UPDATE
     // =========================================================
-    function redirectToInsert(
-        UNIT,
-        DOCTYPE,
-        DOCTYPE_TYPE
-    ) {
+function redirectToInsert(
+    UNIT,
+    GLOCA,
+    DOCTYPE,
+    DOCTYPE_TYPE
+) {
 
-        console.log("=================================");
-        console.log("REDIRECT TO INSERT/UPDATE");
-        console.log("UNIT:", UNIT);
-        console.log("DOCTYPE:", DOCTYPE);
-        console.log("DOCTYPE TYPE:", DOCTYPE_TYPE);
-        console.log("=================================");
-
-
-        // Store one final time
-        $('#hiddenUNIT').val(UNIT);
-
-        $('#hiddenDOCTYPE').val(DOCTYPE);
-
-        $('#hiddenDOCTYPETYPE')
-            .val(DOCTYPE_TYPE);
+    console.log("=================================");
+    console.log("REDIRECT TO INSERT / UPDATE");
+    console.log("UNIT:", UNIT);
+    console.log("GLOCA:", GLOCA);
+    console.log("DOCTYPE:", DOCTYPE);
+    console.log("DOCTYPE TYPE:", DOCTYPE_TYPE);
+    console.log("=================================");
 
 
-        // Build URL
-        var url =
-            '@Url.Action("InsertOrUpdate", "PacketTeaPurchaseEntry")'
-            + '?unit='
-            + encodeURIComponent(UNIT)
-            + '&doctype='
-            + encodeURIComponent(DOCTYPE)
-            + '&doctypeType='
-            + encodeURIComponent(DOCTYPE_TYPE);
+    // =====================================================
+    // STORE FINAL VALUES
+    // =====================================================
+    $('#hiddenUNIT').val(UNIT);
+
+    $('#hiddenGLOCA').val(GLOCA || '');
+
+    $('#hiddenDOCTYPE').val(DOCTYPE);
+
+    $('#hiddenDOCTYPETYPE').val(DOCTYPE_TYPE);
 
 
-        console.log(
-            "Final Redirect URL:",
-            url
-        );
+    // =====================================================
+    // BUILD URL
+    // =====================================================
+    var url =
+        '@Url.Action("InsertOrUpdate", "PacketTeaPurchaseEntry")'
+        + '?unit='
+        + encodeURIComponent(UNIT)
+
+        + '&gloca='
+        + encodeURIComponent(GLOCA || '')
+
+        + '&doctype='
+        + encodeURIComponent(DOCTYPE)
+
+        + '&doctypeType='
+        + encodeURIComponent(DOCTYPE_TYPE);
 
 
-        // Redirect
-        window.location.href = url;
-    }
+    console.log("=================================");
+    console.log("FINAL REDIRECT URL:");
+    console.log(url);
+    console.log("=================================");
 
+
+    // =====================================================
+    // REDIRECT
+    // =====================================================
+    window.location.href = url;
+}
     </script>  
     
     
