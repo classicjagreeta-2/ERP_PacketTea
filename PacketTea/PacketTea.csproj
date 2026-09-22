@@ -356,6 +356,7 @@
     <Compile Include="Models\PT\M_SALESCENTRE.cs" />
     <Compile Include="Models\PT\M_SALETYPE.cs" />
     <Compile Include="Models\PT\M_Transp.cs" />
+    <Compile Include="Models\PT\M_UNIT.cs" />
     <Compile Include="Models\PT\PT_ALL_LIST.cs" />
     <Compile Include="Models\PT\SLMAS.cs" />
     <Compile Include="Models\PT\TeaPurchase_LISTING.cs" />

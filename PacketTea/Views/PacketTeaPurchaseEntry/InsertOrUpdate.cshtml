@@ -143,8 +143,8 @@
                 <input type="hidden" id="hiddenUNIT" />
                 <input type="hidden" id="hiddenDOCTYPE" />
                 <input type="hidden" id="hiddenDOCTYPETYPE" />
-                <input type="hidden" id="LocationStateCode" />
-                <input type="hidden" id="LocationGSTNo" />
+                @*<input type="hidden" id="LocationStateCode" />
+                <input type="hidden" id="LocationGSTNo" />*@
 
                 <input type="hidden" id="VendorStateCode" />
                 <input type="hidden" id="VendorGSTNo" />
@@ -214,16 +214,16 @@
                             <!-- Customer account -->
                             <div class="form-row">
                                 <div class="form-col-10">
-                                    <label>Document No <span>(*)</span></label>
+                                    <label>Document No </label>
 
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.DOCNO, new { @class = "form-control ", @readonly = "readonly", tabindex = "-1" })
                                 </div>
                                 <div class="form-col-10">
-                                    <label>Date</label>
+                                    <label>Date <span>(*)</span></label>
                                     <div class="date-field">
 
                                         @Html.TextBoxFor(m => m.T_TEA_HEAD.DOCDT, "{0:dd/MM/yyyy}",
-                        new { @class = "form-control", @id = "PacketDate" })
+                             new { @class = "form-control req", @id = "PacketDate" })
                                         <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
                                              alt="calendar"
                                              class="calendar-icon" data-target="PacketDate" />
@@ -232,23 +232,38 @@
                                 </div>
                                 <div class="form-col-10">
                                     <label>Pur. Location <span>(*)</span></label>
-                                    @*@Html.TextBoxFor(model => model.T_TEA_HEAD.ALLOCATION, new { @class = "form-control location-desc" })*@
-                                    <input type="text"
-                                           id="LocationName"
-                                           class="form-control req location-desc" />
+                                    @Html.TextBoxFor(
+                                            m => m.T_TEA_HEAD.LOCATIONDESC,
+                                            new
+                                        {
+                                                @class = "form-control req location-desc",
+                                                @id = "LocationName"
+                                            }
+                                        )
+
+                                    @Html.HiddenFor(
+                                        m => m.T_TEA_HEAD.SALE_CENTRE,
+                                        new
+                                        {
+                                            @id = "LocationCode"
+                                        }
+                                    )
 
                                     <input type="hidden"
-                                           id="LocationCode"
-                                           name="T_TEA_HEAD.ALLOCATION" />
+                                           id="LocationStateCode" />
+
+                                    <input type="hidden"
+                                           id="LocationGSTNo" />
+
 
                                 </div>
 
 
                                 @*<div class="form-col-10">
-                                <label>Flavour Purchase</label>
+                                        <label>Flavour Purchase</label>
 
-                                @Html.TextBoxFor(model => model.T_TEA_HEAD.FLAVOUR, new { @class = "form-control" })
-                            </div>*@
+                                        @Html.TextBoxFor(model => model.T_TEA_HEAD.FLAVOUR, new { @class = "form-control" })
+                                    </div>*@
                                 <div class="form-col-10">
                                     <label>Vendor Code <span>(*)</span></label>
 
@@ -258,7 +273,7 @@
                                 <div class="form-col-20">
                                     <label>Vendor Name</label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.VENDORNAME, new { @class = "form-control  vendor-desc", @readonly = "readonly" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.VENDORNAME, new { @class = "form-control vendor-desc", @readonly = "readonly" })
 
                                 </div>
 
@@ -291,9 +306,9 @@
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.TRANSPORTERNAME, new { @class = "form-control trans-desc", @readonly = "readonly", tabindex = "-1" })
                                 </div>
                                 <div class="form-col-10">
-                                    <label>Bill No</label>
+                                    <label>Bill No <span>(*)</span></label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.BILLNO, new { @class = "form-control " })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.BILLNO, new { @class = "form-control req" })
                                 </div>
                                 <div class="form-col-10">
                                     <label>Date </label>
@@ -301,7 +316,7 @@
                                     <div class="date-field">
 
                                         @Html.TextBoxFor(m => m.T_TEA_HEAD.BILLDT, "{0:dd/MM/yyyy}",
-                        new { @class = "form-control", @id = "BillNoDate" })
+                             new { @class = "form-control", @id = "BillNoDate" })
                                         <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
                                              alt="calendar"
                                              class="calendar-icon" data-target="BillNoDate" />
@@ -333,7 +348,7 @@
                                     <div class="date-field">
 
                                         @Html.TextBoxFor(m => m.T_TEA_HEAD.SALE_DATE, "{0:dd/MM/yyyy}",
-                        new { @class = "form-control", @id = "CnNoDate" })
+                             new { @class = "form-control", @id = "CnNoDate" })
                                         <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
                                              alt="calendar"
                                              class="calendar-icon" data-target="CnNoDate" />
@@ -350,7 +365,7 @@
                                     <div class="date-field">
 
                                         @Html.TextBoxFor(m => m.T_TEA_HEAD.EWAYBILLDT, "{0:dd/MM/yyyy}",
-                        new { @class = "form-control", @id = "EWayBillNoDate" })
+                             new { @class = "form-control", @id = "EWayBillNoDate" })
                                         <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
                                              alt="calendar"
                                              class="calendar-icon" data-target="EWayBillNoDate" />
@@ -404,11 +419,11 @@
                                     <li><a href="#" id="btnAddRow"><i class="fa fa-plus"></i> Add</a></li>
                                     <li><a href="#" id="btnRemoveRow"><i class="fa fa-trash-o"></i> Remove</a></li>
                                     @*<li>
-                                    <a href="javascript:void(0)" class="openPopup" data-popup="InvoNoData">
-                                        <i class="fa fa-credit-card"></i>
-                                        Invo No Data
-                                    </a>
-                                </li>*@
+                                            <a href="javascript:void(0)" class="openPopup" data-popup="InvoNoData">
+                                                <i class="fa fa-credit-card"></i>
+                                                Invo No Data
+                                            </a>
+                                        </li>*@
                                 </ul>
                             </div>
                             <!-- action btns end -->
@@ -507,7 +522,7 @@
                                 </div>
                                 <div class="form-col-10">
                                     <label>Total GST As Per System </label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_GSTAMT_M, new { @class = "form-control" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_GSTAMT_M, new { @class = "form-control", id = "TotalGSTSystem" })
                                 </div>
                             </div>
                             <div class="form-row" style="line-height:2.5;">
@@ -524,7 +539,7 @@
 
                                 <div class="form-col-10">
                                     <label> Total Amount</label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_AMT, new { @class = "form-control" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_AMT, new { @class = "form-control", id = "TotalAmount" })
                                 </div>
 
                             </div>
@@ -536,106 +551,106 @@
                     <!-- Overlay -->
                     <!--<div class="popup-overlay">
 
-            <div id="InvoNoData" class="popup-box">
+                    <div id="InvoNoData" class="popup-box">
 
-                <div class="popup-header">
-                    <h2>  Invo No Data  </h2>
-                    <button class="close-btn" type="button"> X</button>
-                </div>-->
+                        <div class="popup-header">
+                            <h2>  Invo No Data  </h2>
+                            <button class="close-btn" type="button"> X</button>
+                        </div>-->
                     <!-- Existing Search -->
                     <!--<div class="search-box">
-                <div class="search">
-                    <input type="text" id="searchInput" placeholder="Search" />
+                        <div class="search">
+                            <input type="text" id="searchInput" placeholder="Search" />
 
-                </div>
-            </div>-->
+                        </div>
+                    </div>-->
                     <!-- Added section only -->
                     <!--<div class="form-row" style="line-height: 2.5; margin: 0 -0.1px;">
 
 
 
-            <div class="form-col-10">
-                <label>Contact No</label>
-                <input type="text"
-                       id="txtContactNo"
-                       class="form-control Catagory-desc"
-                        />
-            </div>
-            <div class="form-col-10">
-                <label>Invno </label>
-                <input type="text"
-                       id="txtInvNo"
-                       class="form-control" />
-            </div>-->
+                    <div class="form-col-10">
+                        <label>Contact No</label>
+                        <input type="text"
+                               id="txtContactNo"
+                               class="form-control Catagory-desc"
+                                />
+                    </div>
+                    <div class="form-col-10">
+                        <label>Invno </label>
+                        <input type="text"
+                               id="txtInvNo"
+                               class="form-control" />
+                    </div>-->
                     <!-- ADD HERE -->
                     <!--<div style="display:flex; align-items:flex-end; gap:18px; margin-left:auto;">
-                    <button type="button"
-                            id="btnGetData"
-                            class="btn-blue"
-                            style="width:60px;height:30px;">
-                        Get Data
-                    </button>
-                    <button type="button"
-                            id="btnRefresh"
-                            class="btn-white"
-                            style="width:60px;height:30px;">
-                        Refresh
-                    </button>
-                </div>
+                            <button type="button"
+                                    id="btnGetData"
+                                    class="btn-blue"
+                                    style="width:60px;height:30px;">
+                                Get Data
+                            </button>
+                            <button type="button"
+                                    id="btnRefresh"
+                                    class="btn-white"
+                                    style="width:60px;height:30px;">
+                                Refresh
+                            </button>
+                        </div>
 
-            </div>-->
+                    </div>-->
                     <!-- Existing table unchanged -->
                     <!--<div class="table-responsive" id="prScroll" style="margin-top:8px;">
-                <table class="border main-table">
-                    <thead>
-                        <tr>
-                            <th>
-                                <input type="checkbox" id="chkAllRows" />
-                            </th>
-                            <th style="text-align:right;">Sl.</th>
-                            <th style="text-align:right;">Sl.</th>
-                            <th>Tag</th>
-                            <th>Inv No.</th>
-                            <th>MARK</th>
-                            <th>Grade</th>
-                            <th>Category</th>
-                            <th>Bags</th>
-                            <th style="text-align:right;">Net. Wt.</th>
-                            <th style="text-align:right;">Gross Wt.</th>
-                            <th style="text-align:right;">Total Net Wt.</th>
-                            <th>Size Code</th>
-                            <th style="text-align:right;">Rate</th>
-                            <th style="text-align:right;">Amount</th>
-                            <th style="text-align:right;">Disc %</th>
-                            <th style="text-align:right;">Disc Value</th>
-                            <th style="text-align:right;">Taxable Amt</th>
-                            <th style="text-align:right;">CGST %</th>
-                            <th style="text-align:right;">CGST Amt</th>
-                            <th style="text-align:right;">SGST %</th>
-                            <th style="text-align:right;">SGST Amt</th>
-                            <th style="text-align:right;">IGST %</th>
-                            <th style="text-align:right;">IGST Amt</th>
+                        <table class="border main-table">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" id="chkAllRows" />
+                                    </th>
+                                    <th style="text-align:right;">Sl.</th>
+                                    <th style="text-align:right;">Sl.</th>
+                                    <th>Tag</th>
+                                    <th>Inv No.</th>
+                                    <th>MARK</th>
+                                    <th>Grade</th>
+                                    <th>Category</th>
+                                    <th>Bags</th>
+                                    <th style="text-align:right;">Net. Wt.</th>
+                                    <th style="text-align:right;">Gross Wt.</th>
+                                    <th style="text-align:right;">Total Net Wt.</th>
+                                    <th>Size Code</th>
+                                    <th style="text-align:right;">Rate</th>
+                                    <th style="text-align:right;">Amount</th>
+                                    <th style="text-align:right;">Disc %</th>
+                                    <th style="text-align:right;">Disc Value</th>
+                                    <th style="text-align:right;">Taxable Amt</th>
+                                    <th style="text-align:right;">CGST %</th>
+                                    <th style="text-align:right;">CGST Amt</th>
+                                    <th style="text-align:right;">SGST %</th>
+                                    <th style="text-align:right;">SGST Amt</th>
+                                    <th style="text-align:right;">IGST %</th>
+                                    <th style="text-align:right;">IGST Amt</th>
 
 
-                        </tr>
-                    </thead>
+                                </tr>
+                            </thead>
 
-                    <tbody id="prBody"></tbody>
-                </table>
-            </div>-->
+                            <tbody id="prBody"></tbody>
+                        </table>
+                    </div>-->
                     <!-- Existing buttons -->
                     <!--<div class="bottom-btn">
-                        <button class="btn-blue" type="button" id="btnInvoNoDataOk"> OK</button>
-                        <button class="btn-white" type="button" id="btnInvoNoDataCancel"> Cancel</button>
-                    </div>
+                                <button class="btn-blue" type="button" id="btnInvoNoDataOk"> OK</button>
+                                <button class="btn-white" type="button" id="btnInvoNoDataCancel"> Cancel</button>
+                            </div>
 
-                </div>
-
-
+                        </div>
 
 
 
-            </div>-->
+
+
+                    </div>-->
                     <!-- Popup Notes -->
                     <div id="Notes" class="popup-box" style=" width: 50%;">
                         <div class="popup-header">
@@ -745,11 +760,11 @@
         },
         success: function (html) {
             $('#mainTable tbody').html(html);
-            calculateAllRows();
+            //calculateAllRows();
 
-            if (typeof recalculateAllGradeGST === 'function') {
-                recalculateAllGradeGST();
-            }
+            //if (typeof recalculateAllGradeGST === 'function') {
+            //    recalculateAllGradeGST();
+            //}
 
             $("#mainTable tbody tr").each(function () {
 
@@ -1055,7 +1070,7 @@
         });
     </script>
 
-    <script>
+ <script>
         // ======================================================
         // RECALCULATE GST FOR ALL EXISTING GRADE ROWS
         // ======================================================
@@ -1426,11 +1441,6 @@ $(document).on('click', '.vendor-code', function () {
         urlDelay: 1
     });
 
-
-    // ==================================================
-    // SELECT VENDOR
-    // ==================================================
-
     $input
         .off('inputpicker.select.vendor')
         .on(
@@ -1443,9 +1453,25 @@ $(document).on('click', '.vendor-code', function () {
 
                 var $this = $(this);
 
+                // ======================================
+                // OLD VALUES
+                // ======================================
+
+                var oldCode =
+                    $.trim($this.val() || '');
+
+                var oldName =
+                    $.trim($('.vendor-desc').val() || '');
+
+                var oldState =
+                    $.trim($('#VendorStateCode').val() || '');
+
+                var oldGST =
+                    $.trim($('#VendorGSTNo').val() || '');
+
 
                 // ======================================
-                // GET SELECTED VALUES DIRECTLY
+                // NEW VALUES
                 // ======================================
 
                 var code =
@@ -1476,53 +1502,14 @@ $(document).on('click', '.vendor-code', function () {
 
 
                 // ======================================
-                // SET CODE
-                // ======================================
-
-                $this.val(code);
-
-
-                // ======================================
-                // IMPORTANT
-                // SET NAME IMMEDIATELY
-                // ======================================
-
-                $('.vendor-desc').val(name);
-
-
-                // ======================================
-                // SET STATE
-                // ======================================
-
-                $('#VendorStateCode').val(state);
-
-
-                // ======================================
-                // SET GST
-                // ======================================
-
-                $('#VendorGSTNo').val(gst);
-
-
-                // ======================================
-                // HIDE PICKER
-                // ======================================
-
-                $this.inputpicker('hide');
-
-
-                // ======================================
                 // STATE VALIDATION
                 // ======================================
 
                 if (!state) {
 
-                    // Remove old cached value if any
                     vendorValidationMap.delete(
                         code.toUpperCase()
                     );
-
-                    clearVendor($this);
 
                     showVendorAlert(
                         'Vendor State Code is not available.'
@@ -1533,30 +1520,211 @@ $(document).on('click', '.vendor-code', function () {
 
 
                 // ======================================
-                // STORE VALID VENDOR
+                // APPLY NEW VENDOR
                 // ======================================
 
-                vendorValidationMap.set(
-                    code.toUpperCase(),
-                    {
-                        status: 'valid',
-                        code: code,
-                        name: name,
-                        state: state,
-                        gst: gst
+                function applyVendor() {
+
+                    $this.val(code);
+
+                    $('.vendor-desc').val(name);
+
+                    $('#VendorStateCode').val(state);
+
+                    $('#VendorGSTNo').val(gst);
+
+                    $this.inputpicker('hide');
+
+
+                    // ======================================
+                    // STORE VALID VENDOR
+                    // ======================================
+
+                    vendorValidationMap.set(
+                        code.toUpperCase(),
+                        {
+                            status: 'valid',
+                            code: code,
+                            name: name,
+                            state: state,
+                            gst: gst
+                        }
+                    );
+
+
+                    // ======================================
+                    // RECALCULATE GST
+                    // ======================================
+
+                    if (typeof recalculateAllGradeGST === 'function') {
+                        recalculateAllGradeGST();
                     }
-                );
-
-
-                // ======================================
-                // RECALCULATE GST
-                // ======================================
-
-                if (typeof recalculateAllGradeGST === 'function') {
-                    recalculateAllGradeGST();
                 }
+
+
+                // ======================================
+                // CANCEL -> RESTORE OLD VENDOR
+                // ======================================
+
+                function restoreVendor() {
+
+                    $this.val(oldCode);
+
+                    $('.vendor-desc').val(oldName);
+
+                    $('#VendorStateCode').val(oldState);
+
+                    $('#VendorGSTNo').val(oldGST);
+
+                    $this.inputpicker('hide');
+                }
+
+
+                // ======================================
+                // GST CONFIRMATION
+                // ======================================
+
+                confirmGSTChange(
+                    applyVendor,
+                    restoreVendor
+                );
             }
         );
+    //$input
+    //    .off('inputpicker.select.vendor')
+    //    .on(
+    //        'inputpicker.select.vendor',
+    //        function (e, item) {
+
+    //            if (!item) {
+    //                return;
+    //            }
+
+    //            var $this = $(this);
+
+
+    //            // ======================================
+    //            // GST CHANGE CONFIRMATION
+    //            // ======================================
+
+    //            if (!confirmGSTChange()) {
+    //                return;
+    //            }
+
+
+    //            // ======================================
+    //            // GET SELECTED VALUES DIRECTLY
+    //            // ======================================
+
+    //            var code =
+    //                $.trim(item.subcode || '');
+
+    //            var name =
+    //                $.trim(item.acname || '');
+
+    //            var state =
+    //                $.trim(item.statE_CODE || '');
+
+    //            var gst =
+    //                $.trim(item.gsT_NO || '');
+
+
+    //            // ======================================
+    //            // EMPTY
+    //            // ======================================
+
+    //            if (!code) {
+
+    //                clearVendor($this);
+
+    //                $this.inputpicker('hide');
+
+    //                return;
+    //            }
+
+
+    //            // ======================================
+    //            // SET CODE
+    //            // ======================================
+
+    //            $this.val(code);
+
+
+    //            // ======================================
+    //            // IMPORTANT
+    //            // SET NAME IMMEDIATELY
+    //            // ======================================
+
+    //            $('.vendor-desc').val(name);
+
+
+    //            // ======================================
+    //            // SET STATE
+    //            // ======================================
+
+    //            $('#VendorStateCode').val(state);
+
+
+    //            // ======================================
+    //            // SET GST
+    //            // ======================================
+
+    //            $('#VendorGSTNo').val(gst);
+
+
+    //            // ======================================
+    //            // HIDE PICKER
+    //            // ======================================
+
+    //            $this.inputpicker('hide');
+
+
+    //            // ======================================
+    //            // STATE VALIDATION
+    //            // ======================================
+
+    //            if (!state) {
+
+    //                vendorValidationMap.delete(
+    //                    code.toUpperCase()
+    //                );
+
+    //                clearVendor($this);
+
+    //                showVendorAlert(
+    //                    'Vendor State Code is not available.'
+    //                );
+
+    //                return;
+    //            }
+
+
+    //            // ======================================
+    //            // STORE VALID VENDOR
+    //            // ======================================
+
+    //            vendorValidationMap.set(
+    //                code.toUpperCase(),
+    //                {
+    //                    status: 'valid',
+    //                    code: code,
+    //                    name: name,
+    //                    state: state,
+    //                    gst: gst
+    //                }
+    //            );
+
+
+    //            // ======================================
+    //            // RECALCULATE GST
+    //            // ======================================
+
+    //            if (typeof recalculateAllGradeGST === 'function') {
+    //                recalculateAllGradeGST();
+    //            }
+    //        }
+    //    );
+
 });
 
 
@@ -1616,7 +1784,8 @@ $(document)
     );
 
     </script>
-   
+
+
     <script>
 $(document).on('click', '.mark-code', function () {
 
@@ -1739,126 +1908,214 @@ $(document).on('blur', '.mark-code', function () {
 
     <script>
 
-        // size //
-$(document).on('click', '.size-code', function () {
+// ======================================================
+// SIZE INPUTPICKER
+// ======================================================
 
-    var $input = $(this);
-    var $row = $input.closest('tr');
+$(document)
+    .off('click.sizePicker', '.size-code')
+    .on('click.sizePicker', '.size-code', function () {
 
-    $('.inputpicker-wrapped-list').remove();
+        var $input = $(this);
+        var $row = $input.closest('tr');
 
-    if ($input.data('inputpicker')) {
-        $input.inputpicker('show');
-        return;
-    }
+        $('.inputpicker-wrapped-list').remove();
 
-    $input.inputpicker({
-        url: '@Url.Action("GetSize", "PacketTeaPurchaseEntry")',
-        fields: [
-            { name: 'SZ_CODE', text: 'CODE' },
-            { name: 'SZ_DESC', text: 'NAME' }
-        ],
-        fieldText: 'SZ_CODE',
-        fieldValue: 'SZ_CODE',
-        headShow: true,
-        filterOpen: true,
-        autoOpen: true,
-        pagination: true,
-        pageField: 'p',
-        pageLimitField: 'limit',
-        pageLimit: 10,
-        pageCountField: 'count',
-        width: 'auto',
-        urlDelay: 1
-    });
-
-    // SELECT
-    $input.off('inputpicker.select').on('inputpicker.select', function (e, item) {
-
-        if (!item) return;
-
-        // ✅ Only update the current row
-        $row.find('.size-code').val(item.SZ_CODE);
-        $row.find('.size-desc').val(item.SZ_DESC || '');
-
-        $(this).inputpicker('hide');
-    });
-});
-
-
-// CHANGE
-        $(document).on('change', '.size-code', function () {
-
-    var $input = $(this);
-    var $row = $input.closest('tr');
-    var code = $input.val();
-
-    if (!code) {
-        $row.find('.size-desc').val('');
-        return;
-    }
-
-    $.ajax({
-        url: '@Url.Action("GetSize", "PacketTeaPurchaseEntry")',
-        type: 'GET',
-        data: {
-            q: code,
-            limit: 1,
-            p: 1
-        },
-        success: function (res) {
-
-            if (res && res.data && res.data.length > 0) {
-
-                // ✅ Only current row
-                $row.find('.size-desc').val(res.data[0].SZ_DESC || '');
-
-            } else {
-
-                $row.find('.size-desc').val('');
-            }
-        }
-    });
-});
-
-
-// BLUR
-        $(document).on('blur', '.size-code', function () {
-
-    var $input = $(this);
-    var $row = $input.closest('tr');
-    var code = $input.val().trim();
-
-    setTimeout(function () {
-
-        if (!code) {
-            $row.find('.size-desc').val('');
+        if ($input.data('inputpicker')) {
+            $input.inputpicker('show');
             return;
         }
 
-        $.ajax({
+        $input.inputpicker({
+
             url: '@Url.Action("GetSize", "PacketTeaPurchaseEntry")',
+
+            fields: [
+                { name: 'SZ_CODE', text: 'CODE' },
+                { name: 'SZ_DESC', text: 'NAME' }
+            ],
+
+            fieldText: 'SZ_CODE',
+            fieldValue: 'SZ_CODE',
+
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+
+            width: 'auto',
+            urlDelay: 1
+        });
+
+
+        // ==================================================
+        // SIZE SELECT
+        // ==================================================
+
+        $input
+            .off('inputpicker.select.size')
+            .on(
+                'inputpicker.select.size',
+                function (e, item) {
+
+                    if (!item) {
+                        return;
+                    }
+
+                    // Only current row
+                    $row.find('.size-code')
+                        .val(item.SZ_CODE || '');
+
+                    $row.find('.size-desc')
+                        .val(item.SZ_DESC || '');
+
+                    $(this).inputpicker('hide');
+                }
+            );
+    });
+
+
+// ======================================================
+// SIZE CHANGE
+// ======================================================
+
+$(document)
+    .off('change.size', '.size-code')
+    .on('change.size', '.size-code', function () {
+
+        var $input = $(this);
+        var $row = $input.closest('tr');
+
+        var code =
+            $.trim($input.val() || '');
+
+        if (!code) {
+
+            $row.find('.size-desc')
+                .val('');
+
+            return;
+        }
+
+
+        $.ajax({
+
+            url: '@Url.Action("GetSize", "PacketTeaPurchaseEntry")',
+
             type: 'GET',
+
             data: {
                 q: code,
                 limit: 1,
                 p: 1
             },
+
             success: function (res) {
 
-                if (!res || !res.data || res.data.length === 0) {
+                if (
+                    res &&
+                    res.data &&
+                    res.data.length > 0
+                ) {
 
-                    // ✅ Only current row
-                    $input.val('');
-                    $row.find('.size-desc').val('');
+                    $row.find('.size-desc')
+                        .val(
+                            res.data[0].SZ_DESC || ''
+                        );
+
+                } else {
+
+                    $row.find('.size-desc')
+                        .val('');
                 }
+            },
+
+            error: function (xhr) {
+
+                console.log(
+                    "GetSize change error:",
+                    xhr.responseText
+                );
             }
         });
 
-    }, 200);
-});
-    </script>
+        // IMPORTANT:
+        // NO confirmGSTChange()
+        // NO recalculateAllGradeGST()
+        // NO calculateRow()
+    });
 
+
+// ======================================================
+// SIZE BLUR
+// ======================================================
+
+$(document)
+    .off('blur.size', '.size-code')
+    .on('blur.size', '.size-code', function () {
+
+        var $input = $(this);
+        var $row = $input.closest('tr');
+
+        var code =
+            $.trim($input.val() || '');
+
+        setTimeout(function () {
+
+            if (!code) {
+
+                $row.find('.size-desc')
+                    .val('');
+
+                return;
+            }
+
+
+            $.ajax({
+
+                url: '@Url.Action("GetSize", "PacketTeaPurchaseEntry")',
+
+                type: 'GET',
+
+                data: {
+                    q: code,
+                    limit: 1,
+                    p: 1
+                },
+
+                success: function (res) {
+
+                    if (
+                        !res ||
+                        !res.data ||
+                        res.data.length === 0
+                    ) {
+
+                        $input.val('');
+
+                        $row.find('.size-desc')
+                            .val('');
+                    }
+                },
+
+                error: function (xhr) {
+
+                    console.log(
+                        "GetSize blur error:",
+                        xhr.responseText
+                    );
+                }
+            });
+
+        }, 200);
+    });
+
+    </script>
 
     <script>
 $(document).on('click', '.broker-code', function () {
@@ -2240,20 +2497,17 @@ function getGradeDetails($row, gradeCode) {
 
 
             // ==================================================
-            // GRADE GST RATES
+            // GRADE MASTER GST
             // ==================================================
 
-            var gradeCGST = parseFloat(
-                grade.CGST_RATE
-            ) || 0;
+            var gradeCGST =
+                parseFloat(grade.CGST_RATE) || 0;
 
-            var gradeSGST = parseFloat(
-                grade.SGST_RATE
-            ) || 0;
+            var gradeSGST =
+                parseFloat(grade.SGST_RATE) || 0;
 
-            var gradeIGST = parseFloat(
-                grade.IGST_RATE
-            ) || 0;
+            var gradeIGST =
+                parseFloat(grade.IGST_RATE) || 0;
 
 
             // ==================================================
@@ -2272,7 +2526,6 @@ function getGradeDetails($row, gradeCode) {
                 'input[name$=".IGST_RT"]'
             );
 
-
             var $cgstAmt = $row.find(
                 'input[name$=".CGST_AMT"]'
             );
@@ -2287,7 +2540,7 @@ function getGradeDetails($row, gradeCode) {
 
 
             // ==================================================
-            // FIRST CLEAR OLD GST
+            // ALWAYS CLEAR PREVIOUS GST FIRST
             // ==================================================
 
             $cgstRate.val('0.00');
@@ -2300,110 +2553,71 @@ function getGradeDetails($row, gradeCode) {
 
 
             // ==================================================
-            // 1. REQUIRED DATA NOT AVAILABLE
+            // 1. REQUIRED GST / STATE DATA MISSING
             // ==================================================
 
             if (
                 vendorGST === '' ||
-                locationGST === '' ||
                 vendorState === '' ||
+                locationGST === '' ||
                 locationState === ''
             ) {
 
                 calculateRow($row);
-
                 return;
             }
 
 
             // ==================================================
-            // 2. GST SAME
+            // 2. VENDOR GST == LOCATION GST
+            //    NO GST
             // ==================================================
 
             if (vendorGST === locationGST) {
 
-                // NO GST
-
-                $cgstRate.val('0.00');
-                $sgstRate.val('0.00');
-                $igstRate.val('0.00');
-
-                $cgstAmt.val('0.00');
-                $sgstAmt.val('0.00');
-                $igstAmt.val('0.00');
-
                 calculateRow($row);
-
                 return;
             }
 
 
             // ==================================================
-            // 3. GST DIFFERENT
+            // 3. VENDOR GST != LOCATION GST
+            //    SAME STATE -> CGST + SGST
             // ==================================================
 
-            if (vendorGST !== locationGST) {
+            if (vendorState === locationState) {
 
+                $cgstRate.val(
+                    gradeCGST.toFixed(2)
+                );
 
-                // ==================================================
-                // 3A. SAME STATE
-                // ==================================================
+                $sgstRate.val(
+                    gradeSGST.toFixed(2)
+                );
 
-                if (vendorState === locationState) {
+                $igstRate.val('0.00');
 
-                    // CGST = Grade %
-                    $cgstRate.val(
-                        gradeCGST.toFixed(2)
-                    );
-
-                    // SGST = Grade %
-                    $sgstRate.val(
-                        gradeSGST.toFixed(2)
-                    );
-
-                    // IGST = 0
-                    $igstRate.val('0.00');
-
-
-                    calculateRow($row);
-
-                    return;
-                }
-
-
-                // ==================================================
-                // 3B. DIFFERENT STATE
-                // ==================================================
-
-                if (vendorState !== locationState) {
-
-                    // CGST = 0
-                    $cgstRate.val('0.00');
-
-                    // SGST = 0
-                    $sgstRate.val('0.00');
-
-                    // IGST = Grade %
-                    $igstRate.val(
-                        gradeIGST.toFixed(2)
-                    );
-
-
-                    calculateRow($row);
-
-                    return;
-                }
+                calculateRow($row);
+                return;
             }
 
 
             // ==================================================
-            // FALLBACK
+            // 4. VENDOR GST != LOCATION GST
+            //    DIFFERENT STATE -> IGST
             // ==================================================
 
-            clearGradeGST($row);
+            $cgstRate.val('0.00');
+            $sgstRate.val('0.00');
+
+            $igstRate.val(
+                gradeIGST.toFixed(2)
+            );
+
+            calculateRow($row);
         }
 
-  
+
 
     // ======================================================
     // CLEAR GST FOR CURRENT ROW
@@ -2434,282 +2648,197 @@ function getGradeDetails($row, gradeCode) {
 // VALIDATE GRADE WHEN USER TYPES / PASTES
 // =====================================
 
-$(document).on('change', '.grade-code', function () {
+$(document)
+    .off('blur.gradeValidation', '.grade-code')
+    .on('blur.gradeValidation', '.grade-code', function () {
 
-    var $input = $(this);
-    var $row = $input.closest('tr');
-
-    var code = $.trim($input.val());
-
-    if (!code) {
-
-        $row.find('.grade-desc').val('');
-        clearGradeGST($row);
-
-        return;
-    }
-
-    getGradeDetails($row, code);
-});
-
-
-// =====================================
-// VALIDATE ON BLUR
-// =====================================
-
-$(document).on('blur', '.grade-code', function () {
-
-    var $input = $(this);
-    var $row = $input.closest('tr');
-
-    var code = $.trim($input.val());
-
-    setTimeout(function () {
+        var $input = $(this);
+        var $row = $input.closest('tr');
+        var code = $.trim($input.val() || '');
 
         if (!code) {
+
             $row.find('.grade-desc').val('');
             clearGradeGST($row);
             return;
         }
 
-        $.ajax({
-
-            url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
-            type: 'GET',
-
-            data: {
-                q: code,
-                limit: 1,
-                p: 1
-            },
-
-            success: function (res) {
-
-                if (
-                    !res ||
-                    !res.data ||
-                    res.data.length === 0
-                ) {
-
-                    $input.val('');
-                    $row.find('.grade-desc').val('');
-
-                    clearGradeGST($row);
-
-                    return;
-                }
-
-                var grade = res.data[0];
-
-                // Make sure entered code is valid
-                if (
-                    String(grade.GCODE || '').toUpperCase() !==
-                    String(code).toUpperCase()
-                ) {
-
-                    $input.val('');
-                    $row.find('.grade-desc').val('');
-
-                    clearGradeGST($row);
-
-                    return;
-                }
-
-                $row.find('.grade-desc')
-                    .val(grade.NAME || '');
-
-                applyGradeGST($row, grade);
-            },
-
-            error: function (xhr) {
-
-                console.log(
-                    "Grade validation error:",
-                    xhr.responseText
-                );
-
-                $input.val('');
-                $row.find('.grade-desc').val('');
-
-                clearGradeGST($row);
-            }
-        });
-
-    }, 200);
-});
+        // One central Grade -> GST AJAX flow
+        getGradeDetails($row, code);
+    });
 
     </script>
 
     @*<script>
 
-$(document).on('click', '.grade-code', function () {
+        $(document).on('click', '.grade-code', function () {
 
-    var $input = $(this);
-    var $row = $input.closest('tr');
+            var $input = $(this);
+            var $row = $input.closest('tr');
 
-    $('.inputpicker-wrapped-list').remove();
+            $('.inputpicker-wrapped-list').remove();
 
-    // Already initialized
-    if ($input.data('inputpicker')) {
-        $input.inputpicker('show');
-        return;
-    }
-
-    $input.inputpicker({
-        url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
-
-        fields: [
-            { name: 'GCODE', text: 'CODE' },
-            { name: 'NAME', text: 'NAME' }
-        ],
-
-        fieldText: 'GCODE',
-        fieldValue: 'GCODE',
-
-        headShow: true,
-        filterOpen: true,
-        autoOpen: true,
-
-        pagination: true,
-        pageField: 'p',
-        pageLimitField: 'limit',
-        pageLimit: 10,
-        pageCountField: 'count',
-
-        width: 'auto',
-        urlDelay: 1
-    });
-
-
-    // =====================================================
-    // SELECT GRADE
-    // =====================================================
-    $input.off('inputpicker.select').on(
-        'inputpicker.select',
-        function (e, item) {
-
-            if (!item) return;
-
-            // IMPORTANT:
-            // Only update the current row
-            $row.find('.grade-code').val(item.GCODE);
-            $row.find('.grade-desc').val(item.NAME || '');
-
-            $(this).inputpicker('hide');
-        }
-    );
-
-});
-
-
-// =====================================================
-// CHANGE GRADE CODE
-// =====================================================
-$(document).on('change', '.grade-code', function () {
-
-    var $input = $(this);
-    var $row = $input.closest('tr');
-
-    var code = $.trim($input.val());
-
-    if (!code) {
-        $row.find('.grade-desc').val('');
-        return;
-    }
-
-    $.ajax({
-        url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
-        type: 'GET',
-
-        data: {
-            q: code,
-            limit: 1,
-            p: 1
-        },
-
-        success: function (res) {
-
-            if (
-                res &&
-                res.data &&
-                res.data.length > 0
-            ) {
-
-                // IMPORTANT:
-                // Only current row
-                $row.find('.grade-desc')
-                    .val(res.data[0].NAME || '');
-
-            } else {
-
-                $row.find('.grade-desc').val('');
+            // Already initialized
+            if ($input.data('inputpicker')) {
+                $input.inputpicker('show');
+                return;
             }
-        },
 
-        error: function (xhr) {
+            $input.inputpicker({
+                url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
 
-            console.log("GetGrade Error:", xhr.responseText);
+                fields: [
+                    { name: 'GCODE', text: 'CODE' },
+                    { name: 'NAME', text: 'NAME' }
+                ],
 
-            $row.find('.grade-desc').val('');
-        }
-    });
+                fieldText: 'GCODE',
+                fieldValue: 'GCODE',
 
-});
+                headShow: true,
+                filterOpen: true,
+                autoOpen: true,
+
+                pagination: true,
+                pageField: 'p',
+                pageLimitField: 'limit',
+                pageLimit: 10,
+                pageCountField: 'count',
+
+                width: 'auto',
+                urlDelay: 1
+            });
 
 
-// =====================================================
-// BLUR GRADE CODE
-// =====================================================
-$(document).on('blur', '.grade-code', function () {
+            // =====================================================
+            // SELECT GRADE
+            // =====================================================
+            $input.off('inputpicker.select').on(
+                'inputpicker.select',
+                function (e, item) {
 
-    var $input = $(this);
-    var $row = $input.closest('tr');
+                    if (!item) return;
 
-    var code = $.trim($input.val());
+                    // IMPORTANT:
+                    // Only update the current row
+                    $row.find('.grade-code').val(item.GCODE);
+                    $row.find('.grade-desc').val(item.NAME || '');
 
-    setTimeout(function () {
-
-        if (!code) {
-            $row.find('.grade-desc').val('');
-            return;
-        }
-
-        $.ajax({
-            url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
-            type: 'GET',
-
-            data: {
-                q: code,
-                limit: 1,
-                p: 1
-            },
-
-            success: function (res) {
-
-                if (
-                    !res ||
-                    !res.data ||
-                    res.data.length === 0
-                ) {
-
-                    // Only current row
-                    $input.val('');
-                    $row.find('.grade-desc').val('');
+                    $(this).inputpicker('hide');
                 }
-            },
+            );
 
-            error: function (xhr) {
-                console.log("Grade validation error:", xhr.responseText);
-            }
         });
 
-    }, 200);
 
-});
+        // =====================================================
+        // CHANGE GRADE CODE
+        // =====================================================
+        $(document).on('change', '.grade-code', function () {
 
-    </script>*@
+            var $input = $(this);
+            var $row = $input.closest('tr');
 
-    <script>
+            var code = $.trim($input.val());
+
+            if (!code) {
+                $row.find('.grade-desc').val('');
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
+                type: 'GET',
+
+                data: {
+                    q: code,
+                    limit: 1,
+                    p: 1
+                },
+
+                success: function (res) {
+
+                    if (
+                        res &&
+                        res.data &&
+                        res.data.length > 0
+                    ) {
+
+                        // IMPORTANT:
+                        // Only current row
+                        $row.find('.grade-desc')
+                            .val(res.data[0].NAME || '');
+
+                    } else {
+
+                        $row.find('.grade-desc').val('');
+                    }
+                },
+
+                error: function (xhr) {
+
+                    console.log("GetGrade Error:", xhr.responseText);
+
+                    $row.find('.grade-desc').val('');
+                }
+            });
+
+        });
+
+
+        // =====================================================
+        // BLUR GRADE CODE
+        // =====================================================
+        $(document).on('blur', '.grade-code', function () {
+
+            var $input = $(this);
+            var $row = $input.closest('tr');
+
+            var code = $.trim($input.val());
+
+            setTimeout(function () {
+
+                if (!code) {
+                    $row.find('.grade-desc').val('');
+                    return;
+                }
+
+                $.ajax({
+                    url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
+                    type: 'GET',
+
+                    data: {
+                        q: code,
+                        limit: 1,
+                        p: 1
+                    },
+
+                    success: function (res) {
+
+                        if (
+                            !res ||
+                            !res.data ||
+                            res.data.length === 0
+                        ) {
+
+                            // Only current row
+                            $input.val('');
+                            $row.find('.grade-desc').val('');
+                        }
+                    },
+
+                    error: function (xhr) {
+                        console.log("Grade validation error:", xhr.responseText);
+                    }
+                });
+
+            }, 200);
+
+        });
+
+            </script>*@
+
+    @*<script>
 
         $(document).on('click', '.location-desc', function () {
 
@@ -2786,9 +2915,9 @@ $(document).on('blur', '.grade-code', function () {
 
 });
 
-    </script>
+    </script>*@
 
-    @*<script>
+<script>
 
 $(document).on('click', '.location-desc', function () {
 
@@ -2809,16 +2938,12 @@ $(document).on('click', '.location-desc', function () {
             { name: 'CODE', text: 'CODE' },
             { name: 'NAME', text: 'NAME' },
             { name: 'CITY', text: 'CITY' },
-            { name: 'STATE_CODE', text: 'STATE CODE ' },
+            { name: 'STATE_CODE', text: 'STATE CODE' },
             { name: 'PIN', text: 'PIN' },
-            { name: 'GST_NO', text: 'GST NO  ' },
-
+            { name: 'GST_NO', text: 'GST NO' }
         ],
 
-        // Show NAME in textbox
         fieldText: 'NAME',
-
-        // Actual value is CODE
         fieldValue: 'CODE',
 
         headShow: true,
@@ -2835,30 +2960,305 @@ $(document).on('click', '.location-desc', function () {
         urlDelay: 1
     });
 
-
-    // =========================================
-    // SELECT LOCATION
-    // =========================================
-
-    $input.off('inputpicker.select').on(
-        'inputpicker.select',
-        function (e, item) {
-
-            if (!item) return;
-
-            // Show NAME in textbox
-            $input.val(item.NAME || '');
-
-            // If you need CODE separately
-            $input.attr('data-code', item.CODE || '');
-
-            $(this).inputpicker('hide');
-        }
-    );
-
 });
 
-    </script>*@
+$(document)
+    .off(
+        'click.locationSelect',
+        '#inputpicker-wrapped-list .inputpicker-element'
+    )
+    .on(
+        'click.locationSelect',
+        '#inputpicker-wrapped-list .inputpicker-element',
+        function () {
+
+            var $pickerRow = $(this);
+
+            var code = $.trim(
+                $pickerRow.attr('data-value') || ''
+            );
+
+            if (!code) {
+                return;
+            }
+
+
+            // ==========================================
+            // OLD LOCATION VALUES
+            // ==========================================
+
+            var oldLocationName =
+                $.trim($('#LocationName').val() || '');
+
+            var oldLocationCode =
+                $.trim($('#LocationCode').val() || '');
+
+            var oldLocationState =
+                $.trim($('#LocationStateCode').val() || '');
+
+            var oldLocationGST =
+                $.trim($('#LocationGSTNo').val() || '');
+
+
+            // ==========================================
+            // APPLY LOCATION
+            // ==========================================
+
+            function loadAndApplyLocation() {
+
+                $.ajax({
+
+                    url: '@Url.Action("GetLocation", "PacketTeaPurchaseEntry")',
+
+                    type: 'GET',
+
+                    data: {
+                        q: code,
+                        limit: 1,
+                        p: 1
+                    },
+
+                    success: function (res) {
+
+                        if (
+                            !res ||
+                            !res.data ||
+                            res.data.length === 0
+                        ) {
+                            return;
+                        }
+
+                        var location = res.data[0];
+
+
+                        // ==========================================
+                        // LOCATION VALUES
+                        // ==========================================
+
+                        var locationName =
+                            $.trim(location.NAME || '');
+
+                        var locationCode =
+                            $.trim(location.CODE || code);
+
+                        var locationState =
+                            $.trim(location.STATE_CODE || '');
+
+                        var locationGST =
+                            $.trim(location.GST_NO || '');
+
+
+                        // ==========================================
+                        // SET LOCATION
+                        // ==========================================
+
+                        $('#LocationName').val(locationName);
+
+                        $('#LocationCode').val(locationCode);
+
+                        $('#LocationStateCode').val(locationState);
+
+                        $('#LocationGSTNo').val(locationGST);
+
+
+                        // ==========================================
+                        // HIDE PICKER
+                        // ==========================================
+
+                        $('.inputpicker-wrapped-list').remove();
+
+
+                        // ==========================================
+                        // RECALCULATE GST
+                        // ==========================================
+
+                        if (
+                            typeof recalculateAllGradeGST ===
+                            'function'
+                        ) {
+                            recalculateAllGradeGST();
+                        }
+                    },
+
+                    error: function (xhr) {
+
+                        console.log(
+                            "GetLocation ERROR:",
+                            xhr.responseText
+                        );
+                    }
+                });
+            }
+
+
+            // ==========================================
+            // RESTORE OLD LOCATION
+            // ==========================================
+
+            function restoreLocation() {
+
+                $('#LocationName').val(
+                    oldLocationName
+                );
+
+                $('#LocationCode').val(
+                    oldLocationCode
+                );
+
+                $('#LocationStateCode').val(
+                    oldLocationState
+                );
+
+                $('#LocationGSTNo').val(
+                    oldLocationGST
+                );
+
+                $('.inputpicker-wrapped-list').remove();
+            }
+
+
+            // ==========================================
+            // GST CONFIRMATION
+            // ==========================================
+
+            confirmGSTChange(
+                loadAndApplyLocation,
+                restoreLocation
+            );
+        }
+    );
+// ==========================================================
+// LOCATION SELECT
+// ==========================================================
+
+@*$(document)
+    .off('click.locationSelect', '#inputpicker-wrapped-list .inputpicker-element')
+    .on(
+        'click.locationSelect',
+        '#inputpicker-wrapped-list .inputpicker-element',
+        function () {
+
+            var $row = $(this);
+
+            var code = $.trim(
+                $row.attr('data-value') || ''
+            );
+
+            console.log("LOCATION ROW CLICKED");
+            console.log("LOCATION CODE:", code);
+
+            if (!code) {
+                return;
+            }
+
+
+            // ==========================================
+            // GST CHANGE CONFIRMATION
+            // ==========================================
+
+            if (!confirmGSTChange()) {
+                return;
+            }
+
+
+            // ==========================================
+            // GET LOCATION
+            // ==========================================
+
+            $.ajax({
+
+                url: '@Url.Action("GetLocation", "PacketTeaPurchaseEntry")',
+
+                type: 'GET',
+
+                data: {
+                    q: code,
+                    limit: 1,
+                    p: 1
+                },
+
+                success: function (res) {
+
+                    console.log(
+                        "GET LOCATION RESPONSE:",
+                        res
+                    );
+
+                    if (
+                        !res ||
+                        !res.data ||
+                        res.data.length === 0
+                    ) {
+                        return;
+                    }
+
+                    var location = res.data[0];
+
+
+                    // ==========================================
+                    // SET LOCATION
+                    // ==========================================
+
+                    //$('#LocationName').val(
+                    //    location.NAME || ''
+                    //);
+
+                    //$('#LocationCode').val(
+                    //    location.CODE || code
+                    //);
+                    var locationName = location.NAME || '';
+                    var locationCode = location.CODE || code;
+
+                    $('#LocationName').val(locationName);
+                    $('#LocationCode').val(locationCode);
+                    //$('#LocationDesc').val(locationName);
+
+                    $('#LocationStateCode').val(
+                        $.trim(location.STATE_CODE || '')
+                    );
+
+                    $('#LocationGSTNo').val(
+                        $.trim(location.GST_NO || '')
+                    );
+
+
+                    console.log(
+                        "Location Code:",
+                        $('#LocationCode').val()
+                    );
+
+                    console.log(
+                        "Location State:",
+                        $('#LocationStateCode').val()
+                    );
+
+                    console.log(
+                        "Location GST:",
+                        $('#LocationGSTNo').val()
+                    );
+
+
+                    // ==========================================
+                    // RECALCULATE GST
+                    // ==========================================
+
+                    recalculateAllGradeGST();
+                },
+
+                error: function (xhr) {
+
+                    console.log(
+                        "GetLocation ERROR:",
+                        xhr.responseText
+                    );
+                }
+            });
+        }
+    );*@
+
+
+</script>    
+    
     <script>
         $(document).on('click', '#btnAddRow', function (e) {
 
@@ -3050,274 +3450,453 @@ $(document).on('click', '.location-desc', function () {
 
     </script>
     @*<script>
-        // netwt* rate=amt, //
-        $(document).on('input change', '.total-net-wt, .rate', function () {
+            // netwt* rate=amt, //
+            $(document).on('input change', '.total-net-wt, .rate', function () {
 
-            var $row = $(this).closest('tr');
+                var $row = $(this).closest('tr');
 
-            var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
-            var rate = parseFloat($row.find('.rate').val()) || 0;
+                var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
+                var rate = parseFloat($row.find('.rate').val()) || 0;
 
-            var amount = totalNetWt * rate;
+                var amount = totalNetWt * rate;
 
-            $row.find('.amount').val(amount.toFixed(2));
-        });
-    </script>*@
-<script>
+                $row.find('.amount').val(amount.toFixed(2));
+            });
+        </script>*@
+    <script>
 
-    // ======================================================
-    // CALCULATE ONE ROW
-    // ======================================================
+        // ======================================================
+        // CALCULATE ONE ROW
+        // ======================================================
 
-    function calculateRow($row) {
+        function calculateRow($row) {
 
-        if (!$row || !$row.length) {
-            return;
-        }
-
-
-        // ==================================================
-        // 1. TOTAL NET WEIGHT
-        // ==================================================
-
-        var totalNetWt =
-            parseFloat(
-                $row.find('.total-net-wt').val()
-            ) || 0;
-
-
-        // ==================================================
-        // 2. RATE
-        // ==================================================
-
-        var rate =
-            parseFloat(
-                $row.find('.rate').val()
-            ) || 0;
-
-
-        // ==================================================
-        // 3. AMOUNT
-        // ==================================================
-
-        var amount =
-            totalNetWt * rate;
-
-        $row.find('.amount')
-            .val(amount.toFixed(2));
-
-
-        // ==================================================
-        // 4. DISCOUNT %
-        // ==================================================
-
-        var discPer =
-            parseFloat(
-                $row.find('.disc-per').val()
-            ) || 0;
-
-
-        // ==================================================
-        // 5. DISCOUNT VALUE
-        // ==================================================
-
-        var discount =
-            amount * discPer / 100;
-
-        $row.find('.discount')
-            .val(discount.toFixed(2));
-
-
-        // ==================================================
-        // 6. TAXABLE AMOUNT
-        // ==================================================
-
-        var taxableAmount =
-            amount - discount;
-
-        if (taxableAmount < 0) {
-            taxableAmount = 0;
-        }
-
-        $row.find('.taxable-amt')
-            .val(taxableAmount.toFixed(2));
-
-
-        // ==================================================
-        // 7. GST RATES
-        // ==================================================
-
-        var cgstRate =
-            parseFloat(
-                $row.find('.cgst-rate').val()
-            ) || 0;
-
-        var sgstRate =
-            parseFloat(
-                $row.find('.sgst-rate').val()
-            ) || 0;
-
-        var igstRate =
-            parseFloat(
-                $row.find('.igst-rate').val()
-            ) || 0;
-
-
-        // ==================================================
-        // 8. GST AMOUNTS
-        // ==================================================
-
-        var cgstAmount =
-            taxableAmount * cgstRate / 100;
-
-        var sgstAmount =
-            taxableAmount * sgstRate / 100;
-
-        var igstAmount =
-            taxableAmount * igstRate / 100;
-
-
-        $row.find('.cgst-amt')
-            .val(cgstAmount.toFixed(2));
-
-        $row.find('.sgst-amt')
-            .val(sgstAmount.toFixed(2));
-
-        $row.find('.igst-amt')
-            .val(igstAmount.toFixed(2));
-
-
-        // ==================================================
-        // 9. TOTAL AMOUNT
-        // ==================================================
-
-        var totalAmount =
-            taxableAmount +
-            cgstAmount +
-            sgstAmount +
-            igstAmount;
-
-
-        $row.find('.tot-amt')
-            .val(totalAmount.toFixed(2));
-
-
-        // ==================================================
-        // 10. HEADER TOTALS
-        // ==================================================
-
-        calculateHeaderTotals();
-    }
-
-
-
-    // ======================================================
-    // CALCULATE ALL ROWS
-    // ======================================================
-
-    function calculateAllRows() {
-
-        $('#mainTable tbody tr').each(function () {
-
-            calculateRow($(this));
-
-        });
-    }
-
-
-
-    // ======================================================
-    // HEADER TOTALS
-    // ======================================================
-
-    function calculateHeaderTotals() {
-
-        var totalGST = 0;
-        var totalAmount = 0;
-
-
-        $('#mainTable tbody tr').each(function () {
-
-            var $row = $(this);
-
-
-            var cgst =
-                parseFloat(
-                    $row.find('.cgst-amt').val()
-                ) || 0;
-
-            var sgst =
-                parseFloat(
-                    $row.find('.sgst-amt').val()
-                ) || 0;
-
-            var igst =
-                parseFloat(
-                    $row.find('.igst-amt').val()
-                ) || 0;
-
-            var rowTotal =
-                parseFloat(
-                    $row.find('.tot-amt').val()
-                ) || 0;
-
-
-            totalGST +=
-                cgst +
-                sgst +
-                igst;
-
-            totalAmount +=
-                rowTotal;
-        });
-
-
-        // ==================================================
-        // HEADER GST
-        // ==================================================
-
-        $('#TotalGSTSystem')
-            .val(totalGST.toFixed(2));
-
-
-        // ==================================================
-        // HEADER TOTAL AMOUNT
-        // ==================================================
-
-        $('#TotalAmount')
-            .val(totalAmount.toFixed(2));
-    }
-
-
-
-    // ======================================================
-    // WHEN WEIGHT / RATE / DISCOUNT CHANGES
-    // ======================================================
-
-    $(document)
-        .off(
-            'input.calculation change.calculation',
-            '.total-net-wt, .rate, .disc-per'
-        )
-        .on(
-            'input.calculation change.calculation',
-            '.total-net-wt, .rate, .disc-per',
-            function () {
-
-                var $row =
-                    $(this).closest('tr');
-
-                calculateRow($row);
+            if (!$row || !$row.length) {
+                return;
             }
-        );
 
-</script>
+
+            // ============================================
+            // 1. TOTAL NET WT
+            // ============================================
+
+            var totalNetWt =
+                parseFloat(
+                    $row.find('.total-net-wt').val()
+                ) || 0;
+
+
+            // ============================================
+            // 2. RATE
+            // ============================================
+
+            var rate =
+                parseFloat(
+                    $row.find('.rate').val()
+                ) || 0;
+
+
+            // ============================================
+            // 3. AMOUNT
+            // TOTAL NET WT × RATE
+            // ============================================
+
+            var amount =
+                totalNetWt * rate;
+
+            $row.find('.amount')
+                .val(amount.toFixed(2));
+
+
+            // ============================================
+            // 4. DISCOUNT %
+            // ============================================
+
+            var discPer =
+                parseFloat(
+                    $row.find('.disc-per').val()
+                ) || 0;
+
+
+            // ============================================
+            // 5. DISCOUNT VALUE
+            // AMOUNT × DISCOUNT % / 100
+            // ============================================
+
+            var discount =
+                amount * discPer / 100;
+
+            $row.find('.discount')
+                .val(discount.toFixed(2));
+
+
+            // ============================================
+            // 6. TAXABLE AMOUNT
+            // AMOUNT - DISCOUNT
+            // ============================================
+
+            var taxableAmount =
+                amount - discount;
+
+            if (taxableAmount < 0) {
+                taxableAmount = 0;
+            }
+
+            $row.find('.taxable-amt')
+                .val(taxableAmount.toFixed(2));
+
+
+            // ============================================
+            // 7. GST RATES
+            // ============================================
+
+            var cgstRate =
+                parseFloat(
+                    $row.find('.cgst-rate').val()
+                ) || 0;
+
+            var sgstRate =
+                parseFloat(
+                    $row.find('.sgst-rate').val()
+                ) || 0;
+
+            var igstRate =
+                parseFloat(
+                    $row.find('.igst-rate').val()
+                ) || 0;
+
+
+            // ============================================
+            // 8. GST AMOUNT
+            // GST MUST USE TAXABLE AMOUNT
+            // ============================================
+
+            var cgstAmt =
+                taxableAmount * cgstRate / 100;
+
+            var sgstAmt =
+                taxableAmount * sgstRate / 100;
+
+            var igstAmt =
+                taxableAmount * igstRate / 100;
+
+
+            // ============================================
+            // 9. SET GST AMOUNTS
+            // ============================================
+
+            $row.find('.cgst-amt')
+                .val(cgstAmt.toFixed(2));
+
+            $row.find('.sgst-amt')
+                .val(sgstAmt.toFixed(2));
+
+            $row.find('.igst-amt')
+                .val(igstAmt.toFixed(2));
+
+
+            // ============================================
+            // 10. TOTAL AMOUNT
+            // TAXABLE + GST
+            // ============================================
+
+            var totalAmount =
+                taxableAmount +
+                cgstAmt +
+                sgstAmt +
+                igstAmt;
+
+            $row.find('.tot-amt')
+                .val(totalAmount.toFixed(2));
+
+
+            // ============================================
+            // 11. HEADER TOTALS
+            // ============================================
+
+            calculateHeaderTotals();
+        }
+        // ======================================================
+        // CALCULATE ALL ROWS
+        // ======================================================
+
+        function calculateAllRows() {
+
+            $('#mainTable tbody tr').each(function () {
+
+                calculateRow($(this));
+
+            });
+        }
+
+
+
+        // ======================================================
+        // HEADER TOTALS
+        // ======================================================
+
+        function calculateHeaderTotals() {
+
+            var totalGST = 0;
+            var totalAmount = 0;
+
+
+            $('#mainTable tbody tr').each(function () {
+
+                var $row = $(this);
+
+
+                var cgst =
+                    parseFloat(
+                        $row.find('.cgst-amt').val()
+                    ) || 0;
+
+                var sgst =
+                    parseFloat(
+                        $row.find('.sgst-amt').val()
+                    ) || 0;
+
+                var igst =
+                    parseFloat(
+                        $row.find('.igst-amt').val()
+                    ) || 0;
+
+                var rowTotal =
+                    parseFloat(
+                        $row.find('.tot-amt').val()
+                    ) || 0;
+
+
+                totalGST +=
+                    cgst +
+                    sgst +
+                    igst;
+
+                totalAmount +=
+                    rowTotal;
+            });
+
+
+            // ==================================================
+            // HEADER GST
+            // ==================================================
+
+            $('#TotalGSTSystem')
+                .val(totalGST.toFixed(2));
+
+
+            // ==================================================
+            // HEADER TOTAL AMOUNT
+            // ==================================================
+
+            $('#TotalAmount')
+                .val(totalAmount.toFixed(2));
+        }
+
+
+
+        // ======================================================
+        // WHEN WEIGHT / RATE / DISCOUNT CHANGES
+        // ======================================================
+
+        // ======================================================
+        // GST CONFIRMATION FOR:
+        // TOTAL NET WT / RATE / DISCOUNT %
+        // ======================================================
+
+        $(document)
+            .off(
+                'focus.gstChange',
+                '.total-net-wt, .rate, .disc-per'
+            )
+            .on(
+                'focus.gstChange',
+                '.total-net-wt, .rate, .disc-per',
+                function () {
+
+                    // Store old value before user changes it
+                    $(this).data(
+                        'gst-old-value',
+                        $(this).val()
+                    );
+                }
+            );
+
+
+        $(document)
+            .off(
+                'change.gstChange',
+                '.total-net-wt, .rate, .disc-per'
+            )
+            .on(
+                'change.gstChange',
+                '.total-net-wt, .rate, .disc-per',
+                function () {
+
+                    var $input = $(this);
+
+                    var $row =
+                        $input.closest('tr');
+
+                    var newValue =
+                        $input.val();
+
+                    var oldValue =
+                        $input.data('gst-old-value');
+
+
+                    // ==========================================
+                    // VALUE DID NOT CHANGE
+                    // ==========================================
+
+                    if (
+                        String(newValue) ===
+                        String(oldValue)
+                    ) {
+                        calculateRow($row);
+                        return;
+                    }
+
+
+                    // ==========================================
+                    // YES
+                    // ==========================================
+
+                    function applyChange() {
+
+                        calculateRow($row);
+                    }
+
+
+                    // ==========================================
+                    // NO
+                    // ==========================================
+
+                    function restoreChange() {
+
+                        $input.val(oldValue);
+
+                        calculateRow($row);
+                    }
+
+
+                    // ==========================================
+                    // CONFIRM
+                    // ==========================================
+
+                    confirmGSTChange(
+                        applyChange,
+                        restoreChange
+                    );
+                }
+            );
+        function isGSTAlreadyCalculated() {
+
+            var hasGST = false;
+
+            $('#mainTable tbody tr').each(function () {
+
+                var $row = $(this);
+
+                var cgstRate = parseFloat(
+                    $row.find('input[name$=".CGST_RT"]').val()
+                ) || 0;
+
+                var sgstRate = parseFloat(
+                    $row.find('input[name$=".SGST_RT"]').val()
+                ) || 0;
+
+                var igstRate = parseFloat(
+                    $row.find('input[name$=".IGST_RT"]').val()
+                ) || 0;
+
+                var cgstAmt = parseFloat(
+                    $row.find('input[name$=".CGST_AMT"]').val()
+                ) || 0;
+
+                var sgstAmt = parseFloat(
+                    $row.find('input[name$=".SGST_AMT"]').val()
+                ) || 0;
+
+                var igstAmt = parseFloat(
+                    $row.find('input[name$=".IGST_AMT"]').val()
+                ) || 0;
+
+                if (
+                    cgstRate > 0 ||
+                    sgstRate > 0 ||
+                    igstRate > 0 ||
+                    cgstAmt > 0 ||
+                    sgstAmt > 0 ||
+                    igstAmt > 0
+                ) {
+                    hasGST = true;
+                    return false;
+                }
+            });
+
+            return hasGST;
+        }
+
+
+     
+
+        function confirmGSTChange(onYes, onNo) {
+
+            // No GST calculated yet -> directly continue
+            if (!isGSTAlreadyCalculated()) {
+
+                if (typeof onYes === 'function') {
+                    onYes();
+                }
+
+                return;
+            }
+
+            $.confirm({
+                title: "GST Warning",
+                type: "orange",
+
+                content:
+                    "GST is already calculated.<br><br>" +
+                    "Changing Vendor, Location, Total Net Wt, Rate or Discount % " +
+                    "will recalculate GST.",
+
+                buttons: {
+
+                    Yes: {
+                        text: "Yes",
+                        btnClass: "btn-orange",
+
+                        action: function () {
+
+                            if (typeof onYes === 'function') {
+                                onYes();
+                            }
+                        }
+                    },
+
+                    No: {
+                        text: "No",
+
+                        action: function () {
+
+                            if (typeof onNo === 'function') {
+                                onNo();
+                            }
+                        }
+                    }
+                }
+            });
+        } 
+
+    </script>
 
     <script>
         // ✅ SINGLE UNIFIED SUBMIT HANDLER
         $('form').off('submit').on('submit', function (e) {
 
-          
+
 
             // ─── STEP 3: Required validation ───
             var isValid = true;
@@ -3344,8 +3923,8 @@ $(document).on('click', '.location-desc', function () {
                 return false;
             }
 
-  
-     
+
+
 
             var val = $('#PacketDate').val();
 

@@ -236,40 +236,34 @@ namespace PacketTea.Controllers.TEA
             }, JsonRequestBehavior.AllowGet);
         }
 
-        public async Task<JsonResult> GetUnit(
-            string q = "",
-            int limit = 10,
-            string fieldValue = "",
-            string fieldText = "",
-            string value = "",
-            int p = 1)
+        public async Task<JsonResult> GetUnit(string q = "", int limit = 10, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var resp = await Services.GetAsync<List<string>>(
-                "/api/TeaPurchase/GetUnit"
-            );
+            var resp = await Services.GetAsync<List<M_UNIT>>("/api/TeaPurchase/GetUnit");
 
-            var all = resp?.Data ?? new List<string>();
+            var all = resp?.Data ?? new List<M_UNIT>();
 
-            // Search
+            // 🔍 Search filter
             if (!string.IsNullOrWhiteSpace(q))
             {
-                q = q.Trim();
-
-                all = all
-                    .Where(x => !string.IsNullOrEmpty(x) &&
-                                x.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
-                    .ToList();
+                all = all.Where(x =>
+                    (x.CODE != null && x.CODE.Contains(q)) ||
+                    (x.NAME != null && x.NAME.Contains(q)) ||
+                    (x.GLOCA != null && x.GLOCA.Contains(q))
+                ).ToList();
             }
 
             var count = all.Count;
 
-            // Paging
+            // 📄 Paging
             var data = all
                 .Skip((p - 1) * limit)
                 .Take(limit)
-                .Select(x => new
+                .Select(x => new  // ✅ Make sure GLOCA is included
                 {
-                    code = x
+                    CODE = x.CODE,
+                    NAME = x.NAME,
+                    GLOCA = x.GLOCA,
+                    
                 })
                 .ToList();
 
@@ -335,13 +329,23 @@ namespace PacketTea.Controllers.TEA
             }, JsonRequestBehavior.AllowGet);
         }
 
-        public async Task<JsonResult> GetLocation(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        public async Task<JsonResult> GetLocation(
+            string q = "",
+            int limit = 0,
+            string fieldValue = "",
+            string fieldText = "",
+            string value = "",
+            int p = 1)
         {
             if (string.IsNullOrEmpty(q))
             {
                 q = value;
             }
-            var resp = await Services.GetAsync<PageValue<M_SALESCENTRE>>($"/api/TeaPurchase/GetLocation?search={q}&page={p}&pageSize={limit}");
+
+            var resp = await Services.GetAsync<PageValue<M_SALESCENTRE>>(
+                $"/api/TeaPurchase/GetLocation?search={q}&page={p}&pageSize={limit}"
+            );
+
             var data = resp?.Data.results;
 
             return Json(new
@@ -350,7 +354,6 @@ namespace PacketTea.Controllers.TEA
                 count = resp?.Data.rowCount ?? 0
             }, JsonRequestBehavior.AllowGet);
         }
-
         public async Task<JsonResult> GetBroker( string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             if (string.IsNullOrEmpty(q))
@@ -430,7 +433,7 @@ namespace PacketTea.Controllers.TEA
                 return Json(new List<T_TEA_PURCHASE>(), JsonRequestBehavior.AllowGet);
             }
         }
-        public async Task<ActionResult> InsertOrUpdate(string unit = "", string docdt = "", string docno = "", string doctype = "", string doctypeType = "")
+        public async Task<ActionResult> InsertOrUpdate(string unit = "", string docdt = "", string docno = "", string gloca = "", string doctype = "", string doctypeType = "")
         {
             // ===============================
             // FINANCIAL YEAR SETUP
@@ -510,6 +513,7 @@ namespace PacketTea.Controllers.TEA
                     T_TEA_HEAD = new T_TEA_PURCHASE
                     {
                         UNIT = unit,
+                        GLOCA = gloca,
                         PUR_TYPE = doctypeType
                     },
 
@@ -637,14 +641,14 @@ namespace PacketTea.Controllers.TEA
             foreach (var detail in details)
             {
                 //head.DOCNO = "000117";
-                head.GLOCA = "G00099";
+                detail.GLOCA = head.GLOCA;
                 detail.LOCA = user.Loca;
                 detail.PUR_TYPE = head.PUR_TYPE;
                 detail.GLOCA = head.GLOCA;
                 detail.UNIT = head.UNIT;
               
                 detail.DOCDT = head.DOCDT;
-
+                detail.DOC_YEAR = head.DOC_YEAR;
                 head.PACK_DATE = DateTime.Now;
 
                 detail.PACK_DATE = head.PACK_DATE;
@@ -687,10 +691,10 @@ namespace PacketTea.Controllers.TEA
                 // DETAIL
                 detail.SL_NO = slNo.ToString();
 
-                detail.AMOUNT =
-                    (detail.QTY ?? 0) * (detail.RATE ?? 0);
+                //detail.AMOUNT =
+                //    (detail.QTY ?? 0) * (detail.RATE ?? 0);
 
-                detail.TOT_AMT = detail.AMOUNT;
+                //detail.TOT_AMT = detail.AMOUNT;
 
                 // AUDIT
                 detail.U_NAME = user.getUserName;

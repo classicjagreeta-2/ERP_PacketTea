@@ -126,6 +126,8 @@ namespace PacketTea.Models.PT
         public virtual string BROKERNAME { get; set; }
         public virtual string TRANSPORTERNAME { get; set; }
         public virtual string VENDORNAME { get; set; }
-       
+        public virtual string LOCATIONDESC { get; set; }
+        public virtual string MARKDESC { get; set; }
+        public virtual string SIZEDESC { get; set; }
     }
 }
