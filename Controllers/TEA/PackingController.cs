@@ -60,11 +60,29 @@ namespace Finance.Controllers.TEA
             return (response.IsSuccessStatusCode ? response.Data : null) ?? new List<UnitOption>();
         }
 
+        // AEDV rights + back-date days (Aday/Eday) -- same shared "PacketTeaPurchaseEntry"
+        // permission bucket as MasterBlendEntryController (see its comment).
+        private AEDV Permission =>
+            ((List<AEDV>)Session["User_AEDV"])?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
+
+        // Doc Date picker for a new entry: the FY bounds, narrowed to no earlier than the
+        // back-date policy allows (Aday days back) and no later than today.
+        private void SetNewDocDateBounds(AEDV perm)
+        {
+            var backDateMin = perm?.MinDocDate(true) ?? DateTime.Today;
+            var min = backDateMin;
+            var max = DateTime.Today;
+            if (DateTime.TryParse((string)ViewBag.FyStart, out var fs) && fs > min) min = fs;
+            if (DateTime.TryParse((string)ViewBag.FyEnd, out var fe) && fe < max) max = fe;
+            ViewBag.BackDateMin = backDateMin.ToString("yyyy-MM-dd");
+            ViewBag.DocDtMin = min.ToString("yyyy-MM-dd");
+            ViewBag.DocDtMax = max.ToString("yyyy-MM-dd");
+        }
+
         // GET: Packing
         public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15, string sortBy = "", string sortDir = "")
         {
-            var sdsd = (List<AEDV>)Session["User_AEDV"];
-            ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
+            ViewBag.Permission = Permission;
             ViewBag.CurrentFilter = searchString;
             ViewBag.SortBy = sortBy;
             ViewBag.SortDir = sortDir;
@@ -114,8 +132,18 @@ namespace Finance.Controllers.TEA
                 }
             }
 
+            var perm = Permission;
+            ViewBag.Permission = perm;
+
             if (string.IsNullOrEmpty(docno))
             {
+                if (!(perm?.Can('A') ?? false))
+                {
+                    TempData["toastrWarning"] = "You do not have permission to add a new Packing entry.";
+                    return RedirectToAction("Index", new { blendType });
+                }
+                SetNewDocDateBounds(perm);
+
                 // Default to "PT" only when the user actually has rights to it, else
                 // their first allowed type -- so the Unit guess below isn't derived from
                 // a Packet Type they cannot select (same as Master/Final Blend Entry).
@@ -142,12 +170,23 @@ namespace Finance.Controllers.TEA
 
             if (!response.IsSuccessStatusCode || response.Data == null)
             {
-                TempData["toastrError"] = response.Message ?? "Record not found.";
+                TempData[response.FailureToastKey] = response.Message ?? "Record not found.";
                 return RedirectToAction("Index", new { blendType });
             }
 
             var json = JsonConvert.SerializeObject(response.Data);
             var wrapper = JsonConvert.DeserializeObject<GetByDocNoResult>(json);
+
+            // AEDV "E" right + back-date policy (Eday) -- View mode stays open to everyone.
+            if (!view && wrapper.head?.DOCDT != null)
+            {
+                var denied = AEDV.CheckAddEdit(perm, false, wrapper.head.DOCDT.Value);
+                if (denied != null)
+                {
+                    TempData["toastrWarning"] = denied;
+                    return RedirectToAction("Index", new { blendType });
+                }
+            }
 
             var editModel = wrapper.head ?? new BLEND_PACKING_DATA();
             editModel.BLEND_TYPE = blendType;
@@ -173,11 +212,21 @@ namespace Finance.Controllers.TEA
                 model.UNIT = string.IsNullOrEmpty(model.UNIT) ? UnitForBlendType(model.BLEND_TYPE) : model.UNIT;
             }
 
+            // Re-checked here, not just on the form: the post can be replayed, or the page
+            // left open past the back-date window.
+            if (model?.DOCDT != null)
+            {
+                var denied = AEDV.CheckAddEdit(Permission, string.IsNullOrEmpty(model.DOCNO), model.DOCDT.Value);
+                if (denied != null)
+                    return Json(new { success = false, message = denied, warning = true });
+            }
+
             var response = await Services.PostAsync<dynamic>("/api/BlendPacking/SaveOrUpdate", model);
             return Json(new
             {
                 success = response.IsSuccessStatusCode,
                 message = response.IsSuccessStatusCode ? "Saved successfully." : (response.Message ?? "Save failed."),
+                warning = response.IsValidationFailure,
                 data = response.Data
             });
         }
@@ -186,10 +235,16 @@ namespace Finance.Controllers.TEA
         [HttpPost]
         public async Task<ActionResult> Delete(string docno, string docdt, string blendType)
         {
+            if (!(Permission?.Can('D') ?? false))
+            {
+                TempData["toastrWarning"] = "You do not have permission to delete this entry.";
+                return RedirectToAction("Index", new { blendType });
+            }
+
             var response = await Services.PostAsync<dynamic>(
                 $"/api/BlendPacking/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}", new { });
 
-            TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
+            TempData[response.IsSuccessStatusCode ? "toastrSuccess" : response.FailureToastKey] =
                 response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");
 
             return RedirectToAction("Index", new { blendType });

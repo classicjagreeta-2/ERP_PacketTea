@@ -1,0 +1,110 @@
+@* Validation message box for the Master Blend / Final Blend / Packing screens ONLY
+   (Index + InsertOrUpdate of each). Included by those six views; nothing else loads it,
+   so every other screen keeps _Notification's own warning styles.
+
+   Rendered inside the page body, i.e. after _Layout's _Notification partial, so the
+   showWarning / showWarningDialog declared here replace _Notification's versions for
+   these pages -- which also routes TempData["toastrWarning"] (edit/delete rejected by
+   the API) into this box.
+
+   bxAlert(message, opts)  opts: { title, kind: 'warning'|'error'|'success', onOk }
+   bxConfirm(message, onYes, opts)  opts: { title, okText, cancelText } *@
+<style>
+    .bx-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100002; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity .15s; }
+    .bx-overlay.bx-show { opacity: 1; }
+    .bx-box { --bx-accent: #e8574a; --bx-accent-dark: #d64536; width: 380px; max-width: 100%; background: #fff; border-radius: 8px; border-top: 5px solid var(--bx-accent); box-shadow: 0 8px 24px rgba(0,0,0,.25); padding: 14px 18px; font-family: inherit; transform: scale(.96); transition: transform .15s; }
+    .bx-overlay.bx-show .bx-box { transform: none; }
+    .bx-box.bx-success { --bx-accent: #2e9e5b; --bx-accent-dark: #25824a; }
+    .bx-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .bx-head svg { flex: 0 0 22px; width: 22px; height: 22px; color: var(--bx-accent); }
+    .bx-title { margin: 0; font-size: 17px; font-weight: 600; color: #111; line-height: 1.2; }
+    .bx-msg { color: #111; font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow-y: auto; }
+    .bx-msg b { font-weight: 700; }
+    .bx-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+    .bx-btn { border: 0; border-radius: 4px; padding: 6px 16px; min-width: 70px; font-size: 13px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; cursor: pointer; }
+    .bx-btn.bx-ok { background: var(--bx-accent); color: #fff; }
+    .bx-btn.bx-ok:hover, .bx-btn.bx-ok:focus { background: var(--bx-accent-dark); outline: none; box-shadow: 0 0 0 3px rgba(232,87,74,.3); }
+    .bx-btn.bx-cancel { background: #fff; color: #444; border: 1px solid #ccc; }
+    .bx-btn.bx-cancel:hover, .bx-btn.bx-cancel:focus { background: #f3f3f3; outline: none; }
+</style>
+<script type="text/javascript">
+    (function () {
+        var ICONS = {
+            warning: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.5c.7 0 1.3.4 1.7 1l9 15.6c.8 1.3-.2 2.9-1.7 2.9H3c-1.5 0-2.5-1.6-1.7-2.9l9-15.6c.4-.6 1-1 1.7-1z"/><rect x="10.9" y="8.2" width="2.2" height="7" rx="1.1" fill="#fff"/><circle cx="12" cy="18" r="1.3" fill="#fff"/></svg>',
+            success: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M6.8 12.4l3.3 3.3 7.1-7.2" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+            confirm: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M9.2 9.3a2.9 2.9 0 1 1 4.2 2.6c-.9.5-1.4 1-1.4 2v.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.3" fill="#fff"/></svg>'
+        };
+
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+        // Escape first, then bold the values the user needs to spot: dates and
+        // anything the message quotes ("R023").
+        function format(msg) {
+            return esc(msg)
+                .replace(/\b(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})\b/g, '<b>$1</b>')
+                .replace(/&quot;([^&]{1,60}?)&quot;/g, '&quot;<b>$1</b>&quot;');
+        }
+
+        function open(message, o) {
+            var kind = o.kind || 'warning';
+            var ov = document.createElement('div');
+            ov.className = 'bx-overlay';
+            ov.innerHTML = '<div class="bx-box' + (kind === 'success' ? ' bx-success' : '') + '" role="alertdialog" aria-modal="true">' +
+                '<div class="bx-head">' + (ICONS[o.icon || kind] || ICONS.warning) + '<h3 class="bx-title"></h3></div>' +
+                '<div class="bx-msg"></div><div class="bx-actions"></div></div>';
+            ov.querySelector('.bx-title').textContent = o.title;
+            ov.querySelector('.bx-msg').innerHTML = format(message);
+            var actions = ov.querySelector('.bx-actions');
+
+            function close(cb) {
+                document.removeEventListener('keydown', onKey, true);
+                ov.classList.remove('bx-show');
+                setTimeout(function () { if (ov.parentNode) ov.parentNode.removeChild(ov); }, 150);
+                if (cb) cb();
+            }
+            function onKey(e) {
+                if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(o.onCancel || (o.cancelText ? null : o.onOk)); }
+                else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); close(o.onOk); }
+            }
+
+            if (o.cancelText) {
+                var c = document.createElement('button');
+                c.type = 'button'; c.className = 'bx-btn bx-cancel'; c.textContent = o.cancelText;
+                c.addEventListener('click', function () { close(o.onCancel); });
+                actions.appendChild(c);
+            }
+            var ok = document.createElement('button');
+            ok.type = 'button'; ok.className = 'bx-btn bx-ok'; ok.textContent = o.okText || 'Okay';
+            ok.addEventListener('click', function () { close(o.onOk); });
+            actions.appendChild(ok);
+
+            document.body.appendChild(ov);
+            document.addEventListener('keydown', onKey, true);
+            requestAnimationFrame(function () { ov.classList.add('bx-show'); ok.focus(); });
+        }
+
+        window.bxAlert = function (message, opts) {
+            var o = opts || {};
+            var kind = o.kind || 'warning';
+            open(message, {
+                kind: kind,
+                title: o.title || (kind === 'success' ? 'Success !' : kind === 'error' ? 'Error !' : 'Warning !'),
+                onOk: o.onOk
+            });
+        };
+        window.bxConfirm = function (message, onYes, opts) {
+            var o = opts || {};
+            open(message, {
+                kind: 'warning', icon: 'confirm', title: o.title || 'Confirm !',
+                okText: o.okText || 'Yes', cancelText: o.cancelText || 'No', onOk: onYes
+            });
+        };
+
+        // Take over _Notification's toast + dialog on these screens.
+        window.showWarning = function (message, title) { bxAlert(message, { title: title }); };
+        window.showWarningDialog = function (message, title) { bxAlert(message, { title: title }); };
+    })();
+</script>

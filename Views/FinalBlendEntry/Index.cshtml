@@ -6,6 +6,10 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
+    // AEDV rights (same as Master Blend's list). The edit back-date limit (Eday) is
+    // enforced by the CanEdit check the Edit button / Blend No link already make.
+    var perm = ViewBag.Permission as PacketTea.Helpers.AEDV;
+    bool canAdd = perm?.Can('A') ?? false, canEdit = perm?.Can('E') ?? false, canDelete = perm?.Can('D') ?? false;
 }
 
 @{
@@ -98,12 +102,12 @@
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
                 <li>
-                    <a href="javascript:void(0)" id="btnNew">
+                    <a href="javascript:void(0)" id="btnNew" style="@(canAdd ? "" : "opacity:0.5;")">
                         <i class="fa fa-plus"></i> New
                     </a>
                 </li>
                 <li>
-                    <a href="javascript:void(0)" id="editBtn">
+                    <a href="javascript:void(0)" id="editBtn" style="@(canEdit ? "" : "opacity:0.5;")">
                         <i class="fa fa-pencil"></i> Edit
                     </a>
                 </li>
@@ -113,7 +117,7 @@
                     </a>
                 </li>
                 <li>
-                    <a href="javascript:void(0)" id="deleteBtn">
+                    <a href="javascript:void(0)" id="deleteBtn" style="@(canDelete ? "" : "opacity:0.5;")">
                         <i class="fa fa-trash-o"></i> Delete
                     </a>
                 </li>
@@ -186,7 +190,8 @@
                                 <td>@row.DOCNO</td>
                                 <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
                                 <td>
-                                    <a href="@Url.Action("InsertOrUpdate", "FinalBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE, unit = row.UNIT })">@row.BLEND_NO</a>
+                                    <a class="blend-edit-link" href="@Url.Action("InsertOrUpdate", "FinalBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE, unit = row.UNIT })"
+                                       data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE" data-unit="@row.UNIT">@row.BLEND_NO</a>
                                 </td>
                                 <td>@(row.BLEND_DATE.HasValue ? row.BLEND_DATE.Value.ToString("dd/MM/yyyy") : "")</td>
                                 <td>@row.MasterBlendNo</td>
@@ -262,6 +267,7 @@
         </div>
     </div>
 
+    @Html.Partial("_BlendAlert")
     <script>
         $(function () {
             var searchTimer;
@@ -382,7 +388,10 @@
                 $('.go-new').toggleClass('is-ready', ready);
             }
 
+            var CAN_ADD = @(canAdd ? "true" : "false"), CAN_DELETE = @(canDelete ? "true" : "false");
+
             $('#btnNew').on('click', function () {
+                if (!CAN_ADD) { showWarningDialog('You do not have permission to add a new entry.', 'Add Not Allowed !'); return; }
                 if ($('#newUnitRow').length) return;
                 $('#blendTable tbody').prepend(buildNewRow());
                 refreshGoNewState();
@@ -392,8 +401,8 @@
 
             $('#blendTable').on('click', '.go-new', function () {
                 var unit = $('#newRowUnit').val(), packetType = $('#newRowPacketType').val();
-                if (!unit) { alert('Please select Unit first'); return; }
-                if (!packetType) { alert('Please select Packet Type first'); return; }
+                if (!unit) { showWarning('Please select Unit first'); return; }
+                if (!packetType) { showWarning('Please select Packet Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
                     + '?unit=' + encodeURIComponent(unit)
                     + '&blendType=' + encodeURIComponent(packetType);
@@ -405,19 +414,50 @@
             // Entry's list page does.
             function getSingleChecked(action) {
                 var $c = $('.row-check:checked');
-                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
-                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
+                if ($c.length === 0) { showWarning('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { showWarning('Please select only one record to ' + action + '.'); return null; }
                 return $c;
             }
+
+            // Blend No link and Edit button both ask CanEdit first: a packed/locked sheet
+            // used to load the whole edit page only to be redirected back to a reloaded
+            // list (slow, and the warning appeared as a small top toast). Now it's one
+            // small call and a centered warning dialog naming the Blend No.
+            var editBusy = false;
+            function openForEdit(docno, docdt, blendType, unit) {
+                if (editBusy) return;
+                var qs = '?docno=' + encodeURIComponent(docno)
+                    + '&docdt=' + encodeURIComponent(docdt)
+                    + '&blendType=' + encodeURIComponent(blendType)
+                    + '&unit=' + encodeURIComponent(unit || '');
+                var editUrl = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")' + qs;
+                editBusy = true;
+                $('body').css('cursor', 'progress');
+                $.getJSON('@Url.Action("CanEdit", "FinalBlendEntry")' + qs)
+                    .done(function (r) {
+                        if (r && r.canEdit) { window.location.href = editUrl; return; }
+                        editBusy = false; $('body').css('cursor', '');
+                        showWarningDialog((r && r.message) || 'This Final Blend cannot be edited.', 'Edit Not Allowed !');
+                    })
+                    .fail(function (x) {
+                        editBusy = false; $('body').css('cursor', '');
+                        if (x.status === 440) { window.location.reload(); return; }
+                        // Couldn't check -- fall back to the old path; the edit page still guards.
+                        window.location.href = editUrl;
+                    });
+            }
+
+            $('#blendTable').on('click', '.blend-edit-link', function (e) {
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.which === 2) return; // new tab: plain link
+                e.preventDefault();
+                var $a = $(this);
+                openForEdit($a.data('docno'), $a.data('docdt'), $a.data('blendtype'), $a.data('unit'));
+            });
 
             $('#editBtn').on('click', function () {
                 var $c = getSingleChecked('edit');
                 if (!$c) return;
-                window.location.href = '@Url.Action("InsertOrUpdate", "FinalBlendEntry")'
-                    + '?docno=' + encodeURIComponent($c.val())
-                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
-                    + '&blendType=' + encodeURIComponent($c.data('blendtype'))
-                    + '&unit=' + encodeURIComponent($c.data('unit') || '');
+                openForEdit($c.val(), $c.data('docdt'), $c.data('blendtype'), $c.data('unit'));
             });
 
             $('#viewBtn').on('click', function () {
@@ -432,16 +472,17 @@
             });
 
             $('#deleteBtn').on('click', function () {
+                if (!CAN_DELETE) { showWarningDialog('You do not have permission to delete this entry.', 'Delete Not Allowed !'); return; }
                 var $c = getSingleChecked('delete');
                 if (!$c) return;
-                if (!confirm('Are you sure you want to delete Final Blend No against Doc No ' + $c.val() + ' ?')) return;
-
-                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "FinalBlendEntry")' })
-                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
-                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
-                    .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
-                    .append($('<input>', { type: 'hidden', name: 'unit', value: $c.data('unit') || '' }))
-                    .appendTo('body').submit();
+                bxConfirm('Are you sure you want to delete Final Blend No against Doc No ' + $c.val() + ' ?', function () {
+                    $('<form>', { method: 'POST', action: '@Url.Action("Delete", "FinalBlendEntry")' })
+                        .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
+                        .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
+                        .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
+                        .append($('<input>', { type: 'hidden', name: 'unit', value: $c.data('unit') || '' }))
+                        .appendTo('body').submit();
+                }, { okText: 'Delete', cancelText: 'Cancel' });
             });
         });
     </script>

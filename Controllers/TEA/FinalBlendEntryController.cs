@@ -75,11 +75,29 @@ namespace Finance.Controllers.TEA
             return (response.IsSuccessStatusCode ? response.Data : null) ?? new List<UnitOption>();
         }
 
+        // AEDV rights + back-date days (Aday/Eday) -- same shared "PacketTeaPurchaseEntry"
+        // permission bucket as MasterBlendEntryController (see its comment).
+        private AEDV Permission =>
+            ((List<AEDV>)Session["User_AEDV"])?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
+
+        // Doc Date picker for a new entry: the FY bounds, narrowed to no earlier than the
+        // back-date policy allows (Aday days back) and no later than today.
+        private void SetNewDocDateBounds(AEDV perm)
+        {
+            var backDateMin = perm?.MinDocDate(true) ?? DateTime.Today;
+            var min = backDateMin;
+            var max = DateTime.Today;
+            if (DateTime.TryParse((string)ViewBag.FyStart, out var fs) && fs > min) min = fs;
+            if (DateTime.TryParse((string)ViewBag.FyEnd, out var fe) && fe < max) max = fe;
+            ViewBag.BackDateMin = backDateMin.ToString("yyyy-MM-dd");
+            ViewBag.DocDtMin = min.ToString("yyyy-MM-dd");
+            ViewBag.DocDtMax = max.ToString("yyyy-MM-dd");
+        }
+
         // GET: FinalBlendEntry
         public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15, string sortBy = "", string sortDir = "")
         {
-            var sdsd = (List<AEDV>)Session["User_AEDV"];
-            ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
+            ViewBag.Permission = Permission;
             ViewBag.CurrentFilter = searchString;
             ViewBag.SortBy = sortBy;
             ViewBag.SortDir = sortDir;
@@ -137,8 +155,18 @@ namespace Finance.Controllers.TEA
                 }
             }
 
+            var perm = Permission;
+            ViewBag.Permission = perm;
+
             if (string.IsNullOrEmpty(docno))
             {
+                if (!(perm?.Can('A') ?? false))
+                {
+                    TempData["toastrWarning"] = "You do not have permission to add a new Final Blend entry.";
+                    return RedirectToAction("Index", new { blendType });
+                }
+                SetNewDocDateBounds(perm);
+
                 // New entry -- Master Blend, and everything it carries, is picked
                 // on-screen (spec §3.5.1); nothing to clone until then.
                 // Default to "PT" only when the user actually has rights to it --
@@ -168,16 +196,27 @@ namespace Finance.Controllers.TEA
 
             // Edit mode
             var response = await Services.GetAsync<dynamic>(
-                $"/api/FinalBlend/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={UnitOrCurrent(unit)}");
+                $"/api/FinalBlend/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={UnitOrCurrent(unit)}&forView={view}");
 
             if (!response.IsSuccessStatusCode || response.Data == null)
             {
-                TempData["toastrError"] = response.Message ?? "Record not found.";
+                TempData[response.FailureToastKey] = response.Message ?? "Record not found.";
                 return RedirectToAction("Index", new { blendType });
             }
 
             var json = JsonConvert.SerializeObject(response.Data);
             var wrapper = JsonConvert.DeserializeObject<GetByDocNoResult>(json);
+
+            // AEDV "E" right + back-date policy (Eday) -- View mode stays open to everyone.
+            if (!view && wrapper.head != null)
+            {
+                var denied = AEDV.CheckAddEdit(perm, false, wrapper.head.DOCDT);
+                if (denied != null)
+                {
+                    TempData["toastrWarning"] = denied;
+                    return RedirectToAction("Index", new { blendType });
+                }
+            }
 
             var editModel = new TEA_BLEND_DATA
             {
@@ -207,11 +246,21 @@ namespace Finance.Controllers.TEA
                     : model.T_TEA_BLEND.UNIT;
             }
 
+            // Re-checked here, not just on the form: the post can be replayed, or the page
+            // left open past the back-date window.
+            if (model?.T_TEA_BLEND != null)
+            {
+                var denied = AEDV.CheckAddEdit(Permission, string.IsNullOrEmpty(model.T_TEA_BLEND.DOCNO), model.T_TEA_BLEND.DOCDT);
+                if (denied != null)
+                    return Json(new { success = false, message = denied, warning = true });
+            }
+
             var response = await Services.PostAsync<dynamic>("/api/FinalBlend/SaveOrUpdate", model);
             return Json(new
             {
                 success = response.IsSuccessStatusCode,
                 message = response.IsSuccessStatusCode ? "Saved successfully." : (response.Message ?? "Save failed."),
+                warning = response.IsValidationFailure,
                 data = response.Data
             });
         }
@@ -220,13 +269,37 @@ namespace Finance.Controllers.TEA
         [HttpPost]
         public async Task<ActionResult> Delete(string docno, string docdt, string blendType, string unit = "")
         {
+            if (!(Permission?.Can('D') ?? false))
+            {
+                TempData["toastrWarning"] = "You do not have permission to delete this entry.";
+                return RedirectToAction("Index", new { blendType });
+            }
+
             var response = await Services.PostAsync<dynamic>(
                 $"/api/FinalBlend/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={UnitOrCurrent(unit)}", new { });
 
-            TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
+            TempData[response.IsSuccessStatusCode ? "toastrSuccess" : response.FailureToastKey] =
                 response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");
 
             return RedirectToAction("Index", new { blendType });
+        }
+
+        // GET: FinalBlendEntry/CanEdit (AJAX, Index list's Blend No link / Edit button) --
+        // checked before navigating so a packed/locked sheet is refused in place.
+        [HttpGet]
+        public async Task<ActionResult> CanEdit(string docno = "", string docdt = "", string blendType = "", string unit = "")
+        {
+            // AEDV "E" right + back-date policy first -- no API round trip needed to refuse.
+            if (DateTime.TryParse(docdt, out var docDate))
+            {
+                var denied = AEDV.CheckAddEdit(Permission, false, docDate);
+                if (denied != null)
+                    return JsonExact(new { canEdit = false, message = denied });
+            }
+
+            var r = await Services.GetAsync<dynamic>(
+                $"/api/FinalBlend/CanEdit?docno={docno}&docdt={docdt}&blendType={blendType}&unit={UnitOrCurrent(unit)}");
+            return JsonExactOrSessionExpired(r);
         }
 
         // GET: FinalBlendEntry/GetRowDetail (AJAX, Index list's "+" toggle)
@@ -270,8 +343,16 @@ namespace Finance.Controllers.TEA
         {
             if (!r.IsSuccessStatusCode)
             {
-                Response.StatusCode = 440; // Login Timeout
-                return JsonExact(new { sessionExpired = true, message = "Your session has expired. Please log in again." });
+                // Only an auth failure is a dead session; anything else (API 500, bad
+                // request, ...) is passed on with the API's own message so the picker can
+                // show what actually went wrong instead of a misleading "session expired".
+                if (r.StatusCode == "Unauthorized" || r.StatusCode == "Forbidden")
+                {
+                    Response.StatusCode = 440; // Login Timeout
+                    return JsonExact(new { sessionExpired = true, message = "Your session has expired. Please log in again." });
+                }
+                Response.StatusCode = 502; // Bad Gateway -- the API call behind this proxy failed
+                return JsonExact(new { message = r.Message ?? r.Title ?? ("Server error (" + (r.StatusCode ?? "no response") + ").") });
             }
             return JsonExact(r.Data);
         }

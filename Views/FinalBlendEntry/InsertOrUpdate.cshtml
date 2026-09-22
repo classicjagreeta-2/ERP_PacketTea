@@ -47,9 +47,6 @@
         .popup-box .picker-body tr:hover td { background: #eef3ff; }
         .popup-box .picker-search { margin-bottom: 8px; }
         .action-btns li a.is-disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
-        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
-        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
-        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
         #remainingQtyHint { font-size: 12px; color: var(--mbe-muted, #6b7280); padding-top: 6px; }
     </style>
 </head>
@@ -144,8 +141,9 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Doc Date <span>(*)</span></label>
+                                @* New entry: FY narrowed by the back-date policy (Aday) and today -- see SetNewDocDateBounds. *@
                                 <input type="date" id="DOCDT" value="@head.DOCDT.ToString("yyyy-MM-dd")"
-                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
+                                       min="@(ViewBag.DocDtMin ?? ViewBag.FyStart)" max="@(ViewBag.DocDtMax ?? ViewBag.FyEnd)" @(isEdit ? "disabled" : "") />
                             </div>
                             <div class="form-col-20">
                                 <label>Party</label>
@@ -369,43 +367,24 @@
         <div class="picker-body" id="masterPickerBody"></div>
     </div>
 
-    <!-- In-page alert/confirm modal -->
-    <div class="popup-overlay" id="appAlertOverlay"></div>
-    <div class="popup-box alert-box" id="appAlertBox">
-        <div class="popup-header">
-            <h2 id="appAlertTitle">Notice</h2>
-        </div>
-        <div class="alert-message" id="appAlertMessage"></div>
-        <div class="alert-actions">
-            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
-            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
-        </div>
-    </div>
+@Html.Partial("_BlendAlert")
 
 <script>
     // =========================================================
-    // In-page alert/confirm (see MasterBlendEntry's InsertOrUpdate for why).
+    // In-page alert/confirm -- drawn by Shared/_BlendAlert.cshtml.
+    // kind: 'warning' (default -- every validation), 'success', or 'error' (real failure only).
     // =========================================================
-    function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
-    function showAlert(message, onOk) {
-        $('#appAlertTitle').text('Notice');
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').hide();
-        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    function showAlert(message, onOk, kind) {
+        bxAlert(message, { kind: kind || 'warning', onOk: onOk });
     }
     function showConfirm(message, onYes) {
-        $('#appAlertTitle').text('Confirm');
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').show().off('click').on('click', closeAppAlert);
-        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onYes) onYes(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+        bxConfirm(message, onYes);
     }
 
     // Same re-parenting fix as MasterBlendEntry's InsertOrUpdate (see that view
     // for the full rationale) -- keeps "fixed, centered" popups centered on the
     // real viewport instead of a transformed ancestor from _Layout's chrome.
-    $('#pickerOverlay, #genericPicker, #masterPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    $('#pickerOverlay, #genericPicker, #masterPicker').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
     // Doc Date and Blend Date must fall inside the selected financial year. Pack Date is
@@ -414,6 +393,8 @@
     // carries an earlier Pack Date when it is blended now.
     var FY_MIN = '@ViewBag.FyStart';
     var FY_MAX = '@ViewBag.FyEnd';
+    // Back-date policy (AEDV Aday): earliest Doc Date a new entry may carry. Blank in Edit.
+    var BACK_DATE_MIN = '@ViewBag.BackDateMin';
     function withinFy(dateStr) { return !dateStr || !FY_MIN || !FY_MAX || (dateStr >= FY_MIN && dateStr <= FY_MAX); }
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_TEA_BLEND_DET));
     var rowSeq = 0;
@@ -632,7 +613,23 @@
             html += '</tbody></table>';
             $('#masterPickerBody').html(html);
             $('#masterPickerBody').data('rows', data);
+        }).fail(function (jqXHR) {
+            // Without this a failed call left the picker silently blank.
+            $('#masterPickerBody').data('rows', []).html(
+                '<div style="text-align:center;padding:12px;color:#b00020;">Could not load Master Blends.</div>');
+            handleLookupFail(jqXHR);
         });
+    }
+
+    // Same contract as MasterBlendEntry's handleLookupFail: 440 = session expired,
+    // anything else carries the API's own message.
+    function handleLookupFail(jqXHR) {
+        var msg = jqXHR.responseJSON && jqXHR.responseJSON.message;
+        if (jqXHR.status === 440) {
+            showAlert(msg || 'Your session has expired. Please log in again.', function () { window.location.reload(); }, 'error');
+        } else {
+            showAlert(msg || ('Could not load data (HTTP ' + jqXHR.status + '). Please try again.'), null, 'error');
+        }
     }
 
     $('#masterPickerBody').on('click', 'tr[data-i]', function () {
@@ -834,11 +831,12 @@
     // =========================================================
     $('#btnSave').on('click', function () {
         if (!$('#DOCDT').val()) { showAlert('Doc Date cannot be blank'); return; }
-        var docDtVal = $('#DOCDT').val(), fyMin = $('#DOCDT').attr('min'), fyMax = $('#DOCDT').attr('max');
+        var docDtVal = $('#DOCDT').val(), fyMin = FY_MIN, fyMax = FY_MAX;
         var now = new Date();
         var todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         if (docDtVal > todayStr) { showAlert('Doc Date cannot be a future date'); return; }
         if ((fyMin && docDtVal < fyMin) || (fyMax && docDtVal > fyMax)) { showAlert('Doc Date must fall within the current financial year'); return; }
+        if (!IS_EDIT && BACK_DATE_MIN && docDtVal < BACK_DATE_MIN) { showAlert('Back date entry is not allowed. Doc Date cannot be earlier than ' + BACK_DATE_MIN.split('-').reverse().join('/') + '.'); return; }
         if (!$('#R_DOCNO').val()) { showAlert('Master Blend No cannot be blank'); return; }
         if (!$('#BLEND_WH').val()) { showAlert('Warehouse cannot be blank'); return; }
         if (!$('#BLEND_GRADE').val()) { showAlert('Blend Grade cannot be blank'); return; }
@@ -904,12 +902,12 @@
                     if (resp.success) {
                         showAlert(resp.message || 'Saved.', function () {
                             window.location.href = '@Url.Action("Index", "FinalBlendEntry")' + '?blendType=' + encodeURIComponent($('#BLEND_TYPE').val());
-                        });
+                        }, 'success');
                     } else {
-                        showAlert(resp.message || 'Save failed.');
+                        showAlert(resp.message || 'Save failed.', null, resp.warning === false ? 'error' : 'warning');
                     }
                 },
-                error: function () { showAlert('Save failed - server error.'); }
+                error: function () { showAlert('Save failed - server error.', null, 'error'); }
             });
         });
     });

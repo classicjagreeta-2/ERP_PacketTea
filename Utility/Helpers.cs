@@ -354,6 +354,41 @@ namespace PacketTea
                     this._add = value;
                 }
             }
+
+            // Null-safe right check -- the Add/Edit/Delete/View getters above throw when
+            // the menu API sends no AEDV string for this entry.
+            public bool Can(char right) => (Aedv ?? "").IndexOf(right) >= 0;
+
+            // Back-date policy: a new document may be dated at most Aday days back, and an
+            // existing one may only be edited while its own date is within Eday days of today.
+            public DateTime MinDocDate(bool isNew) => DateTime.Today.AddDays(-(isNew ? Aday : Eday));
+
+            // Null when the user may add (isNew) / edit a document dated docDate, else the
+            // message to show them.
+            public string CheckAddEdit(bool isNew, DateTime docDate)
+            {
+                if (!Can(isNew ? 'A' : 'E'))
+                    return isNew ? "You do not have permission to add a new entry."
+                                 : "You do not have permission to edit this entry.";
+
+                if (isNew && docDate.Date > DateTime.Today)
+                    return "Doc Date cannot be a future date.";
+
+                var minDate = MinDocDate(isNew);
+                if (docDate.Date < minDate)
+                    return isNew
+                        ? $"Back date entry is not allowed. Doc Date cannot be earlier than {minDate:dd/MM/yyyy} ({Aday} day(s) back)."
+                        : $"Edit is not allowed. Only entries dated on or after {minDate:dd/MM/yyyy} ({Eday} day(s) back) can be edited.";
+
+                return null;
+            }
+
+            // Null-permission (user has no AEDV row for the screen) is treated as "no rights",
+            // same as the list pages' "?? false".
+            public static string CheckAddEdit(AEDV permission, bool isNew, DateTime docDate) =>
+                permission == null
+                    ? (isNew ? "You do not have permission to add a new entry." : "You do not have permission to edit this entry.")
+                    : permission.CheckAddEdit(isNew, docDate);
         }
     }
 }

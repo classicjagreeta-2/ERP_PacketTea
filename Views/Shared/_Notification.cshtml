@@ -42,6 +42,138 @@
 }
 
 
+@* Validation warning -- a business-rule rejection ("Packing Done Against This Blend
+   Sheet", month lock, blank field ...) is not a failure, so it gets its own soft amber
+   notice instead of toastr's red "Error". Plain JS/CSS (no toastr) so it looks the
+   same everywhere; call showWarning(message) from any page. *@
+<style>
+    .vw-stack { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 100000; display: flex; flex-direction: column; gap: 8px; width: 420px; max-width: calc(100vw - 32px); }
+    .vw-toast { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: #fff8e6; border: 1px solid #f3d38a; border-left: 5px solid #f0a500; border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.12); color: #5c4400; font-size: 13px; line-height: 1.45; opacity: 0; transform: translateY(-8px); transition: opacity .2s, transform .2s; }
+    .vw-toast.vw-show { opacity: 1; transform: translateY(0); }
+    .vw-icon { flex: 0 0 26px; height: 26px; border-radius: 50%; background: #f0a500; color: #fff; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; }
+    .vw-body { flex: 1; min-width: 0; word-wrap: break-word; }
+    .vw-title { font-weight: 700; color: #8a5a00; margin-bottom: 2px; }
+    .vw-close { background: none; border: 0; color: #8a6d2a; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 2px; }
+    .vw-close:hover { color: #5c4400; }
+
+    /* Centered, blocking variant -- showWarningDialog(). */
+    .vw-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 100001; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; transition: opacity .15s; }
+    .vw-overlay.vw-show { opacity: 1; }
+    .vw-dialog { width: 460px; max-width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 20px 45px rgba(0,0,0,.28); transform: translateY(-10px) scale(.98); transition: transform .15s; }
+    .vw-overlay.vw-show .vw-dialog { transform: none; }
+    .vw-dialog .vw-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #f0a500; color: #fff; }
+    .vw-dialog .vw-head svg { flex: 0 0 22px; width: 22px; height: 22px; }
+    .vw-dialog .vw-title { flex: 1; margin: 0; font-size: 15px; font-weight: 600; color: #fff; letter-spacing: .2px; }
+    .vw-dialog .vw-x { background: none; border: 0; color: #fff; opacity: .85; font-size: 22px; line-height: 1; cursor: pointer; padding: 0 2px; }
+    .vw-dialog .vw-x:hover { opacity: 1; }
+    .vw-dialog .vw-content { display: flex; gap: 14px; align-items: flex-start; padding: 20px 20px 8px; }
+    .vw-dialog .vw-badge { flex: 0 0 40px; height: 40px; border-radius: 50%; background: #fff4d6; color: #d98e00; display: flex; align-items: center; justify-content: center; }
+    .vw-dialog .vw-badge svg { width: 22px; height: 22px; }
+    .vw-dialog .vw-msg { flex: 1; color: #333; font-size: 14px; line-height: 1.6; padding-top: 8px; white-space: pre-wrap; word-break: break-word; }
+    .vw-dialog .vw-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; margin-top: 12px; background: #f7f7f7; border-top: 1px solid #e5e5e5; }
+    .vw-dialog .vw-btn { border: 1px solid #ccc; background: #fff; color: #333; border-radius: 4px; padding: 6px 22px; font-size: 13px; cursor: pointer; min-width: 80px; }
+    .vw-dialog .vw-btn.vw-primary { background: #f0a500; border-color: #e09a00; color: #fff; font-weight: 600; }
+    .vw-dialog .vw-btn.vw-primary:hover, .vw-dialog .vw-btn.vw-primary:focus { background: #d98e00; outline: none; box-shadow: 0 0 0 3px rgba(240,165,0,.3); }
+
+    /* In-form alert modal (#appAlertBox on the Master Blend / Final Blend / Packing
+       entry screens) -- showAlert(msg, onOk, kind) sets one of these. */
+    .popup-box.alert-box.is-warning,
+    .popup-box.alert-box.is-success,
+    .popup-box.alert-box.is-error { border-top: 5px solid; border-radius: 6px; }
+    .popup-box.alert-box.is-warning { border-top-color: #f0a500; }
+    .popup-box.alert-box.is-success { border-top-color: #2e9e5b; }
+    .popup-box.alert-box.is-error { border-top-color: #d9534f; }
+    .popup-box.alert-box[class*="is-"] .popup-header h2 { display: flex; align-items: center; gap: 10px; }
+    .popup-box.alert-box[class*="is-"] .popup-header h2::before { flex: 0 0 24px; height: 24px; border-radius: 50%; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .popup-box.alert-box.is-warning .popup-header h2 { color: #8a5a00; }
+    .popup-box.alert-box.is-warning .popup-header h2::before { content: "!"; background: #f0a500; }
+    .popup-box.alert-box.is-warning .alert-message { background: #fff8e6; border: 1px solid #f3d38a; border-radius: 4px; padding: 10px 12px; color: #5c4400; }
+    .popup-box.alert-box.is-success .popup-header h2 { color: #1f7a45; }
+    .popup-box.alert-box.is-success .popup-header h2::before { content: "\2713"; background: #2e9e5b; }
+    .popup-box.alert-box.is-error .popup-header h2 { color: #a94442; }
+    .popup-box.alert-box.is-error .popup-header h2::before { content: "\00D7"; background: #d9534f; }
+</style>
+<script type="text/javascript">
+    function showWarning(message, title) {
+        var stack = document.getElementById('vwStack');
+        if (!stack) {
+            stack = document.createElement('div');
+            stack.id = 'vwStack';
+            stack.className = 'vw-stack';
+            document.body.appendChild(stack);
+        }
+        var toast = document.createElement('div');
+        toast.className = 'vw-toast';
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = '<div class="vw-icon">!</div><div class="vw-body"><div class="vw-title"></div><div class="vw-msg"></div></div>' +
+            '<button type="button" class="vw-close" aria-label="Close">&times;</button>';
+        toast.querySelector('.vw-title').textContent = title || 'Please Note';
+        toast.querySelector('.vw-msg').textContent = message || '';
+        stack.appendChild(toast);
+        requestAnimationFrame(function () { toast.classList.add('vw-show'); });
+
+        var timer;
+        function close() {
+            clearTimeout(timer);
+            toast.classList.remove('vw-show');
+            setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 200);
+        }
+        function arm() { timer = setTimeout(close, 6000); }
+        toast.querySelector('.vw-close').addEventListener('click', close);
+        toast.addEventListener('mouseenter', function () { clearTimeout(timer); });
+        toast.addEventListener('mouseleave', arm);
+        arm();
+    }
+
+    // Centered modal warning for rejections the user must acknowledge (e.g. "Packing
+    // has already been done against Final Blend No X"). `extra` = optional
+    // { label, onClick } for a second button (e.g. open the record in View mode).
+    function showWarningDialog(message, title, extra) {
+        var ov = document.createElement('div');
+        ov.className = 'vw-overlay';
+        var tri = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        ov.innerHTML = '<div class="vw-dialog" role="alertdialog" aria-modal="true">' +
+            '<div class="vw-head">' + tri + '<h3 class="vw-title"></h3>' +
+            '<button type="button" class="vw-x" aria-label="Close">&times;</button></div>' +
+            '<div class="vw-content"><div class="vw-badge">' + tri + '</div><div class="vw-msg"></div></div>' +
+            '<div class="vw-actions"></div></div>';
+        ov.querySelector('.vw-title').textContent = title || 'Warning';
+        ov.querySelector('.vw-msg').textContent = message || '';
+        var actions = ov.querySelector('.vw-actions');
+        function close() {
+            document.removeEventListener('keydown', onKey);
+            ov.classList.remove('vw-show');
+            setTimeout(function () { if (ov.parentNode) ov.parentNode.removeChild(ov); }, 150);
+        }
+        function onKey(e) { if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); close(); } }
+        if (extra && extra.label) {
+            var b = document.createElement('button');
+            b.type = 'button'; b.className = 'vw-btn'; b.textContent = extra.label;
+            b.addEventListener('click', function () { close(); if (extra.onClick) extra.onClick(); });
+            actions.appendChild(b);
+        }
+        var ok = document.createElement('button');
+        ok.type = 'button'; ok.className = 'vw-btn vw-primary'; ok.textContent = 'OK';
+        ok.addEventListener('click', close);
+        actions.appendChild(ok);
+        ov.querySelector('.vw-x').addEventListener('click', close);
+        document.body.appendChild(ov);
+        document.addEventListener('keydown', onKey);
+        requestAnimationFrame(function () { ov.classList.add('vw-show'); ok.focus(); });
+    }
+</script>
+
+@if (TempData["toastrWarning"] != null)
+{
+    <script type="text/javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            showWarningDialog(@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(TempData["toastrWarning"].ToString(),
+                new Newtonsoft.Json.JsonSerializerSettings { StringEscapeHandling = Newtonsoft.Json.StringEscapeHandling.EscapeHtml })));
+        });
+    </script>
+}
+
 @if (TempData["toastrSuccess"] != null)
 {
     <script type="text/javascript">

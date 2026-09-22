@@ -72,9 +72,6 @@
         .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
         .popup-box .picker-body tr:hover td { background: #eef3ff; }
         .popup-box .picker-search { margin-bottom: 8px; }
-        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
-        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
-        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
         #balanceHint { font-size: 12px; color: var(--mbe-muted, #6b7280); padding-top: 6px; }
     </style>
 </head>
@@ -153,8 +150,9 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Doc Date <span>(*)</span></label>
+                                @* New entry: FY narrowed by the back-date policy (Aday) and today -- see SetNewDocDateBounds. *@
                                 <input type="date" id="DOCDT" value="@(head.DOCDT?.ToString("yyyy-MM-dd"))"
-                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
+                                       min="@(ViewBag.DocDtMin ?? ViewBag.FyStart)" max="@(ViewBag.DocDtMax ?? ViewBag.FyEnd)" @(isEdit ? "disabled" : "") />
                             </div>
                             <div class="form-col-20">
                                 <label>Blend No <span>(*)</span></label>
@@ -241,7 +239,7 @@
                                     <tr>
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
                                         <th style="width:50px;min-width:50px;text-align:center;">Sl</th>
-                                        <th style="width:80px;min-width:80px;text-align:center;">Blend</th>
+                                        <th style="width:130px;min-width:130px;text-align:center;">Blend</th>
                                         <th>Mark Code <span style="color:red;">(*)</span></th>
                                         <th>Mark</th>
                                         <th>Grade Code <span style="color:red;">(*)</span></th>
@@ -317,36 +315,25 @@
         <div class="picker-body" id="blendPickerBody"></div>
     </div>
 
-    <div class="popup-overlay" id="appAlertOverlay"></div>
-    <div class="popup-box alert-box" id="appAlertBox">
-        <div class="popup-header"><h2 id="appAlertTitle">Notice</h2></div>
-        <div class="alert-message" id="appAlertMessage"></div>
-        <div class="alert-actions">
-            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
-            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
-        </div>
-    </div>
+@Html.Partial("_BlendAlert")
 
 <script>
-    function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
-    function showAlert(message, onOk) {
-        $('#appAlertTitle').text('Notice');
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').hide();
-        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    // =========================================================
+    // In-page alert/confirm -- drawn by Shared/_BlendAlert.cshtml.
+    // kind: 'warning' (default -- every validation), 'success', or 'error' (real failure only).
+    // =========================================================
+    function showAlert(message, onOk, kind) {
+        bxAlert(message, { kind: kind || 'warning', onOk: onOk });
     }
     function showConfirm(message, onYes) {
-        $('#appAlertTitle').text('Confirm');
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').show().off('click').on('click', closeAppAlert);
-        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onYes) onYes(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+        bxConfirm(message, onYes);
     }
 
-    $('#pickerOverlay, #genericPicker, #blendPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    $('#pickerOverlay, #genericPicker, #blendPicker').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
+    // Back-date policy (AEDV Aday): earliest Doc Date a new entry may carry. Blank in Edit.
+    var BACK_DATE_MIN = '@ViewBag.BackDateMin';
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.Details));
     var rowSeq = 0;
     rows.forEach(function (r) { r._cid = ++rowSeq; });
@@ -398,7 +385,8 @@
             var tr = $('<tr data-cid="' + r._cid + '"></tr>');
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
             tr.append('<td style="text-align:center;">' + r.SL_NO + '</td>');
-            tr.append('<td style="text-align:center;"><button type="button" class="grid-pick-btn f-blend-btn" title="Pick a Final Blend for this row">&hellip;</button></td>');
+            tr.append('<td style="white-space:nowrap;"><input type="text" class="f-blendno" value="' + esc(blendNoFor(r)) + '" readonly style="width:90px;" />' +
+                '<button type="button" class="grid-pick-btn f-blend-btn" title="Pick a Final Blend for this row">&hellip;</button></td>');
             tr.append('<td><input type="text" class="f-mark code-input" value="' + esc(r.MARK) + '" placeholder="Code" />' +
                 '<button type="button" class="grid-pick-btn f-mark-btn" title="Search mark">&hellip;</button></td>');
             tr.append('<td><input type="text" class="f-markname" value="' + esc(r.MarkName) + '" readonly /></td>');
@@ -470,6 +458,16 @@
     });
 
     function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
+
+    // Text shown in a row's Blend cell. A freshly picked row carries the Blend No
+    // from GetFinalBlendRowValues; a saved row only has BLEND_DOCNO, so fall back
+    // to the header's Blend No when it is the same Final Blend, else the Doc No.
+    function blendNoFor(r) {
+        if (r.BlendNo) return r.BlendNo;
+        if (!r.BLEND_DOCNO) return '';
+        if (r.BLEND_DOCNO === $('#BlendDocNo').val() && $('#MasterBlendNo').val()) return $('#MasterBlendNo').val();
+        return r.BLEND_DOCNO;
+    }
 
     $('#gridBody').on('input change', 'input', function () {
         var $tr = $(this).closest('tr');
@@ -743,6 +741,7 @@
             }
             r.BLEND_DOCNO = v.blendDocNo;
             r.BLEND_DOCDT = v.blendDocDt;
+            r.BlendNo = v.blendNo || '';
             r.MARK = v.mark; r.MarkName = v.markName || '';
             r.GRADE = v.grade; r.GradeName = v.gradeName || '';
             r.CAT = v.cat; r.CategoryName = v.categoryName || '';
@@ -768,6 +767,12 @@
     // =========================================================
     $('#btnSave').on('click', function () {
         if (!$('#DOCDT').val()) { showAlert('Doc Date cannot be blank'); return; }
+        if (!IS_EDIT) {
+            var docDtVal = $('#DOCDT').val(), now = new Date();
+            var todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            if (docDtVal > todayStr) { showAlert('Doc Date cannot be a future date'); return; }
+            if (BACK_DATE_MIN && docDtVal < BACK_DATE_MIN) { showAlert('Back date entry is not allowed. Doc Date cannot be earlier than ' + BACK_DATE_MIN.split('-').reverse().join('/') + '.'); return; }
+        }
         if (!$('#BlendDocNo').val()) { showAlert('Blend No cannot be blank'); return; }
         if (!$('#SaleCentre').val()) { showAlert('Location cannot be blank'); return; }
 
@@ -806,12 +811,12 @@
                     if (resp.success) {
                         showAlert(resp.message || 'Saved.', function () {
                             window.location.href = '@Url.Action("Index", "Packing")' + '?blendType=' + encodeURIComponent($('#BLEND_TYPE').val());
-                        });
+                        }, 'success');
                     } else {
-                        showAlert(resp.message || 'Save failed.');
+                        showAlert(resp.message || 'Save failed.', null, resp.warning === false ? 'error' : 'warning');
                     }
                 },
-                error: function () { showAlert('Save failed - server error.'); }
+                error: function () { showAlert('Save failed - server error.', null, 'error'); }
             });
         });
     });

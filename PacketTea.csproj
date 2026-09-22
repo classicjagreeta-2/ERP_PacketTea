@@ -5297,6 +5297,7 @@
     <Content Include="Views\SalesInvoice\InsertOrUpdate.cshtml" />
     <Content Include="Views\SalesInvoice\_Delete.cshtml" />
     <Content Include="Views\Shared\_Notification.cshtml" />
+    <Content Include="Views\Shared\_BlendAlert.cshtml" />
     <Content Include="Views\MiscBill\MiscBill.cshtml" />
     <Content Include="Views\MiscBill\InsertOrUpdate.cshtml" />
     <Content Include="Views\MiscBill\TaxDocument.cshtml" />

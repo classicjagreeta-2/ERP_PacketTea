@@ -7,6 +7,11 @@
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     var currentBlendType = (string)ViewBag.BlendType;
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
+    // AEDV rights + edit back-date limit (Eday), same as Master Blend's list. The
+    // controller re-checks all of these.
+    var perm = ViewBag.Permission as PacketTea.Helpers.AEDV;
+    bool canAdd = perm?.Can('A') ?? false, canEdit = perm?.Can('E') ?? false, canDelete = perm?.Can('D') ?? false;
+    var editMinDate = perm?.MinDocDate(false) ?? DateTime.Today;
 }
 
 @{
@@ -103,9 +108,9 @@
                      inline row instead, so the list itself shows every type the user has
                      rights to (PackingController.GetAllowedBlendTypesAsync) rather than one
                      type at a time. -->
-                <li><a href="javascript:void(0)" id="btnNew"><i class="fa fa-plus"></i> New</a></li>
-                <li><a href="javascript:void(0)" id="editBtn"><i class="fa fa-pencil"></i> Edit</a></li>
-                <li><a href="javascript:void(0)" id="deleteBtn"><i class="fa fa-trash-o"></i> Delete</a></li>
+                <li><a href="javascript:void(0)" id="btnNew" style="@(canAdd ? "" : "opacity:0.5;")"><i class="fa fa-plus"></i> New</a></li>
+                <li><a href="javascript:void(0)" id="editBtn" style="@(canEdit ? "" : "opacity:0.5;")"><i class="fa fa-pencil"></i> Edit</a></li>
+                <li><a href="javascript:void(0)" id="deleteBtn" style="@(canDelete ? "" : "opacity:0.5;")"><i class="fa fa-trash-o"></i> Delete</a></li>
                 <li><a href="javascript:void(0)" id="viewBtn"><i class="fa fa-eye"></i> View</a></li>
                 <li><a href="javascript:void(0)" id="linesBtn"><i class="fa fa-list"></i> Lines</a></li>
                 <li style="margin-left:auto">
@@ -247,6 +252,7 @@
         </div>
     </div>
 
+    @Html.Partial("_BlendAlert")
     <script>
         $(function () {
             var searchTimer;
@@ -307,7 +313,18 @@
                 $('.go-new').toggleClass('is-ready', ready);
             }
 
+            // AEDV rights + edit back-date limit -- see the perm block at the top of this view.
+            var CAN_ADD = @(canAdd ? "true" : "false"), CAN_EDIT = @(canEdit ? "true" : "false"), CAN_DELETE = @(canDelete ? "true" : "false");
+            var EDIT_MIN_DATE = '@editMinDate.ToString("yyyy-MM-dd")', EDIT_MIN_DMY = '@editMinDate.ToString("dd/MM/yyyy")';
+            function editRefusal(docdt) {
+                if (!CAN_EDIT) return 'You do not have permission to edit this entry.';
+                if (docdt && docdt < EDIT_MIN_DATE)
+                    return 'Edit is not allowed. Only entries dated on or after ' + EDIT_MIN_DMY + ' can be edited.';
+                return null;
+            }
+
             $('#btnNew').on('click', function () {
+                if (!CAN_ADD) { showWarningDialog('You do not have permission to add a new entry.', 'Add Not Allowed !'); return; }
                 if ($('#newUnitRow').length) return;
                 $('#packingTable tbody').prepend(buildNewRow());
                 refreshGoNewState();
@@ -317,8 +334,8 @@
 
             $('#packingTable').on('click', '.go-new', function () {
                 var unit = $('#newRowUnit').val(), packetType = $('#newRowPacketType').val();
-                if (!unit) { alert('Please select Unit first'); return; }
-                if (!packetType) { alert('Please select Packet Type first'); return; }
+                if (!unit) { showWarning('Please select Unit first'); return; }
+                if (!packetType) { showWarning('Please select Packet Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "Packing")'
                     + '?unit=' + encodeURIComponent(unit)
                     + '&blendType=' + encodeURIComponent(packetType);
@@ -406,14 +423,16 @@
 
             function getSingleChecked(action) {
                 var $c = $('.row-check:checked');
-                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
-                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
+                if ($c.length === 0) { showWarning('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { showWarning('Please select only one record to ' + action + '.'); return null; }
                 return $c;
             }
 
             $('#editBtn').on('click', function () {
                 var $c = getSingleChecked('edit');
                 if (!$c) return;
+                var refusal = editRefusal($c.data('docdt'));
+                if (refusal) { showWarningDialog(refusal, 'Edit Not Allowed !'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "Packing")'
                     + '?docno=' + encodeURIComponent($c.val())
                     + '&docdt=' + encodeURIComponent($c.data('docdt'))
@@ -431,15 +450,16 @@
             });
 
             $('#deleteBtn').on('click', function () {
+                if (!CAN_DELETE) { showWarningDialog('You do not have permission to delete this entry.', 'Delete Not Allowed !'); return; }
                 var $c = getSingleChecked('delete');
                 if (!$c) return;
-                if (!confirm('Are you sure you want to delete Packing Doc No ' + $c.val() + ' ?')) return;
-
-                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "Packing")' })
-                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
-                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
-                    .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
-                    .appendTo('body').submit();
+                bxConfirm('Are you sure you want to delete Packing Doc No ' + $c.val() + ' ?', function () {
+                    $('<form>', { method: 'POST', action: '@Url.Action("Delete", "Packing")' })
+                        .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
+                        .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
+                        .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
+                        .appendTo('body').submit();
+                }, { okText: 'Delete', cancelText: 'Cancel' });
             });
         });
     </script>

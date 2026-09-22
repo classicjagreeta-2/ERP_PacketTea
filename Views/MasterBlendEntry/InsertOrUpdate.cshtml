@@ -71,10 +71,6 @@
         .stock-filters { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
         .stock-filters input { width: 150px; }
         .action-btns li a.is-disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
-        /* In-page alert/confirm -- see showAlert()/showConfirm() below. */
-        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
-        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
-        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
     </style>
 </head>
 <body>
@@ -164,8 +160,9 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Doc Date <span>(*)</span></label>
+                                @* New entry: FY narrowed by the back-date policy (Aday) and today -- see SetNewDocDateBounds. *@
                                 <input type="date" id="DOCDT" value="@head.DOCDT.ToString("yyyy-MM-dd")"
-                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
+                                       min="@(ViewBag.DocDtMin ?? ViewBag.FyStart)" max="@(ViewBag.DocDtMax ?? ViewBag.FyEnd)" @(isEdit ? "disabled" : "") />
                             </div>
                             <div class="form-col-20">
                                 <label>Party</label>
@@ -386,39 +383,18 @@
         </div>
     </div>
 
-    <!-- In-page alert/confirm modal -- replaces native alert()/confirm() so
-         messages render in the app's own UI instead of the browser's native
-         "<host> says" dialog chrome. -->
-    <div class="popup-overlay" id="appAlertOverlay"></div>
-    <div class="popup-box alert-box" id="appAlertBox">
-        <div class="popup-header">
-            <h2 id="appAlertTitle">Notice</h2>
-        </div>
-        <div class="alert-message" id="appAlertMessage"></div>
-        <div class="alert-actions">
-            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
-            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
-        </div>
-    </div>
+@Html.Partial("_BlendAlert")
 
 <script>
     // =========================================================
-    // In-page alert/confirm (see markup above).
+    // In-page alert/confirm -- drawn by Shared/_BlendAlert.cshtml.
+    // kind: 'warning' (default -- every validation), 'success', or 'error' (real failure only).
     // =========================================================
-    function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
-    function showAlert(message, onOk) {
-        $('#appAlertTitle').text('Notice');
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').hide();
-        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+    function showAlert(message, onOk, kind) {
+        bxAlert(message, { kind: kind || 'warning', onOk: onOk });
     }
     function showConfirm(message, onYes) {
-        $('#appAlertTitle').text('Confirm');
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').show().off('click').on('click', closeAppAlert);
-        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onYes) onYes(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+        bxConfirm(message, onYes);
     }
 
     // Every lookup/picker AJAX call below goes through MasterBlendEntryController's
@@ -444,7 +420,7 @@
     // against that narrower wrapper instead of the real viewport, clipping its left edge (the
     // "Select Data" title/filter labels losing their first several characters). Re-parenting
     // these onto the true <body> sidesteps that regardless of which ancestor is the culprit.
-    $('#pickerOverlay, #genericPicker, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    $('#pickerOverlay, #genericPicker, #stockPicker').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
     // Doc Date, Blend Date and the Lines grid's Arrival Date / DO Date must fall within the
@@ -454,6 +430,8 @@
     // the purchase invoice, so stock bought in an earlier year legitimately predates this FY.
     var FY_MIN = '@ViewBag.FyStart';
     var FY_MAX = '@ViewBag.FyEnd';
+    // Back-date policy (AEDV Aday): earliest Doc Date a new entry may carry. Blank in Edit.
+    var BACK_DATE_MIN = '@ViewBag.BackDateMin';
     function withinFy(dateStr) { return !dateStr || !FY_MIN || !FY_MAX || (dateStr >= FY_MIN && dateStr <= FY_MAX); }
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_TEA_BLEND_DET));
     var rowSeq = 0;
@@ -900,7 +878,7 @@
     // =========================================================
     $('#btnSave').on('click', function () {
         if (!$('#DOCDT').val()) { showAlert('Doc Date cannot be blank'); return; }
-        var docDtVal = $('#DOCDT').val(), fyMin = $('#DOCDT').attr('min'), fyMax = $('#DOCDT').attr('max');
+        var docDtVal = $('#DOCDT').val(), fyMin = FY_MIN, fyMax = FY_MAX;
         // input[type=date] always gives the LOCAL calendar date with no time/zone attached, so
         // "today" must be built from local getters too. new Date().toISOString() reports UTC --
         // for any timezone ahead of UTC (IST included) that's still "yesterday" for several
@@ -909,6 +887,7 @@
         var todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         if (docDtVal > todayStr) { showAlert('Doc Date cannot be a future date'); return; }
         if ((fyMin && docDtVal < fyMin) || (fyMax && docDtVal > fyMax)) { showAlert('Doc Date must fall within the current financial year'); return; }
+        if (!IS_EDIT && BACK_DATE_MIN && docDtVal < BACK_DATE_MIN) { showAlert('Back date entry is not allowed. Doc Date cannot be earlier than ' + BACK_DATE_MIN.split('-').reverse().join('/') + '.'); return; }
         if (!$('#BLEND_WH').val()) { showAlert('Warehouse cannot be blank'); return; }
         if (!$('#BLEND_GRADE').val()) { showAlert('Blend Grade cannot be blank'); return; }
         if (!$('#BLEND_MARK').val()) { showAlert('Blend Mark cannot be blank'); return; }
@@ -989,12 +968,12 @@
                     if (resp.success) {
                         showAlert(resp.message || 'Saved.', function () {
                             window.location.href = '@Url.Action("Index", "MasterBlendEntry")' + '?blendType=' + encodeURIComponent($('#BLEND_TYPE').val());
-                        });
+                        }, 'success');
                     } else {
-                        showAlert(resp.message || 'Save failed.');
+                        showAlert(resp.message || 'Save failed.', null, resp.warning === false ? 'error' : 'warning');
                     }
                 },
-                error: function () { showAlert('Save failed - server error.'); }
+                error: function () { showAlert('Save failed - server error.', null, 'error'); }
             });
         });
     });
