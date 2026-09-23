@@ -171,3 +171,18 @@
     text-align: center;
     display: inline-block;
 }
+
+.inputpicker-wrapped-list tr.inputpicker-active {
+    background-color: #404e68 !important;
+}
+
+    .inputpicker-wrapped-list tr.inputpicker-active td {
+        background-color: #404e68 !important;
+        color: #ffffff !important;
+        font-weight: bold !important;
+    }
+
+.inputpicker-wrapped-list tr.inputpicker-highlight-active td {
+    background-color: #404e68 !important;
+    color: #ffffff !important;
+}

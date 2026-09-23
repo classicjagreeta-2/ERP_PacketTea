@@ -59,7 +59,6 @@
         .popup-box.picker-box { width: 420px; display: none; }
         .popup-box.picker-box.wide { width: 700px; max-width: 90vw; }
         .popup-box .picker-body { max-height: 36vh; overflow-y: auto; margin-top: 8px; }
-        .popup-box .picker-body .stock-empty { margin: 10px 4px 2px; font-size: 12px; color: #666; }
         .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
         /* No color was ever set here, so the header text just inherited whatever the popup's
            ancestor happened to supply -- washed out to near-illegible once appendTo(body)
@@ -71,6 +70,10 @@
         .stock-filters { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
         .stock-filters input { width: 150px; }
         .action-btns li a.is-disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+        /* In-page alert/confirm -- see showAlert()/showConfirm() below. */
+        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
+        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
     </style>
 </head>
 <body>
@@ -114,23 +117,33 @@
                 </div>
             </div>
 
-            <!-- Unit / Blend Type -- its own section above Header per the spec, not just the
-                 Header accordion's first row, and always visible (not collapsible away with
-                 the rest of Header). The list page's "New" row still calls this same value
-                 "Packet Type" (its own picker label), but the standalone Packet Type field
-                 that used to duplicate Blend Type here has been removed -- Blend Type alone
-                 drives it. Unit is otherwise never user-facing (UNIT is derived server-side --
+            <!-- Unit / Packet Type / Blend Type -- its own section above Header per the spec
+                 ("Unit name, Packet Type and Blend type will be in a separate section above
+                 header"), not just the Header accordion's first row, and always visible
+                 (not collapsible away with the rest of Header). Packet Type and Blend Type
+                 are the same underlying value (see MasterBlendEntryController's BlendTypes
+                 dict / the list page's "New" row Packet Type picker) shown twice under their
+                 two names; Unit is otherwise never user-facing (UNIT is derived server-side --
                  see UnitForBlendType's comment), it's shown here purely for confirmation. Both
-                 lock read-only once Unit + Blend Type were chosen on the list page
+                 lock read-only once Unit + Packet Type were chosen on the list page
                  (lockedFromList) same as Blend Type already does in Edit mode. -->
             <div class="accordion-container compact-accordion">
                 <div class="accordion">
-                    <div class="accordion-header active"><span class="txt">Unit / Blend Type</span></div>
+                    <div class="accordion-header active"><span class="txt">Unit / Packet Type / Blend Type</span></div>
                     <div class="accordion-body">
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Unit</label>
                                 <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Packet Type <span>(*)</span></label>
+                                <select id="PACKET_TYPE_disp" disabled>
+                                    @foreach (var bt in blendTypes)
+                                    {
+                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
+                                    }
+                                </select>
                             </div>
                             <div class="form-col-20">
                                 <label>Blend Type <span>(*)</span></label>
@@ -160,9 +173,8 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Doc Date <span>(*)</span></label>
-                                @* New entry: FY narrowed by the back-date policy (Aday) and today -- see SetNewDocDateBounds. *@
                                 <input type="date" id="DOCDT" value="@head.DOCDT.ToString("yyyy-MM-dd")"
-                                       min="@(ViewBag.DocDtMin ?? ViewBag.FyStart)" max="@(ViewBag.DocDtMax ?? ViewBag.FyEnd)" @(isEdit ? "disabled" : "") />
+                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
                             </div>
                             <div class="form-col-20">
                                 <label>Party</label>
@@ -181,27 +193,17 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Blend Date <span>(*)</span></label>
-                                <input type="date" id="BLEND_DATE" value="@(head.BLEND_DATE?.ToString("yyyy-MM-dd"))"
-                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" />
+                                <input type="date" id="BLEND_DATE" value="@(head.BLEND_DATE?.ToString("yyyy-MM-dd"))" />
                             </div>
                             <div class="form-col-20">
                                 <label>Warehouse <span>(*)</span></label>
                                 <input type="text" id="BLEND_WH" data-picker="warehouse" value="@head.BLEND_WH" placeholder="Code" />
+                                <input type="hidden" id="BLEND_WH_disp" value="@head.WarehouseName" />
                             </div>
-                            <div class="form-col-20">
-                                <label>Warehouse Name</label>
-                                <input type="text" id="BLEND_WH_disp" value="@head.WarehouseName" readonly />
-                            </div>
-                        </div>
-
-                        <div class="form-row">
                             <div class="form-col-20">
                                 <label>Allocation</label>
                                 <input type="text" id="ALLOC_CODE" data-picker="allocation" value="@head.ALLOC_CODE" placeholder="Code" />
-                            </div>
-                            <div class="form-col-20">
-                                <label>Allocation Description</label>
-                                <input type="text" id="ALLOC_CODE_disp" value="@head.AllocationName" readonly />
+                                <input type="hidden" id="ALLOC_CODE_disp" value="@head.AllocationName" />
                             </div>
                         </div>
 
@@ -209,18 +211,12 @@
                             <div class="form-col-20">
                                 <label>Blend Mark <span>(*)</span></label>
                                 <input type="text" id="BLEND_MARK" data-picker="mark" value="@head.BLEND_MARK" placeholder="Code" />
-                            </div>
-                            <div class="form-col-20">
-                                <label>Mark</label>
-                                <input type="text" id="BLEND_MARK_disp" value="@head.BlendMarkName" readonly />
+                                <input type="hidden" id="BLEND_MARK_disp" value="@head.BlendMarkName" />
                             </div>
                             <div class="form-col-20">
                                 <label>Blend Grade <span>(*)</span></label>
                                 <input type="text" id="BLEND_GRADE" data-picker="blendgrade" value="@head.BLEND_GRADE" placeholder="Code" />
-                            </div>
-                            <div class="form-col-20">
-                                <label>Grade Name</label>
-                                <input type="text" id="BLEND_GRADE_disp" value="@head.BlendGradeName" readonly />
+                                <input type="hidden" id="BLEND_GRADE_disp" value="@head.BlendGradeName" />
                             </div>
                             <div class="form-col-20">
                                 <label>No of Chest</label>
@@ -383,32 +379,39 @@
         </div>
     </div>
 
-@Html.Partial("_BlendAlert")
+    <!-- In-page alert/confirm modal -- replaces native alert()/confirm() so
+         messages render in the app's own UI instead of the browser's native
+         "<host> says" dialog chrome. -->
+    <div class="popup-overlay" id="appAlertOverlay"></div>
+    <div class="popup-box alert-box" id="appAlertBox">
+        <div class="popup-header">
+            <h2 id="appAlertTitle">Notice</h2>
+        </div>
+        <div class="alert-message" id="appAlertMessage"></div>
+        <div class="alert-actions">
+            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
+        </div>
+    </div>
 
 <script>
     // =========================================================
-    // In-page alert/confirm -- drawn by Shared/_BlendAlert.cshtml.
-    // kind: 'warning' (default -- every validation), 'success', or 'error' (real failure only).
+    // In-page alert/confirm (see markup above).
     // =========================================================
-    function showAlert(message, onOk, kind) {
-        bxAlert(message, { kind: kind || 'warning', onOk: onOk });
+    function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
+    function showAlert(message, onOk) {
+        $('#appAlertTitle').text('Notice');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').hide();
+        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
     }
     function showConfirm(message, onYes) {
-        bxConfirm(message, onYes);
-    }
-
-    // Every lookup/picker AJAX call below goes through MasterBlendEntryController's
-    // passthrough actions, which now return HTTP 440 (instead of a silent 200/null) when
-    // the backend call failed -- almost always because the session's token expired and
-    // couldn't be auto-refreshed. Without this, a dead session just made every picker and
-    // "Select Data" look like they'd stopped finding anything, with no indication why.
-    function handleLookupFail(jqXHR) {
-        if (jqXHR.status === 440) {
-            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Your session has expired. Please log in again.',
-                function () { window.location.reload(); });
-        } else {
-            showAlert('Could not load data. Please try again.');
-        }
+        $('#appAlertTitle').text('Confirm');
+        $('#appAlertMessage').text(message || '');
+        $('#appAlertCancel').show().off('click').on('click', closeAppAlert);
+        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onYes) onYes(); });
+        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
     }
 
     // This view declares its own <html>/<body> while also using _Layout.cshtml as its Layout,
@@ -420,19 +423,14 @@
     // against that narrower wrapper instead of the real viewport, clipping its left edge (the
     // "Select Data" title/filter labels losing their first several characters). Re-parenting
     // these onto the true <body> sidesteps that regardless of which ancestor is the culprit.
-    $('#pickerOverlay, #genericPicker, #stockPicker').appendTo(document.body);
+    $('#pickerOverlay, #genericPicker, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
-    // Doc Date, Blend Date and the Lines grid's Arrival Date / DO Date must fall within the
-    // currently selected financial year -- same [FyStart, FyEnd] bound Doc Date's own
-    // min/max attribute already enforces (see ViewBag.FyStart/FyEnd in the controller).
-    // Pack Date is deliberately NOT bounded: it is the garden packing date carried in from
-    // the purchase invoice, so stock bought in an earlier year legitimately predates this FY.
-    var FY_MIN = '@ViewBag.FyStart';
-    var FY_MAX = '@ViewBag.FyEnd';
-    // Back-date policy (AEDV Aday): earliest Doc Date a new entry may carry. Blank in Edit.
-    var BACK_DATE_MIN = '@ViewBag.BackDateMin';
-    function withinFy(dateStr) { return !dateStr || !FY_MIN || !FY_MAX || (dateStr >= FY_MIN && dateStr <= FY_MAX); }
+    // Packet Type is a read-only echo of Blend Type (same underlying value -- see the
+    // header markup's comment); keep it in sync on the one path where Blend Type is
+    // still editable (a brand-new entry started directly on this screen, not via the
+    // list page's "New" row).
+    $('#BLEND_TYPE').on('change', function () { $('#PACKET_TYPE_disp').val($(this).val()); });
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_TEA_BLEND_DET));
     var rowSeq = 0;
     // TAG isn't a persisted column (see T_TEA_BLEND_DET) -- VB derived it purely
@@ -460,8 +458,6 @@
     }
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
-    // M_MARK.MDESC is free text up to 20 chars and goes into an HTML attribute below.
-    function htmlAttr(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
 
     function renderGrid() {
         var $tb = $('#gridBody').empty();
@@ -477,14 +473,7 @@
             // Mark/Garden, Grade, Category: plain, freely-typed cells -- no lookup in the
             // legacy grid (see the note above rows.forEach). Select Data still fills them
             // wholesale same as before.
-            // This cell SHOWS M_MARK.MDESC (the Garden/Mark description, up to 20 chars) but
-            // the column it saves to, T_TEA_BLEND_DET.MARK, is the 4-char CODE. The two were
-            // previously the same field: the sync handler below read this input's display
-            // text straight back into r.MARK, so touching any cell in the row replaced the
-            // code with the description and the save died on "ORA-12899: value too large for
-            // column ...MARK (actual: 7, maximum: 4)". Keep the code on the element and let
-            // the blur resolver below re-derive it whenever the text is edited by hand.
-            tr.append('<td><input type="text" class="f-mark" data-code="' + htmlAttr(r.MARK || '') + '" value="' + htmlAttr(r.MarkName || r.MARK || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-mark" value="' + (r.MarkName || r.MARK || '') + '" /></td>');
             // Inv No DOES have a real legacy lookup (datagrid1_ButtonClick's pINVNO case +
             // the F1 shortcut in datagrid1_KeyDown), both just reopening "Select Data".
             // Item 5: no free-typed lookup here any more -- readonly, filled only by
@@ -496,17 +485,17 @@
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" /></td>');
             tr.append('<td><input type="text" class="f-category" value="' + (r.CategoryDescn || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + round2(r.QTY).toFixed(2) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-sampleqty" value="' + (r.SAMPLE_QTY || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMOUNT).toFixed(2) + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-whloca" value="' + (r.WH_LOCA || '') + '" /></td>');
-            tr.append('<td><input type="date" class="f-awrdate" min="' + FY_MIN + '" max="' + FY_MAX + '" value="' + (r.AWR_DATE ? r.AWR_DATE.substring(0, 10) : '') + '" /></td>');
+            tr.append('<td><input type="date" class="f-awrdate" value="' + (r.AWR_DATE ? r.AWR_DATE.substring(0, 10) : '') + '" /></td>');
             tr.append('<td><input type="text" class="f-awrno" value="' + (r.AWR_NO || '') + '" /></td>');
             tr.append('<td><input type="text" class="f-warehouse" value="' + (r.WAREHOUSE || '') + '" /></td>');
             tr.append('<td style="text-align:center;"><input type="checkbox" class="f-tag" ' + (r.TAG ? 'checked' : '') + ' /></td>');
             tr.append('<td><input type="text" class="f-dono" value="' + (r.DONO || '') + '" /></td>');
-            tr.append('<td><input type="date" class="f-dodt" min="' + FY_MIN + '" max="' + FY_MAX + '" value="' + (r.DODT ? r.DODT.substring(0, 10) : '') + '" /></td>');
+            tr.append('<td><input type="date" class="f-dodt" value="' + (r.DODT ? r.DODT.substring(0, 10) : '') + '" /></td>');
             // Trans Code also has a real legacy lookup (datagrid1_ButtonClick's pTransCode
             // case, hlpl.GETHELP against rsTransp) -- add the same button here, on top of the
             // existing blur-resolve which already matches BeforeColUpdate's rsTransp.Find check.
@@ -536,9 +525,7 @@
         var $tr = $(this).closest('tr');
         var r = findRow($tr.data('cid'));
         if (!r) return;
-        // Display text -> MarkName; the 4-char code stays on data-code (see renderGrid).
-        r.MarkName = $tr.find('.f-mark').val();
-        r.MARK = $tr.find('.f-mark').attr('data-code') || '';
+        r.MARK = $tr.find('.f-mark').val();
         r.INVNO = $tr.find('.f-invno').val();
         r.PACK_DATE = toIso($tr.find('.f-packdate').val());
         r.GRADE = $tr.find('.f-grade').val();
@@ -584,42 +571,8 @@
     // Rate: snap the displayed value to 2 decimal places once the user leaves the field
     // (item 3) -- the live `input`/`change` handler above already keeps r.RATE/r.AMOUNT
     // numerically correct on every keystroke; this only tidies up what's shown.
-    $('#gridBody').on('blur', '.f-rate, .f-qty', function () {
+    $('#gridBody').on('blur', '.f-rate', function () {
         $(this).val(round2($(this).val()).toFixed(2));
-    });
-
-    // Mark/Garden resolve on blur. The cell is freely typed (the legacy grid had no lookup
-    // button here), so accept EITHER the 4-char M_MARK.MCD code or the MDESC description and
-    // resolve it back to a code -- the same shape as the Trans Code blur-resolve below. A
-    // value that resolves to nothing and is too long to be a code is rejected here rather
-    // than at the database, which is where it used to surface as a raw ORA-12899.
-    $('#gridBody').on('blur', '.f-mark', function () {
-        var $inp = $(this), typed = $.trim($inp.val());
-        var $tr = $inp.closest('tr');
-        var r = findRow($tr.data('cid'));
-        if (!typed) { $inp.attr('data-code', ''); if (r) { r.MARK = ''; r.MarkName = ''; } return; }
-        // Unchanged description for the code already held -- nothing to re-resolve.
-        if (r && r.MarkName === typed && r.MARK) { $inp.attr('data-code', r.MARK); return; }
-        $.getJSON('@Url.Action("GetMark", "MasterBlendEntry")', { search: typed }, function (data) {
-            data = data || [];
-            var t = typed.toUpperCase();
-            var m = data.find(function (x) { return String(x.MCD || x.mcd || '').toUpperCase() === t; })
-                 || data.find(function (x) { return String(x.MDESC || x.mdesc || '').toUpperCase() === t; })
-                 || (data.length === 1 ? data[0] : null);
-            if (m) {
-                var code = String(m.MCD || m.mcd || ''), name = String(m.MDESC || m.mdesc || '');
-                $inp.attr('data-code', code).val(name || code);
-                if (r) { r.MARK = code; r.MarkName = name; }
-                return;
-            }
-            if (typed.length <= 4) { // no master row, but short enough to be a code as typed
-                $inp.attr('data-code', typed.toUpperCase());
-                if (r) { r.MARK = typed.toUpperCase(); r.MarkName = ''; }
-                return;
-            }
-            $inp.val(r && r.MarkName ? r.MarkName : (r && r.MARK ? r.MARK : ''));
-            showAlert('"' + typed + '" does not match any Garden/Mark. Pick a row with Select Data, or type the 4-character mark code.');
-        }).fail(handleLookupFail);
     });
 
     // Trans Code lookup on blur
@@ -633,7 +586,7 @@
             var name = m ? (m.NAME || m.name) : '';
             $tr.find('.f-transname').val(name);
             if (r) r.TransporterName = name;
-        }).fail(handleLookupFail);
+        });
     });
 
     // =========================================================
@@ -746,7 +699,7 @@
             html += '</tbody></table>';
             $('#pickerBody').html(html);
             $('#pickerBody').data('rows', data);
-        }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
+        });
     }
 
     $('#pickerBody').on('click', 'tr[data-i]', function () {
@@ -802,22 +755,9 @@
                     '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td>' + r.bagChest + '</td><td>' + r.available + '</td><td style="text-align:right;">' + round2(r.rate).toFixed(2) + '</td></tr>';
             });
             html += '</tbody></table>';
-            // An empty result used to render as just the header row with nothing under it,
-            // which reads exactly like "the screen is broken" -- and that is how the
-            // Repository-level unit filter silently hiding every PT/BT/ST invoice presented
-            // itself (see TeaBlendController.GetAvailableStock). Say which filters produced
-            // the empty list instead, so "no stock left" and "wrong filter" are tellable apart.
-            if (!data.length) {
-                var f = [];
-                if ($('#stockGardenFilter').val()) { f.push('Garden "' + $('#stockGardenFilter').val() + '"'); }
-                if ($('#stockMarkFilter').val()) { f.push('Mark "' + $('#stockMarkFilter').val() + '"'); }
-                if ($('#stockCategoryFilter').val()) { f.push('Category "' + $('#stockCategoryFilter').val() + '"'); }
-                html += '<p class="stock-empty">No un-blended purchased invoices available for Blend Type "' +
-                    blendType + '"' + (f.length ? ' matching ' + f.join(', ') : '') + '.</p>';
-            }
             $('#stockBody').html(html);
             $('#stockBody').data('rows', data);
-        }).fail(handleLookupFail);
+        });
     }
 
     $('#btnStockSelectAll').on('click', function () { $('#stockBody .stockChk').prop('checked', true); });
@@ -870,7 +810,7 @@
                 if (r.TAG && !r.DONO && r.WAREHOUSE && map[r.WAREHOUSE]) r.DONO = map[r.WAREHOUSE];
             });
             renderGrid();
-        }).fail(handleLookupFail);
+        });
     });
 
     // =========================================================
@@ -878,7 +818,7 @@
     // =========================================================
     $('#btnSave').on('click', function () {
         if (!$('#DOCDT').val()) { showAlert('Doc Date cannot be blank'); return; }
-        var docDtVal = $('#DOCDT').val(), fyMin = FY_MIN, fyMax = FY_MAX;
+        var docDtVal = $('#DOCDT').val(), fyMin = $('#DOCDT').attr('min'), fyMax = $('#DOCDT').attr('max');
         // input[type=date] always gives the LOCAL calendar date with no time/zone attached, so
         // "today" must be built from local getters too. new Date().toISOString() reports UTC --
         // for any timezone ahead of UTC (IST included) that's still "yesterday" for several
@@ -887,13 +827,11 @@
         var todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         if (docDtVal > todayStr) { showAlert('Doc Date cannot be a future date'); return; }
         if ((fyMin && docDtVal < fyMin) || (fyMax && docDtVal > fyMax)) { showAlert('Doc Date must fall within the current financial year'); return; }
-        if (!IS_EDIT && BACK_DATE_MIN && docDtVal < BACK_DATE_MIN) { showAlert('Back date entry is not allowed. Doc Date cannot be earlier than ' + BACK_DATE_MIN.split('-').reverse().join('/') + '.'); return; }
         if (!$('#BLEND_WH').val()) { showAlert('Warehouse cannot be blank'); return; }
         if (!$('#BLEND_GRADE').val()) { showAlert('Blend Grade cannot be blank'); return; }
         if (!$('#BLEND_MARK').val()) { showAlert('Blend Mark cannot be blank'); return; }
         if (!$('#BLEND_NO').val()) { showAlert('Blend No cannot be blank'); return; }
         if (!$('#BLEND_DATE').val()) { showAlert('Blend Date cannot be blank'); return; }
-        if (!withinFy($('#BLEND_DATE').val())) { showAlert('Blend Date must fall within the current financial year'); return; }
 
         var netWt = num($('#BLEND_CHEST_WT').val()), grossWt = num($('#BLEND_CHEST_GROSSWT').val());
         if (netWt > grossWt) { showAlert("Gross Weight Can't Be Less Than Net Weight Or Blank. Please Check It."); return; }
@@ -901,27 +839,6 @@
         var valid = rows.filter(function (r) { return r.INVNO; });
         if (!valid.length) { showAlert('Without Invoice Detail, Record Can Not be Saved.'); return; }
         if (valid.some(function (r) { return num(r.QTY) <= 0; })) { showAlert('Enter Quantity Invoice Detail !'); return; }
-        if (valid.some(function (r) { return r.AWR_DATE && !withinFy(r.AWR_DATE.substring(0, 10)); })) { showAlert('Arrival Date must fall within the current financial year'); return; }
-        if (valid.some(function (r) { return r.DODT && !withinFy(r.DODT.substring(0, 10)); })) { showAlert('DO Date must fall within the current financial year'); return; }
-
-        // T_TEA_BLEND_DET is narrower than the T_TEA_PURCHASE columns some of these values
-        // are copied from (GRADE 10 vs 20) and much narrower than the master descriptions
-        // shown in the grid (MARK 4 vs M_MARK.MDESC 20), so an over-long value used to reach
-        // Oracle and come back at the user as a raw ORA-12899 with a schema-qualified column
-        // name. Name the row and the field instead.
-        var DET_MAXLEN = [['MARK', 4, 'Garden/Mark'], ['INVNO', 10, 'Inv No'], ['GRADE', 10, 'Grade'],
-                          ['WAREHOUSE', 6, 'Warehouse'], ['WH_LOCA', 20, 'WH Loca'], ['AWR_NO', 20, 'Arrival No'],
-                          ['DONO', 20, 'DO No'], ['TRANS_CODE', 6, 'Trans Code']];
-        for (var vi = 0; vi < valid.length; vi++) {
-            for (var ci = 0; ci < DET_MAXLEN.length; ci++) {
-                var fld = DET_MAXLEN[ci], val = valid[vi][fld[0]];
-                if (val && String(val).length > fld[1]) {
-                    showAlert('Row ' + (vi + 1) + ': ' + fld[2] + ' "' + val + '" is ' + String(val).length +
-                              ' characters, but only ' + fld[1] + ' can be saved. Please correct it.');
-                    return;
-                }
-            }
-        }
 
         // Spec §5 dupe key: Invoice + Grade + Mark only (no Pack Date).
         var seen = {};
@@ -968,12 +885,12 @@
                     if (resp.success) {
                         showAlert(resp.message || 'Saved.', function () {
                             window.location.href = '@Url.Action("Index", "MasterBlendEntry")' + '?blendType=' + encodeURIComponent($('#BLEND_TYPE').val());
-                        }, 'success');
+                        });
                     } else {
-                        showAlert(resp.message || 'Save failed.', null, resp.warning === false ? 'error' : 'warning');
+                        showAlert(resp.message || 'Save failed.');
                     }
                 },
-                error: function () { showAlert('Save failed - server error.', null, 'error'); }
+                error: function () { showAlert('Save failed - server error.'); }
             });
         });
     });

@@ -26,6 +26,7 @@ namespace Finance.Models.PT
         public virtual string SORT_NAME { get; set; }
         public virtual string GR_CODE { get; set; }
         public virtual string GRADE_TYPE { get; set; }
+        public virtual string GRADE_NAME { get; set; }
 
         public virtual int? PRINT_ORD { get; set; }
         public virtual int? GPRINT_ORD { get; set; }
@@ -36,6 +37,11 @@ namespace Finance.Models.PT
         public virtual string OWNLEAF_P { get; set; }
         public virtual string BOUGHTLEAF_P { get; set; }
         public virtual string HSN_CODE { get; set; }
+        public virtual string GST_CODE { get; set; }
+        public virtual string GST_DESCN { get; set; }
+        public virtual decimal? CGST_RATE { get; set; }
+        public virtual decimal? SGST_RATE { get; set; }
+        public virtual decimal? IGST_RATE { get; set; }
         public virtual string UNIT_CD { get; set; }
         public virtual string DESCN { get; set; }
         public virtual string COSTCODE { get; set; }
@@ -64,5 +70,10 @@ namespace Finance.Models.PT
         public virtual string TERMINAL_ID { get; set; }
         public virtual string LOCKEDBYUSERID { get; set; }
         public virtual DateTime? LOCKEDUNTIL { get; set; }
+
+
+
+
+
     }
 }

@@ -78,20 +78,20 @@ namespace PacketTea.Controllers
                     var AEDVJson = (JsonConvert.SerializeObject(User_AEDV));
                     var _AEDV = JsonConvert.DeserializeObject<List<AEDV>>(AEDVJson);
                     Session["User_AEDV"] = _AEDV;
-                   
+
                     return View();
                 }
                 else
                 {
-                    TempData["toastrError"]= response.Message;
+                    TempData["toastrError"] = response.Message;
                 }
             }
             catch (TaskCanceledException)
             {
-                
+
                 //return RedirectToAction("Index");
             }
-            
+
             return RedirectToAction("Login", "Auth");
         }
 

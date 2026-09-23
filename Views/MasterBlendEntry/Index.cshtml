@@ -6,37 +6,6 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
-    // Full code -> name map (not the rights-filtered ViewBag.BlendTypes) so the Blend Type
-    // column still shows a name for every row the list returns.
-    var blendTypeNames = Finance.Controllers.TEA.MasterBlendEntryController.BlendTypes;
-    // AEDV rights + edit back-date limit (Eday). No permission row = no rights, same as
-    // the other TEA lists' "?? false". The controller re-checks all of these.
-    var perm = ViewBag.Permission as PacketTea.Helpers.AEDV;
-    bool canAdd = perm?.Can('A') ?? false, canEdit = perm?.Can('E') ?? false, canDelete = perm?.Can('D') ?? false;
-    var editMinDate = perm?.MinDocDate(false) ?? DateTime.Today;
-}
-
-@{
-    // Sortable column header. Sorting is server-side (see the API GetByPage's sortBy/sortDir),
-    // so a header sorts the WHOLE filtered result set, not just the rows on the current page.
-    // Clicking the active column flips direction; any other column starts ascending.
-    // Written as a plain Func returning MvcHtmlString rather than a Razor helper block: every label
-    // passed in below is a literal, so nothing here needs HTML-encoding.
-    Func<string, string, MvcHtmlString> SortTh = (key, label) =>
-    {
-        var cur = (string)(ViewBag.SortBy ?? "");
-        var dir = (string)(ViewBag.SortDir ?? "");
-        var active = string.Equals(cur, key, StringComparison.OrdinalIgnoreCase);
-        var next = (active && dir == "asc") ? "desc" : "asc";
-        var thClass = active ? "sortable is-sorted" : "sortable";
-        var up = (active && dir == "asc") ? "feather icon-arrow-up on" : "feather icon-arrow-up";
-        var down = (active && dir != "asc") ? "feather icon-arrow-down on" : "feather icon-arrow-down";
-        return MvcHtmlString.Create(
-            "<th class=\"" + thClass + "\" data-sort=\"" + key + "\" data-dir=\"" + next +
-            "\" title=\"Sort by " + label + "\"><span class=\"th-label\">" + label +
-            "</span><span class=\"sort-arrows\"><i class=\"" + up + "\"></i><i class=\"" +
-            down + "\"></i></span></th>");
-    };
 }
 
 <!doctype html>
@@ -46,57 +15,62 @@
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
     <style>
-        /* Matches ERP_Inventory's Purchase Order list. The shared purchase-order.css this
-           page already links styles .general-container, .action-btns (white bar with a 1px
-           #ddd border and dividers between items), table.border.main-table and
-           .table-responsive thead th (#404e68, sticky). This view used to override all of
-           that with its own theme -- navy #2c3958 headers, a borderless toolbar, zebra rows,
-           a rounded white card, wider cell padding -- which is exactly why it did not look
-           like Purchase Order. Those overrides are gone; only Purchase Order's own two extra
-           rules, the sort-arrow styling, and the PacketTea-only sub-grid / New-row styles
-           remain below. */
-        .table.table-sm td, .table.table-sm th { padding: 0.6rem; }
-        tbody div { overflow: unset !important; height: auto !important; max-height: none !important; }
-        .btn-link { font-weight: 500; color: black; border-radius: 0; }
-
-        /* Row metrics pinned to Purchase Order's, so all three list screens are identical
-           and cannot drift on cascade order. That screen resolves to 12px/1.3 text in a
-           6px-padded cell (shared purchase-order.css: "table tr th, table tr td
-           {padding:6px}" over "html,body {font-size:12px; line-height:1.3}") -- about a
-           30px row. Nothing in a cell may exceed that: the expand control is a bare
-           <i class="fa fa-plus"> exactly like _POList.cshtml's .toggle-details, NOT a
-           <button>, and the row checkbox is the plain .row-check rather than the 18px
-           .checkbox-round -- both of those were making these rows noticeably taller. */
-        table.main-table th, table.main-table td {
-            padding: 6px; font-size: 12px; line-height: 1.3;
-            height: 30px; box-sizing: border-box; vertical-align: middle;
+        :root {
+            --mbe-navy: #2c3958; --mbe-accent: #3a7bd5; --mbe-border: #dde2ea;
+            --mbe-bg: #f4f6fa; --mbe-text: #2b2f38; --mbe-muted: #6b7280;
         }
-        table.main-table td .row-expand-btn { font-size: 12px; line-height: 1.3; }
-        table.main-table td .row-check { margin: 0; vertical-align: middle; }
+        body { background: var(--mbe-bg); }
+        .general-container { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(20,30,60,.08); padding-bottom: 18px; overflow: hidden; }
 
-        /* Sortable headers. Purchase Order renders the same paired up/down arrows but as a
-           dead <a href="#">; here they drive a real server-side sort, so the pair is tinted
-           to show which column is active and which way it is going. */
-        .table-responsive thead th.sortable { cursor: pointer; user-select: none; }
-        .table-responsive thead th.sortable:hover { background-color: #4b5b7a; }
-        .table-responsive thead th.is-sorted { background-color: #4b5b7a; }
-        th.sortable .sort-arrows { margin-left: 6px; white-space: nowrap; }
-        th.sortable .sort-arrows i { font-size: 12px; color: rgba(255,255,255,.45); vertical-align: middle; }
-        th.sortable .sort-arrows i.on { color: #fff; }
+        /* purchase-order.css's ".action-btns ul" / ".action-btns ul li a" rules
+           (white bar, black text) match more elements than the equivalents below,
+           so they win on specificity regardless of source order. Match that same
+           element chain here so overrides below actually take effect instead of
+           silently losing to the shared rules on some properties but not others. */
+        .action-btns, .action-btns ul { background: #fff; border: none; border-bottom: 1px solid var(--mbe-border); }
+        .action-btns ul { display: flex; align-items: center; margin: 0; padding: 6px 14px; list-style: none; }
+        .action-btns ul li { margin-right: 6px; border-right: none; }
+        .action-btns ul li a, .action-btns ul li button {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--mbe-text); background: transparent; border: none; cursor: pointer;
+            padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
+            text-decoration: none; transition: background .15s ease;
+        }
+        .action-btns ul li a:hover, .action-btns ul li button:hover:not(:disabled) { background: var(--mbe-bg); color: var(--mbe-text); }
+        .action-btns ul li button:disabled { opacity: .4; cursor: not-allowed; }
+        .title-heading { padding: 18px 20px 14px; font-size: 20px; font-weight: 700; color: var(--mbe-text); }
 
-        /* PacketTea-only: item-line sub-grid shown inside the "+" expand row, themed to
-           match the main grid's header rather than introducing a second palette. */
-        table.detail-sub-table { width: 100%; border-collapse: collapse; }
-        table.detail-sub-table th, table.detail-sub-table td { border: 1px solid #ddd; padding: 6px; white-space: nowrap; }
-        table.detail-sub-table thead th { background-color: #404e68; color: #fff; font-weight: bold; }
+        #searchInput { border: 1px solid var(--mbe-border); border-radius: 6px; }
 
-        /* PacketTea-only: the "New" inline row -- pick Unit + Packet Type here first, then
-           the pencil (enabled only once both are chosen) opens the entry screen with both
-           locked in. Same pattern as ERP_Inventory's Purchase_Requisition list. */
-        tr.new-entry-row td { background-color: #eef3ff; vertical-align: middle; }
-        tr.new-entry-row select { border: 1px solid #ccc; border-radius: 4px; padding: 4px 6px; width: 100%; }
+        .table-responsive { padding: 0 20px; }
+        /* Match Purchase Order's own list font exactly (purchase-order.css's shared
+           html,body rule sets Arial/12px, but this page's own font-size:13px below used
+           to win on equal specificity -- pin both explicitly instead of relying on that
+           cascade order). */
+        table.main-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: Arial, Helvetica, sans-serif; }
+        table.main-table th, table.main-table td { border: 1px solid var(--mbe-border); padding: 8px 10px; }
+        table.main-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.main-table tbody tr:nth-child(even) { background: #f8f9fc; }
+        table.main-table tbody tr:hover { background: #eef3ff; }
+        .dataTables_info { padding: 10px 20px 0; color: var(--mbe-muted); font-size: 12.5px; }
+
+        /* Item-line sub-grid shown inside the "+" expand row -- styled like the
+           main list table (navy header, bordered cells) rather than the plain
+           label/value pairs it replaces, matching how other list screens
+           (e.g. Attendance Entry) show a row's child records. */
+        table.detail-sub-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table.detail-sub-table th, table.detail-sub-table td { border: 1px solid var(--mbe-border); padding: 6px 8px; }
+        table.detail-sub-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.detail-sub-table tbody tr:nth-child(even) { background: #fff; }
+
+        /* "New" inline row (item 2) -- mirrors ERP_Inventory's Purchase_Requisition list
+           New-row pattern: pick Unit + Packet Type here first, then the pencil icon
+           (enabled only once both are picked) opens the root Master Blend Entry window
+           with both locked in. */
+        tr.new-entry-row td { background: #eef3ff; vertical-align: middle; }
+        tr.new-entry-row select { border: 1px solid var(--mbe-border); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; }
         tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
-        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: #404e68; }
+        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: var(--mbe-accent); }
     </style>
 </head>
 <body>
@@ -106,12 +80,12 @@
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
                 <li>
-                    <a href="javascript:void(0)" id="btnNew" style="@(canAdd ? "" : "opacity:0.5;")">
+                    <a href="javascript:void(0)" id="btnNew">
                         <i class="fa fa-plus"></i> New
                     </a>
                 </li>
                 <li>
-                    <a href="javascript:void(0)" id="editBtn" style="@(canEdit ? "" : "opacity:0.5;")">
+                    <a href="javascript:void(0)" id="editBtn">
                         <i class="fa fa-pencil"></i> Edit
                     </a>
                 </li>
@@ -121,28 +95,22 @@
                     </a>
                 </li>
                 <li>
-                    <a href="javascript:void(0)" id="deleteBtn" style="@(canDelete ? "" : "opacity:0.5;")">
+                    <a href="javascript:void(0)" id="deleteBtn">
                         <i class="fa fa-trash-o"></i> Delete
                     </a>
                 </li>
-                <li>
-                    <a href="javascript:void(0)" id="linesBtn">
-                        <i class="fa fa-list"></i> Lines
-                    </a>
-                </li>
                 <li style="margin-left:auto">
-                    <label class="btn btn-inverse pull-right" style="margin: 10px;">LIST</label>
+                    <label style="margin:0;color:var(--mbe-muted);font-size:12px;font-weight:700;letter-spacing:.05em;">LIST</label>
                 </li>
             </ul>
         </div>
 
         <div class="title-heading">Master Blend Entry</div>
 
-        <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
-            <div style="position: relative; width: 250px;">
+        <div style="display:flex;justify-content:flex-end;padding:0 20px;margin-bottom:15px;">
+            <div style="position:relative;width:280px;">
                 <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No / Blend No"
-                       style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
-                <i class="fa fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333;"></i>
+                       style="width:100%;padding:8px 14px;box-sizing:border-box;" />
             </div>
         </div>
 
@@ -152,20 +120,19 @@
                     <tr>
                         <th style="width:26px;"></th>
                         <th style="width:26px;"></th>
-                        @SortTh("UNIT", "Unit")
-                        @SortTh("BLEND_TYPE", "Blend Type")
-                        @SortTh("DOCNO", "Doc No")
-                        @SortTh("DOCDT", "Date")
-                        @SortTh("BLEND_NO", "Blend No")
-                        @SortTh("BLEND_DATE", "Blend Date")
-                        @SortTh("WAREHOUSE", "Warehouse")
-                        @SortTh("BLEND_MARK", "Blend Mark")
-                        @SortTh("BLEND_GRADE", "Blend Grade")
-                        @SortTh("ALLOCATION", "Allocation")
-                        @SortTh("PARTY", "Party")
-                        @SortTh("BLEND_CHEST", "No of Chest")
-                        @SortTh("BLEND_CHEST_WT", "Net Wt/Chest")
-                        @SortTh("CLOSED", "Closed")
+                        <th>Doc No</th>
+                        <th>Date</th>
+                        <th>Party</th>
+                        <th>Blend No</th>
+                        <th>Blend Details</th>
+                        <th>Warehouse</th>
+                        <th>Allocation</th>
+                        <th>Blend Mark</th>
+                        <th>Blend Grade</th>
+                        <th>No of Chest</th>
+                        <th>Net WT/Chest</th>
+                        <th>Gross WT/Chest</th>
+                        <th>Closed</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -184,23 +151,22 @@
                                            data-blendtype="@row.BLEND_TYPE" />
                                 </td>
                                 <td style="text-align:center;">
-                                    <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show more details" style="cursor:pointer;"></i>
+                                    <button type="button" class="row-expand-btn" data-target="@detailId" title="Show more details">+</button>
                                 </td>
-                                <td>@row.UNIT</td>
-                                <td>@(row.BLEND_TYPE != null && blendTypeNames.ContainsKey(row.BLEND_TYPE) ? blendTypeNames[row.BLEND_TYPE] : row.BLEND_TYPE)</td>
                                 <td>@row.DOCNO</td>
                                 <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
+                                <td>@row.PartyName</td>
                                 <td>
                                     <a href="@Url.Action("InsertOrUpdate", "MasterBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
                                 </td>
-                                <td>@(row.BLEND_DATE.HasValue ? row.BLEND_DATE.Value.ToString("dd/MM/yyyy") : "")</td>
+                                <td>@row.BLEND_DESCN</td>
                                 <td>@row.WarehouseName</td>
+                                <td>@row.AllocationName</td>
                                 <td>@row.BlendMarkName</td>
                                 <td>@row.BlendGradeName</td>
-                                <td>@row.AllocationName</td>
-                                <td>@row.PartyName</td>
                                 <td class="text-right">@row.BLEND_CHEST</td>
                                 <td class="text-right">@row.BLEND_CHEST_WT</td>
+                                <td class="text-right">@row.BLEND_CHEST_GROSSWT</td>
                                 <td>@(row.CLOSED == "Y" ? "Yes" : "No")</td>
                             </tr>
                             <!-- Header fields that don't fit the main grid -- shown on demand via the
@@ -211,7 +177,7 @@
                                  it was first loaded. -->
                             <tr class="row-detail" id="@detailId" style="display:none;"
                                 data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
-                                <td colspan="16" style="background:#f8f9fc;padding:10px 12px;">
+                                <td colspan="15" style="background:#f8f9fc;padding:10px 12px;">
                                     <!-- Just the item-lines sub-grid -- matches Attendance Entry's own
                                          "+" expand (straight to the detail table, no label/value summary
                                          line above it) instead of also showing Export Ref No/Transporter/
@@ -236,7 +202,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody class="detail-items-body">
-                                                <tr><td colspan="13" style="text-align:center;color:#666;">Loading...</td></tr>
+                                                <tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Loading...</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -246,7 +212,7 @@
                     }
                     else
                     {
-                        <tr><td colspan="16" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="15" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -261,13 +227,12 @@
             <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
             <div style="display:flex;gap:8px;align-items:center;">
                 <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
-                <span style="color:#666;font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
+                <span style="color:var(--mbe-muted);font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
                 <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
             </div>
         </div>
     </div>
 
-    @Html.Partial("_BlendAlert")
     <script>
         // TEMPORARY diagnostic -- shows which Oracle schema (x-database header, see
         // Services.cs) this session's API calls actually connect as, so it can be checked
@@ -288,24 +253,11 @@
             // MasterBlendEntryController.Index) instead of one type at a time. Changing the
             // search text always jumps back to page 1; paging itself calls reload(n) with the
             // target page instead.
-            // Sort state rides along with every navigation (search, paging) so changing the
-            // search text or turning the page keeps the column you sorted by.
-            var SORT_BY = '@(ViewBag.SortBy ?? "")', SORT_DIR = '@(ViewBag.SortDir ?? "")';
-            function reload(page, sortBy, sortDir) {
-                var by = (sortBy === undefined) ? SORT_BY : sortBy;
-                var dir = (sortDir === undefined) ? SORT_DIR : sortDir;
+            function reload(page) {
                 window.location.href = '@Url.Action("Index", "MasterBlendEntry")'
                     + '?searchString=' + encodeURIComponent($('#searchInput').val())
-                    + '&page=' + (page || 1)
-                    + '&sortBy=' + encodeURIComponent(by || '')
-                    + '&sortDir=' + encodeURIComponent(dir || '');
+                    + '&page=' + (page || 1);
             }
-
-            // Re-sorting always returns to page 1 -- staying on page 4 of the old order shows
-            // an arbitrary slice of the new one.
-            $('#blendTable').on('click', 'thead th.sortable', function () {
-                reload(1, $(this).data('sort'), $(this).data('dir'));
-            });
 
             $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
             $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
@@ -314,70 +266,55 @@
             // No, Transporter, Ship Mark, Notes, Special Instructions) for that row. Every open
             // re-fetches them via GetRowDetail instead of trusting what was rendered at page
             // load, so an edit someone else just saved shows up without a full page reload.
-            function openDetail($btn) {
-                var $detail = $('#' + $btn.data('target'));
-                $detail.show();
-                $btn.removeClass('fa-plus').addClass('fa-minus');
-                var $body = $detail.find('.detail-items-body');
-                $.get('@Url.Action("GetRowDetail", "MasterBlendEntry")', {
-                    docno: $detail.data('docno'),
-                    docdt: $detail.data('docdt'),
-                    blendType: $detail.data('blendtype')
-                }).done(function (r) {
-                    if (!r || !r.success) { // leave the page-load values in place
-                        $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
-                        return;
-                    }
-                    // Item lines (Mark/Inv/Grade/Qty/...), rendered the same way as
-                    // Attendance Entry's per-employee sub-grid instead of the plain
-                    // label/value block this panel used to be limited to.
-                    var items = r.details || [];
-                    if (items.length === 0) {
-                        $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">No item lines</td></tr>');
-                        return;
-                    }
-                    $body.empty();
-                    items.forEach(function (d, i) {
-                        var packDate = d.PACK_DATE ? new Date(d.PACK_DATE).toLocaleDateString('en-GB') : '';
-                        $('<tr>').append(
-                            '<td>' + (d.SLNO != null ? d.SLNO : (i + 1)) + '</td>',
-                            '<td>' + (d.MarkName || d.MARK || '') + '</td>',
-                            '<td>' + (d.INVNO || '') + '</td>',
-                            '<td>' + packDate + '</td>',
-                            '<td>' + (d.GradeName || d.GRADE || '') + '</td>',
-                            '<td style="text-align:right;">' + (d.BAG_CHEST || 0) + '</td>',
-                            '<td style="text-align:right;">' + (d.QTY || 0) + '</td>',
-                            '<td style="text-align:right;">' + (d.SAMPLE_QTY || 0) + '</td>',
-                            '<td style="text-align:right;">' + Number(d.RATE || 0).toFixed(2) + '</td>',
-                            '<td style="text-align:right;">' + Number(d.AMOUNT || 0).toFixed(2) + '</td>',
-                            '<td>' + (d.WAREHOUSE || '') + '</td>',
-                            '<td>' + (d.DONO || '') + '</td>',
-                            '<td>' + (d.TransporterName || '') + '</td>'
-                        ).appendTo($body);
-                    });
-                }).fail(function () {
-                    $body.html('<tr><td colspan="13" style="text-align:center;color:#666;">Unable to load item lines.</td></tr>');
-                });
-            }
-            function closeDetail($btn) {
-                $('#' + $btn.data('target')).hide();
-                $btn.removeClass('fa-minus').addClass('fa-plus');
-            }
-
             $('#blendTable').on('click', '.row-expand-btn', function () {
                 var $btn = $(this);
-                if ($('#' + $btn.data('target')).is(':visible')) closeDetail($btn); else openDetail($btn);
-            });
+                var $detail = $('#' + $btn.data('target'));
+                var opening = !$detail.is(':visible');
+                $detail.toggle(opening);
+                $btn.text(opening ? '-' : '+');
 
-            // "Lines": expand the ticked rows' item lines, or every row when none is ticked;
-            // a second click collapses them again (same as Packing Entry's list).
-            $('#linesBtn').on('click', function () {
-                var $checked = $('.row-check:checked');
-                var $btns = $checked.length
-                    ? $checked.closest('tr').find('.row-expand-btn')
-                    : $('#blendTable .row-expand-btn');
-                var anyClosed = $btns.filter('.fa-plus').length > 0;
-                $btns.each(function () { anyClosed ? openDetail($(this)) : closeDetail($(this)); });
+                if (opening) {
+                    var $body = $detail.find('.detail-items-body');
+                    $.get('@Url.Action("GetRowDetail", "MasterBlendEntry")', {
+                        docno: $detail.data('docno'),
+                        docdt: $detail.data('docdt'),
+                        blendType: $detail.data('blendtype')
+                    }).done(function (r) {
+                        if (!r || !r.success) { // leave the page-load values in place
+                            $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Unable to load item lines.</td></tr>');
+                            return;
+                        }
+                        // Item lines (Mark/Inv/Grade/Qty/...), rendered the same way as
+                        // Attendance Entry's per-employee sub-grid instead of the plain
+                        // label/value block this panel used to be limited to.
+                        var items = r.details || [];
+                        if (items.length === 0) {
+                            $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">No item lines</td></tr>');
+                            return;
+                        }
+                        $body.empty();
+                        items.forEach(function (d, i) {
+                            var packDate = d.PACK_DATE ? new Date(d.PACK_DATE).toLocaleDateString('en-GB') : '';
+                            $('<tr>').append(
+                                '<td>' + (d.SLNO != null ? d.SLNO : (i + 1)) + '</td>',
+                                '<td>' + (d.MarkName || d.MARK || '') + '</td>',
+                                '<td>' + (d.INVNO || '') + '</td>',
+                                '<td>' + packDate + '</td>',
+                                '<td>' + (d.GradeName || d.GRADE || '') + '</td>',
+                                '<td style="text-align:right;">' + (d.BAG_CHEST || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.SAMPLE_QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + Number(d.RATE || 0).toFixed(2) + '</td>',
+                                '<td style="text-align:right;">' + Number(d.AMOUNT || 0).toFixed(2) + '</td>',
+                                '<td>' + (d.WAREHOUSE || '') + '</td>',
+                                '<td>' + (d.DONO || '') + '</td>',
+                                '<td>' + (d.TransporterName || '') + '</td>'
+                            ).appendTo($body);
+                        });
+                    }).fail(function () {
+                        $body.html('<tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Unable to load item lines.</td></tr>');
+                    });
+                }
             });
 
             // =========================================================
@@ -401,7 +338,7 @@
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Master Blend Entry"></i></td>' +
                     '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
                     '<td colspan="2"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
-                    '<td colspan="10"></td>' +
+                    '<td colspan="9"></td>' +
                     '</tr>';
             }
 
@@ -410,18 +347,7 @@
                 $('.go-new').toggleClass('is-ready', ready);
             }
 
-            // AEDV rights + edit back-date limit -- see the perm block at the top of this view.
-            var CAN_ADD = @(canAdd ? "true" : "false"), CAN_EDIT = @(canEdit ? "true" : "false"), CAN_DELETE = @(canDelete ? "true" : "false");
-            var EDIT_MIN_DATE = '@editMinDate.ToString("yyyy-MM-dd")', EDIT_MIN_DMY = '@editMinDate.ToString("dd/MM/yyyy")';
-            function editRefusal(docdt) {
-                if (!CAN_EDIT) return 'You do not have permission to edit this entry.';
-                if (docdt && docdt < EDIT_MIN_DATE)
-                    return 'Edit is not allowed. Only entries dated on or after ' + EDIT_MIN_DMY + ' can be edited.';
-                return null;
-            }
-
             $('#btnNew').on('click', function () {
-                if (!CAN_ADD) { showWarningDialog('You do not have permission to add a new entry.', 'Add Not Allowed !'); return; }
                 if ($('#newUnitRow').length) return;
                 $('#blendTable tbody').prepend(buildNewRow());
                 refreshGoNewState();
@@ -431,8 +357,8 @@
 
             $('#blendTable').on('click', '.go-new', function () {
                 var unit = $('#newRowUnit').val(), packetType = $('#newRowPacketType').val();
-                if (!unit) { showWarning('Please select Unit first'); return; }
-                if (!packetType) { showWarning('Please select Packet Type first'); return; }
+                if (!unit) { alert('Please select Unit first'); return; }
+                if (!packetType) { alert('Please select Packet Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
                     + '?unit=' + encodeURIComponent(unit)
                     + '&blendType=' + encodeURIComponent(packetType);
@@ -444,16 +370,14 @@
             // Requisition's own checkbox-based Delete does.
             function getSingleChecked(action) {
                 var $c = $('.row-check:checked');
-                if ($c.length === 0) { showWarning('Please select a record to ' + action + '.'); return null; }
-                if ($c.length > 1) { showWarning('Please select only one record to ' + action + '.'); return null; }
+                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
                 return $c;
             }
 
             $('#editBtn').on('click', function () {
                 var $c = getSingleChecked('edit');
                 if (!$c) return;
-                var refusal = editRefusal($c.data('docdt'));
-                if (refusal) { showWarningDialog(refusal, 'Edit Not Allowed !'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
                     + '?docno=' + encodeURIComponent($c.val())
                     + '&docdt=' + encodeURIComponent($c.data('docdt'))
@@ -471,16 +395,15 @@
             });
 
             $('#deleteBtn').on('click', function () {
-                if (!CAN_DELETE) { showWarningDialog('You do not have permission to delete this entry.', 'Delete Not Allowed !'); return; }
                 var $c = getSingleChecked('delete');
                 if (!$c) return;
-                bxConfirm('Are you sure you want to delete Blend No against Doc No ' + $c.val() + ' ?', function () {
-                    $('<form>', { method: 'POST', action: '@Url.Action("Delete", "MasterBlendEntry")' })
-                        .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
-                        .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
-                        .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
-                        .appendTo('body').submit();
-                }, { okText: 'Delete', cancelText: 'Cancel' });
+                if (!confirm('Are you sure you want to delete Blend No against Doc No ' + $c.val() + ' ?')) return;
+
+                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "MasterBlendEntry")' })
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
+                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
+                    .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
+                    .appendTo('body').submit();
             });
         });
     </script>

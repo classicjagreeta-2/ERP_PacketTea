@@ -1790,13 +1790,13 @@ function parseDate(data) {
 
                 // var data = ret['data'];
                 // Check and format data
-                //if (! _isArray(data)  ){
-                //   _alert( "The type of data(" + ( typeof data ) + ") is incorrect.", input);
-                //    data = _set(input, 'data');    // Still use old data
-                //}else{   // apply new data
-                //    // _set(input, 'data', _formatData(_set(input, 'fieldValue'), data) );
-                //    methods.data.call(input, data);
-                //}
+                if (! _isArray(data)  ){
+                   _alert( "The type of data(" + ( typeof data ) + ") is incorrect.", input);
+                    data = _set(input, 'data');    // Still use old data
+                }else{   // apply new data
+                    // _set(input, 'data', _formatData(_set(input, 'fieldValue'), data) );
+                    methods.data.call(input, data);
+                }
 
                 input.removeClass('loading').prop('disabled', false);
                 if(_isMSIE())   input.removeClass('loading-msie-patch');

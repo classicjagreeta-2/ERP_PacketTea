@@ -64,8 +64,8 @@
                 </td>
                 <td style="width:100px;">
                     <input type="text"
-                           name="T_TEA_DETAIL[@(RowIndex + j)].MARK"
-                           value="@det.MARK"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].MARKDESC"
+                           value="@det.MARKDESC"
                            class="form-control mark-desc"
                            readonly
                            style="width:100px;" />
@@ -101,7 +101,7 @@
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].BAG_CHEST"
                            value="@(det.BAG_CHEST?.ToString("0") ?? "0")"
-                           class="form-control req text-right" />
+                           class="form-control req text-right bags" />
                 </td>
 
 
@@ -110,7 +110,7 @@
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].QTY"
                            value="@(det.QTY?.ToString("0.000") ?? "0.000")"
-                           class="form-control req text-right" />
+                           class="form-control req text-right net-wt" />
                 </td>
 
 
@@ -119,7 +119,7 @@
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].GROSS"
                            value="@(det.GROSS?.ToString("0.000") ?? "0.000")"
-                           class="form-control req text-right" />
+                           class="form-control req text-right gross-wt" />
                 </td>
 
 
@@ -127,7 +127,8 @@
                 <td>
                     <input type="text"
                            value="@(det.QTY?.ToString("0.000") ?? "0.000")"
-                           class="form-control req text-right" />
+                           class="form-control req text-right total-net-wt" 
+                           readonly/>
                 </td>
 
 
@@ -143,8 +144,8 @@
                 <!-- Size -->
                 <td style="width:100px;">
                     <input type="text"
-                           name="T_TEA_DETAIL[@(RowIndex + j)].SZ_CODE"
-                           value="@det.SZ_CODE"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].SIZEDESC"
+                           value="@det.SIZEDESC"
                            class="form-control size-desc"
                            readonly
                            style="width:100px;" />
@@ -157,7 +158,7 @@
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].RATE"
                            value="@(det.RATE?.ToString("0.00") ?? "0.00")"
-                           class="form-control req text-right" />
+                           class="form-control req text-right rate" />
                 </td>
 
 
@@ -166,7 +167,8 @@
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].AMOUNT"
                            value="@(det.AMOUNT?.ToString("0.00") ?? "0.00")"
-                           class="form-control text-right"
+                           class="form-control text-right amount"
+                           readonly
                            style="width:100px;" />
                 </td>
 
@@ -176,7 +178,7 @@
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].DISC_PER"
                            value="@(det.DISC_PER?.ToString("0.00") ?? "0.00")"
-                           class="form-control req text-right" />
+                           class="form-control text-right disc-per" />
                 </td>
 
 
@@ -185,7 +187,8 @@
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].DISCOUNT"
                            value="@(det.DISCOUNT?.ToString("0.00") ?? "0.00")"
-                           class="form-control req text-right" />
+                           class="form-control text-right discount"
+                           readonly />
                 </td>
 
 
@@ -195,70 +198,73 @@
                            value="@(det.AMOUNT.HasValue && det.DISCOUNT.HasValue
                            ? (det.AMOUNT.Value - det.DISCOUNT.Value).ToString("0.00")
                            : "0.00")"
-                           class="form-control text-right" />
+                           class="form-control text-right taxable-amt"
+                           readonly />
                 </td>
 
 
+                <!-- CGST % -->
                 <!-- CGST % -->
                 <td>
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].CGST_RT"
                            value="@(det.CGST_RT?.ToString("0.00") ?? "0.00")"
-                           class="form-control text-right" />
+                           class="form-control text-right cgst-rate"
+                           readonly />
                 </td>
-
 
                 <!-- CGST Amt -->
                 <td>
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].CGST_AMT"
                            value="@(det.CGST_AMT?.ToString("0.00") ?? "0.00")"
-                           class="form-control text-right" />
+                           class="form-control text-right cgst-amt"
+                           readonly />
                 </td>
-
 
                 <!-- SGST % -->
                 <td>
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].SGST_RT"
                            value="@(det.SGST_RT?.ToString("0.00") ?? "0.00")"
-                           class="form-control text-right" />
+                           class="form-control text-right sgst-rate"
+                           readonly />
                 </td>
-
 
                 <!-- SGST Amt -->
                 <td>
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].SGST_AMT"
                            value="@(det.SGST_AMT?.ToString("0.00") ?? "0.00")"
-                           class="form-control text-right" />
+                           class="form-control text-right sgst-amt"
+                           readonly />
                 </td>
-
 
                 <!-- IGST % -->
                 <td>
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].IGST_RT"
                            value="@(det.IGST_RT?.ToString("0.00") ?? "0.00")"
-                           class="form-control text-right" />
+                           class="form-control text-right igst-rate"
+                           readonly />
                 </td>
-
 
                 <!-- IGST Amt -->
                 <td>
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].IGST_AMT"
                            value="@(det.IGST_AMT?.ToString("0.00") ?? "0.00")"
-                           class="form-control text-right" />
+                           class="form-control text-right igst-amt"
+                           readonly />
                 </td>
-
 
                 <!-- Total Amt -->
                 <td style="width:100px;">
-                    <input type="text"
+                   <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].TOT_AMT"
                            value="@(det.TOT_AMT?.ToString("0.00") ?? "0.00")"
-                           class="form-control text-right"
+                           class="form-control text-right tot-amt"
+                           readonly 
                            style="width:100px;" />
                 </td>
 

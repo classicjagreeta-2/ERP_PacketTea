@@ -162,7 +162,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Order No <span class="text-danger">(*)</span></label>
-                                @Html.TextBoxFor(m => m.unbL_HED.partY_ORDER_NO, new { @class = "form-control", @required = "required", @id = "txtOrderNo" })
+                                @Html.TextBoxFor(m => m.unbL_HED.ordeR_NO, new { @class = "form-control", @required = "required", @id = "txtOrderNo" })
                             </div>
                             <div class="form-col-20">
                                 <label>Bill To</label>
@@ -213,15 +213,15 @@
                                 @Html.TextBoxFor(m => m.unbL_HED.maxload, new { @class = "form-control ", @required = "required", @id = "txtMaxLoad" })
                             </div>
                             <div class="form-col-20">
-                                <label>Time</label>
+                                <label>Time <span>(*)</span></label>
                                 @Html.TextBoxFor(m => m.unbL_HED.tim, new { @class = "form-control ", @required = "required", @id = "txtTime" })
                             </div>
                             <div class="form-col-20">
-                                <label>Time Removal</label>
+                                <label>Time Removal <span>(*)</span></label>
                                 @Html.TextBoxFor(m => m.unbL_HED.timrem, new { @class = "form-control ", @required = "required", @id = "txtTimeRemoval" })
                             </div>
                             <div class="form-col-20">
-                                <label>Vehicle Type</label>
+                                <label>Vehicle Type  <span>(*)</span></label>
                                 @Html.TextBoxFor(model => model.unbL_HED.vtype, new { @class = "form-control VehicleTypeDDL", @required = "required", @id = "txtRemovalDate" })
                             </div>
                         </div>
@@ -248,12 +248,13 @@
                                 <div class="col-md-12 pl-1">
                                     <div class="date-field">
                                         @Html.TextBoxFor(m => m.unbL_HED.bldt, "{0:dd-MM-yyyy}", new { @class = "form-control", @id = "txtDeliveryDate" })
+
                                         <img src="~/Content/assets/images/calendar.png" alt="calendar" class="calendar-icon" data-target="DeliveryDate" />
                                     </div>
                                 </div>
                             </div>
                             <div class="form-col-20">
-                                <label>Bank</label>
+                                <label>Bank <span>(*)</span></label>
                                 @Html.TextBoxFor(m => m.unbL_HED.banK_CODE, new { @class = "form-control ", @required = "required", @id = "BankCodeDDL" })
                             </div>
                         </div>
@@ -294,14 +295,14 @@
 
                             <!-- PO No & Date -->
                             <div class="form-col-33 mt-3">
-                                <label>PO No. &amp; Date</label>
+                                <label>PO No. &amp; Date <span>(*)</span></label>
                                 <div class="d-flex">
                                     @Html.TextBoxFor(m => m.unbL_HED.partY_ORDER_NO,
                                     new { @class = "form-control mr-2", style = "flex:1;" })
 
                                     <div class="date-field" style="flex:1;">
                                         @Html.TextBoxFor(m => m.unbL_HED.partY_ORDER_DT, "{0:dd-MM-yyyy}",
-                                        new { @class = "form-control", @id = "txtPODate" })
+                                        new { @class = "form-control", @required = "required", @id = "txtPODate" })
                                         <img src="~/Content/assets/images/calendar.png"
                                              class="calendar-icon"
                                              data-target="PODate" />
@@ -311,14 +312,14 @@
 
                             <!-- C/Note No & Date -->
                             <div class="form-col-33 mt-3">
-                                <label>C/Note No. &amp; Date</label>
+                                <label>C/Note No. &amp; Date <span>(*)</span></label>
                                 <div class="d-flex">
                                     @Html.TextBoxFor(m => m.unbL_HED.cnotE_NO,
                                     new { @class = "form-control mr-2", style = "flex:1;" })
 
                                     <div class="date-field" style="flex:1;">
                                         @Html.TextBoxFor(m => m.unbL_HED.cnotE_DT, "{0:dd-MM-yyyy}",
-                                        new { @class = "form-control", @id = "txtCDate" })
+                                        new { @class = "form-control", @required = "required", @id = "txtCDate" })
                                         <img src="~/Content/assets/images/calendar.png"
                                              class="calendar-icon"
                                              data-target="CDate" />
@@ -948,31 +949,80 @@
             };
 
             // Header
-            $("[name^='unbL_HED.']").each(function () {
-                var name = $(this).attr("name").replace("unbL_HED.", "");
-                if ($(this).is(":radio")) {
+            //$("[name^='unbL_HED.']").each(function () {
+            //    var name = $(this).attr("name").replace("unbL_HED.", "");
+            //    if ($(this).is(":radio")) {
 
-                    if ($(this).is(":checked"))
-                        model.unbL_HED[name] = $(this).val();
+            //        if ($(this).is(":checked"))
+            //            model.unbL_HED[name] = $(this).val();
 
-                } else if ($(this).is(":checkbox")) {
+            //    } else if ($(this).is(":checkbox")) {
 
-                    model.unbL_HED[name] = $(this).is(":checked");
+            //        model.unbL_HED[name] = $(this).is(":checked");
 
-                } else {
+            //    } else {
 
-                    model.unbL_HED[name] = $(this).val();
-                }
-            });
-            model.unbL_HED.bldt = toIsoDate(model.unbL_HED.bldt);
+            //        model.unbL_HED[name] = $(this).val();
+            //    }
+            //});
+            //model.unbL_HED.bldt = toIsoDate(model.unbL_HED.bldt);
 
-            model.unbL_HED.ewaybilL_DT = toNullableDate(toIsoDate(model.unbL_HED.ewaybilL_DT));
-            model.unbL_HED.cnotE_DT = toNullableDate(toIsoDate(model.unbL_HED.cnotE_DT));
-            model.unbL_HED.challaN_DT = toNullableDate(toIsoDate(model.unbL_HED.challaN_DT));
-            model.unbL_HED.remdt = toNullableDate(toIsoDate(model.unbL_HED.remdt));
-            model.unbL_HED.partY_ORDER_DT = toNullableDate(toIsoDate(model.unbL_HED.partY_ORDER_DT));
-            model.unbL_HED.rt = 32;
-            model.unbL_HED.tm = 'T';
+            //model.unbL_HED.ewaybilL_DT = toNullableDate(toIsoDate(model.unbL_HED.ewaybilL_DT));
+            //model.unbL_HED.cnotE_DT = toNullableDate(toIsoDate(model.unbL_HED.cnotE_DT));
+            //model.unbL_HED.challaN_DT = toNullableDate(toIsoDate(model.unbL_HED.challaN_DT));
+            //model.unbL_HED.remdt = toNullableDate(toIsoDate(model.unbL_HED.remdt));
+            //model.unbL_HED.partY_ORDER_DT = toNullableDate(toIsoDate(model.unbL_HED.partY_ORDER_DT));
+            //model.unbL_HED.rt = 32;
+            //model.unbL_HED.tm = 'T';
+
+
+$("[name^='unbL_HED.']").each(function () {
+    var name = $(this).attr("name").replace("unbL_HED.", "");
+
+    if ($(this).is(":radio")) {
+
+        if ($(this).is(":checked"))
+            model.unbL_HED[name] = $(this).val();
+
+    } else if ($(this).is(":checkbox")) {
+
+        model.unbL_HED[name] = $(this).is(":checked");
+
+    } else {
+
+        model.unbL_HED[name] = $(this).val();
+    }
+});
+
+// IMPORTANT: Always take Bill Date from Bill Date textbox
+var billDate = $("#txtBillDate").val();
+
+console.log("Bill Date textbox:", billDate);
+
+model.unbL_HED.bldt = toIsoDate(billDate);
+
+console.log("Bill Date after conversion:", model.unbL_HED.bldt);
+
+model.unbL_HED.ewaybilL_DT =
+    toNullableDate(toIsoDate(model.unbL_HED.ewaybilL_DT));
+
+model.unbL_HED.cnotE_DT =
+    toNullableDate(toIsoDate(model.unbL_HED.cnotE_DT));
+
+model.unbL_HED.challaN_DT =
+    toNullableDate(toIsoDate(model.unbL_HED.challaN_DT));
+
+model.unbL_HED.remdt =
+    toNullableDate(toIsoDate(model.unbL_HED.remdt));
+
+model.unbL_HED.partY_ORDER_DT =
+    toNullableDate(toIsoDate(model.unbL_HED.partY_ORDER_DT));
+
+model.unbL_HED.rt = 32;
+model.unbL_HED.tm = 'T';
+
+
+
             // Details
             $("#mainTable tbody tr").each(function () {
 
@@ -1050,6 +1100,29 @@
 
                 model.unblplt.push(freeRow);
             });
+            // Free Tea Details
+            //model.unblplt = freeTeaData.map(function (item, index) {
+
+            //    return {
+            //        srlno: index + 1,
+
+            //        plcrcd: item.PLCRCD || "",
+            //        plcrqty: parseFloat(item.PLCRQTY) || 0,
+            //        plcrrate: parseFloat(item.PLCRRATE) || 0,
+            //        plcrval: parseFloat(item.PLCRVAL) || 0,
+
+            //        blno: "",
+            //        bldt: model.unbL_HED.bldt,
+            //        pcd: model.unbL_HED.pcd,
+            //        unit: model.unbL_HED.unit,
+            //        loca: model.unbL_HED.loca,
+            //        rt: 32,
+            //        tm: "T",
+            //        doc_YEAR: "2027"
+            //    };
+
+            //});
+
             return model;
         }
     </script>
@@ -1157,28 +1230,65 @@
         }
     </script>
     <script>
-        $("#btnFreeOk").off("click").on("click", function () {
+        //$("#btnFreeOk").off("click").on("click", function () {
 
-            // Clear previous data
-            model.unblplt = [];
+        //    // Clear previous data
+        //    model.unblplt = [];
+
+        //    $("#tblFreeDetail tbody tr").each(function () {
+
+        //        var freeRow = {};
+
+        //        freeRow.srlno = parseInt($(this).find(".txtFreeSlNo").val()) || 0;
+        //        freeRow.plcrcd = $(this).find(".FreeTeaCode").val();
+        //        freeRow.plcrqty = parseFloat($(this).find(".txtFreeTeaQty").val()) || 0;
+        //        freeRow.plcrrate = parseFloat($(this).find(".txtFreeTeaRate").val()) || 0;
+        //        freeRow.plcrval = parseFloat($(this).find(".txtFreeTeaAmount").val()) || 0;
+
+        //        model.unblplt.push(freeRow);
+        //    });
+
+        //    console.log(model.unblplt);
+
+        //    $(".popup-overlay, .popup-box").hide();
+        //});
+        $(document).off("click", "#btnFreeOk").on("click", "#btnFreeOk", function (e) {
+
+            e.preventDefault();
+
+            console.log("========== FREE OK CLICKED ==========");
+
+            // Store selected Free Tea rows
+            freeTeaData = [];
 
             $("#tblFreeDetail tbody tr").each(function () {
 
-                var freeRow = {};
+                var $row = $(this);
 
-                freeRow.srlno = parseInt($(this).find(".txtFreeSlNo").val()) || 0;
-                freeRow.plcrcd = $(this).find(".FreeTeaCode").val();
-                freeRow.plcrqty = parseFloat($(this).find(".txtFreeTeaQty").val()) || 0;
-                freeRow.plcrrate = parseFloat($(this).find(".txtFreeTeaRate").val()) || 0;
-                freeRow.plcrval = parseFloat($(this).find(".txtFreeTeaAmount").val()) || 0;
+                var $checkbox = $row.find(".chkFreeRow");
 
-                model.unblplt.push(freeRow);
+                // Only checked rows
+                if ($checkbox.length > 0 && !$checkbox.prop("checked")) {
+                    return;
+                }
+
+                var freeRow = {
+                    srlno: parseInt($row.find(".txtFreeSlNo").val()) || 0,
+                    PLCRCD: $row.find(".FreeTeaCode").val() || "",
+                    PLCRQTY: parseFloat($row.find(".txtFreeTeaQty").val()) || 0,
+                    PLCRRATE: parseFloat($row.find(".txtFreeTeaRate").val()) || 0,
+                    PLCRVAL: parseFloat($row.find(".txtFreeTeaAmount").val()) || 0
+                };
+
+                freeTeaData.push(freeRow);
             });
 
-            console.log(model.unblplt);
+            console.log("FINAL freeTeaData =", freeTeaData);
 
+            // Close popup
             $(".popup-overlay, .popup-box").hide();
         });
+    
     </script>
     <script>
 

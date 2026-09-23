@@ -83,35 +83,16 @@ namespace Finance.Controllers.TEA
             return (response.IsSuccessStatusCode ? response.Data : null) ?? new List<UnitOption>();
         }
 
-        // AEDV rights + back-date days (Aday/Eday) for this screen, from the menu API's
-        // usracS_AEDV (see MenuController). "MasterBlendEntry" isn't a provisioned
-        // permission key yet (this is a new screen); every other TEA controller in this
-        // app shares the "PacketTeaPurchaseEntry" permission bucket, so match that
-        // convention rather than always resolving to a missing entry and disabling New.
-        private AEDV Permission =>
-            ((List<AEDV>)Session["User_AEDV"])?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
-
-        // Doc Date picker for a new entry: the FY bounds, narrowed to no earlier than the
-        // back-date policy allows (Aday days back) and no later than today.
-        private void SetNewDocDateBounds(AEDV perm)
-        {
-            var backDateMin = perm?.MinDocDate(true) ?? DateTime.Today;
-            var min = backDateMin;
-            var max = DateTime.Today;
-            if (DateTime.TryParse((string)ViewBag.FyStart, out var fs) && fs > min) min = fs;
-            if (DateTime.TryParse((string)ViewBag.FyEnd, out var fe) && fe < max) max = fe;
-            ViewBag.BackDateMin = backDateMin.ToString("yyyy-MM-dd");
-            ViewBag.DocDtMin = min.ToString("yyyy-MM-dd");
-            ViewBag.DocDtMax = max.ToString("yyyy-MM-dd");
-        }
-
         // GET: MasterBlendEntry
-        public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15, string sortBy = "", string sortDir = "")
+        public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15)
         {
-            ViewBag.Permission = Permission;
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            // "MasterBlendEntry" isn't a provisioned permission key yet (this is a new
+            // screen); every other TEA controller in this app shares the
+            // "PacketTeaPurchaseEntry" permission bucket, so match that convention
+            // rather than always resolving to a missing entry and disabling New.
+            ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
             ViewBag.CurrentFilter = searchString;
-            ViewBag.SortBy = sortBy;
-            ViewBag.SortDir = sortDir;
             ViewBag.PageSize = pageSize;
             ViewBag.Page = page ?? 1;
             ViewBag.BlendType = blendType;
@@ -119,7 +100,7 @@ namespace Finance.Controllers.TEA
             ViewBag.UnitList = await GetUnitsForUserAsync();
 
             var response = await Services.GetAsync<PageModel<T_TEA_BLEND>>(
-                $"/api/TeaBlend/GetByPage?blendType={blendType}&unit={CurrentUnit}&search={searchString}&page={page}&pageSize={pageSize}&sortBy={sortBy}&sortDir={sortDir}");
+                $"/api/TeaBlend/GetByPage?blendType={blendType}&unit={CurrentUnit}&search={searchString}&page={page}&pageSize={pageSize}");
 
             var list = response?.Data?.value?.results ?? new List<T_TEA_BLEND>();
             ViewBag.RowCount = response?.Data?.value?.rowCount ?? 0;
@@ -143,13 +124,7 @@ namespace Finance.Controllers.TEA
         // Edit, but the whole form renders read-only (see InsertOrUpdate.cshtml's IS_VIEW).
         public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "", bool view = false)
         {
-            // Same rights-filtered list Index() uses for the list page's "New" row
-            // (GetAllowedBlendTypesAsync) -- using the raw BlendTypes dict here let a
-            // user with rights to only e.g. PT/BT/TB pick TT/WT/ST straight from this
-            // form's own Blend Type dropdown whenever it opens without going through
-            // that "New" row (a brand-new entry not locked from the list).
-            var allowedBlendTypes = await GetAllowedBlendTypesAsync();
-            ViewBag.BlendTypes = allowedBlendTypes;
+            ViewBag.BlendTypes = BlendTypes;
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
             ViewBag.IsView = view;
 
@@ -170,27 +145,10 @@ namespace Finance.Controllers.TEA
                 }
             }
 
-            var perm = Permission;
-            ViewBag.Permission = perm;
-
             if (string.IsNullOrEmpty(docno))
             {
                 // ⭐ New entry
-                if (!(perm?.Can('A') ?? false))
-                {
-                    TempData["toastrWarning"] = "You do not have permission to add a new Master Blend entry.";
-                    return RedirectToAction("Index", new { blendType });
-                }
-                SetNewDocDateBounds(perm);
-
-                // Default to "PT" only when it's actually one of this user's allowed
-                // types -- for a user with no PT rights (e.g. CORETT: TT/ST/WT), fall
-                // back to whatever their first allowed type is instead, so the initial
-                // Unit guess below (UnitForBlendType) isn't computed from a type they
-                // can't even select in the dropdown.
-                var effectiveBlendType = !string.IsNullOrEmpty(blendType) ? blendType :
-                    allowedBlendTypes.ContainsKey("PT") ? "PT" :
-                    allowedBlendTypes.Keys.FirstOrDefault() ?? "PT";
+                var effectiveBlendType = string.IsNullOrEmpty(blendType) ? "PT" : blendType;
                 var model = new TEA_BLEND_DATA
                 {
                     T_TEA_BLEND = new T_TEA_BLEND
@@ -217,23 +175,12 @@ namespace Finance.Controllers.TEA
 
             if (!response.IsSuccessStatusCode || response.Data == null)
             {
-                TempData[response.FailureToastKey] = response.Message ?? "Record not found.";
+                TempData["toastrError"] = response.Message ?? "Record not found.";
                 return RedirectToAction("Index", new { blendType });
             }
 
             var json = JsonConvert.SerializeObject(response.Data);
             var wrapper = JsonConvert.DeserializeObject<GetByDocNoResult>(json);
-
-            // AEDV "E" right + back-date policy (Eday) -- View mode stays open to everyone.
-            if (!view && wrapper.head != null)
-            {
-                var denied = AEDV.CheckAddEdit(perm, false, wrapper.head.DOCDT);
-                if (denied != null)
-                {
-                    TempData["toastrWarning"] = denied;
-                    return RedirectToAction("Index", new { blendType });
-                }
-            }
 
             var editModel = new TEA_BLEND_DATA
             {
@@ -263,21 +210,11 @@ namespace Finance.Controllers.TEA
                     : model.T_TEA_BLEND.UNIT;
             }
 
-            // Re-checked here, not just on the form: the post can be replayed, or the page
-            // left open past the back-date window.
-            if (model?.T_TEA_BLEND != null)
-            {
-                var denied = AEDV.CheckAddEdit(Permission, string.IsNullOrEmpty(model.T_TEA_BLEND.DOCNO), model.T_TEA_BLEND.DOCDT);
-                if (denied != null)
-                    return Json(new { success = false, message = denied, warning = true });
-            }
-
             var response = await Services.PostAsync<dynamic>("/api/TeaBlend/SaveOrUpdate", model);
             return Json(new
             {
                 success = response.IsSuccessStatusCode,
                 message = response.IsSuccessStatusCode ? "Saved successfully." : (response.Message ?? "Save failed."),
-                warning = response.IsValidationFailure,
                 data = response.Data
             });
         }
@@ -286,16 +223,10 @@ namespace Finance.Controllers.TEA
         [HttpPost]
         public async Task<ActionResult> Delete(string docno, string docdt, string blendType)
         {
-            if (!(Permission?.Can('D') ?? false))
-            {
-                TempData["toastrWarning"] = "You do not have permission to delete this entry.";
-                return RedirectToAction("Index", new { blendType });
-            }
-
             var response = await Services.PostAsync<dynamic>(
                 $"/api/TeaBlend/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}", new { });
 
-            TempData[response.IsSuccessStatusCode ? "toastrSuccess" : response.FailureToastKey] =
+            TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");
 
             return RedirectToAction("Index", new { blendType });
@@ -360,78 +291,60 @@ namespace Finance.Controllers.TEA
         private ActionResult JsonExact(object data) =>
             Content(JsonConvert.SerializeObject(data), "application/json");
 
-        // Services.GetAsync swallows a failed call (expired session token, refresh
-        // failure, API unreachable, ...) into r.Data == null with r.IsSuccessStatusCode
-        // == false -- returning JsonExact(r.Data) as-is for that case sends the browser
-        // a plain 200 OK with body "null", which every picker's JS reads as "zero
-        // results" with no visible error (this is exactly what made "Select Data" look
-        // like it silently stopped fetching anything after the 45-minute token expired).
-        // Surface it instead: a distinct status the frontend's .fail() handler can
-        // recognize as "your session died, log in again" rather than "no matches".
-        private ActionResult JsonExactOrSessionExpired<T>(ResponseApiModel<T> r)
-        {
-            if (!r.IsSuccessStatusCode)
-            {
-                Response.StatusCode = 440; // Login Timeout
-                return JsonExact(new { sessionExpired = true, message = "Your session has expired. Please log in again." });
-            }
-            return JsonExact(r.Data);
-        }
-
         [HttpGet]
         public async Task<ActionResult> GetParty(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetParty?search={search}&pageSize=50");
-            return JsonExactOrSessionExpired(r);
+            return JsonExact(r.Data);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetWarehouse(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetWarehouse?search={search}&pageSize=50");
-            return JsonExactOrSessionExpired(r);
+            return JsonExact(r.Data);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetAllocation(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={search}&pageSize=50");
-            return JsonExactOrSessionExpired(r);
+            return JsonExact(r.Data);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetBlendGrade(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={search}&pageSize=50");
-            return JsonExactOrSessionExpired(r);
+            return JsonExact(r.Data);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetMark(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={search}&pageSize=50");
-            return JsonExactOrSessionExpired(r);
+            return JsonExact(r.Data);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetGarden(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetGarden?search={search}&pageSize=50");
-            return JsonExactOrSessionExpired(r);
+            return JsonExact(r.Data);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetCategory(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetCategory?search={search}&pageSize=50");
-            return JsonExactOrSessionExpired(r);
+            return JsonExact(r.Data);
         }
 
         [HttpGet]
         public async Task<ActionResult> GetTransporter(string search = "")
         {
             var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetTransporter?search={search}&pageSize=50");
-            return JsonExactOrSessionExpired(r);
+            return JsonExact(r.Data);
         }
 
         [HttpGet]
@@ -439,7 +352,7 @@ namespace Finance.Controllers.TEA
         {
             var r = await Services.GetAsync<dynamic>(
                 $"/api/TeaBlend/GetAvailableStock?blendType={blendType}&garden={garden}&mark={mark}&category={category}");
-            return JsonExactOrSessionExpired(r);
+            return JsonExact(r.Data);
         }
 
         [HttpGet]
@@ -448,7 +361,7 @@ namespace Finance.Controllers.TEA
             var qs = string.Join("&", (whCodes ?? new string[0]).Select(w => "whCodes=" + Uri.EscapeDataString(w)));
             var r = await Services.GetAsync<dynamic>(
                 $"/api/TeaBlend/GenerateDoNo?blendType={blendType}&unit={CurrentUnit}&fyShortFrom={fyShortFrom}&fyShortTo={fyShortTo}&{qs}");
-            return JsonExactOrSessionExpired(r);
+            return JsonExact(r.Data);
         }
     }
 }
