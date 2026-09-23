@@ -130,6 +130,10 @@ namespace PacketTea.Models.PT
         public virtual string MARKDESC { get; set; }
         public virtual string SIZEDESC { get; set; }
         public virtual string CATDESC { get; set; }
+        public virtual string WAREHOUSEDESC { get; set; }
+
+        public virtual string GRADEDESC { get; set; }
         
+
     }
 }

@@ -1702,7 +1702,7 @@ $(document).on('click', '.vendor-code', function () {
                 );
             }
         );
-  
+
 });
 
 
@@ -2205,6 +2205,119 @@ $(document).on('change', '.broker-code', function () {
 
 });
     </script>
+
+    <script>
+        $(document).on('click', '.warehouse-code', function () {
+
+    var $input = $(this);
+
+    $('.inputpicker-wrapped-list').remove();
+
+    if ($input.data('inputpicker')) {
+        $input.inputpicker('show');
+        return;
+    }
+
+    $input.inputpicker({
+        url: '@Url.Action("GetWarehouse", "PacketTeaPurchaseEntry")',
+        fields: [
+            { name: 'CODE', text: 'CODE' },
+            { name: 'NAME', text: 'NAME' }
+        ],
+        fieldText: 'CODE',
+        fieldValue: 'CODE',
+        headShow: true,
+        filterOpen: true,
+        autoOpen: true,
+        pagination: true,
+        pageField: 'p',
+        pageLimitField: 'limit',
+        pageLimit: 10,
+        pageCountField: 'count',
+        width: 'auto',
+        urlDelay: 1
+    });
+
+    // ✅ SELECT EVENT (FIXED)
+    $input.off('inputpicker.select').on('inputpicker.select', function (e, item) {
+
+        if (!item) return;
+
+        // 🔥 direct selector (NO tr)
+        $('.warehouse-code').val(item.CODE);
+        $('.warehouse-desc').val(item.NAME || '');
+
+        $(this).inputpicker('hide');
+    });
+
+});
+
+
+// ✅ CHANGE EVENT (FIXED)
+        $(document).on('change', '.warehouse-code', function () {
+
+    var code = $(this).val();
+
+    if (!code) {
+        $('.warehouse-desc').val('');
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("GetWarehouse", "PacketTeaPurchaseEntry")',
+        type: 'GET',
+        data: { q: code, limit: 1, p: 1 },
+        success: function (res) {
+
+            if (res && res.data && res.data.length > 0) {
+                $('.warehouse-desc').val(res.data[0].NAME || '');
+            } else {
+                $('.warehouse-desc').val('');
+            }
+        }
+    });
+            $(document).on('blur', '.warehouse-code', function () {
+
+    var $input = $(this);
+    var code = $input.val().trim();
+
+    // small delay → allows inputpicker select to complete first
+    setTimeout(function () {
+
+        // ❌ if empty → clear desc
+        if (!code) {
+            $('.warehouse-desc').val('');
+            return;
+        }
+
+        // 🔍 verify code from server
+        $.ajax({
+            url: '@Url.Action("GetWarehouse", "PacketTeaPurchaseEntry")',
+            type: 'GET',
+            data: { q: code, limit: 1, p: 1 },
+            success: function (res) {
+
+                // ❌ NO RESULT → CLEAR BOTH
+                if (!res || !res.data || res.data.length === 0) {
+
+                    $input.val('');                 // 🔥 clear code
+                    $('.warehouse-desc').val('');       // 🔥 clear desc
+
+                }
+
+                // ✅ VALID → keep as is (already handled in change)
+            }
+        });
+
+    }, 200); // important delay
+
+});
+
+
+
+});
+    </script>
+
 
     <script>
 $(document).on('click', '.trans-code', function () {
@@ -2715,531 +2828,531 @@ $(document)
 
     @*<script>
 
+                // ===============================
+        // GRADE PICKER + GST RATE LOGIC
         // ===============================
-// GRADE PICKER + GST RATE LOGIC
-// ===============================
 
-$(document).on('click', '.grade-code', function () {
+        $(document).on('click', '.grade-code', function () {
 
-    var $input = $(this);
-    var $row = $input.closest('tr');
+            var $input = $(this);
+            var $row = $input.closest('tr');
 
-    $('.inputpicker-wrapped-list').remove();
+            $('.inputpicker-wrapped-list').remove();
 
-    if ($input.data('inputpicker')) {
-        $input.inputpicker('show');
-        return;
-    }
+            if ($input.data('inputpicker')) {
+                $input.inputpicker('show');
+                return;
+            }
 
-    $input.inputpicker({
-        url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
+            $input.inputpicker({
+                url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
 
-        fields: [
-            { name: 'GCODE', text: 'CODE' },
-            { name: 'NAME', text: 'NAME' },
-            { name: 'cat', text: 'CAT' },
-            { name: 'catdesc', text: 'CAT NAME' },
-            { name: 'subcat', text: 'SUBCAT' },
-            { name: 'subcatdesc', text: 'SUBCAT NAME' },
-            { name: 'CGST_RATE', text: 'CGST RATE' },
-            { name: 'SGST_RATE', text: 'SGST RATE' },
-            { name: 'IGST_RATE', text: 'IGST RATE' }
-        ],
+                fields: [
+                    { name: 'GCODE', text: 'CODE' },
+                    { name: 'NAME', text: 'NAME' },
+                    { name: 'cat', text: 'CAT' },
+                    { name: 'catdesc', text: 'CAT NAME' },
+                    { name: 'subcat', text: 'SUBCAT' },
+                    { name: 'subcatdesc', text: 'SUBCAT NAME' },
+                    { name: 'CGST_RATE', text: 'CGST RATE' },
+                    { name: 'SGST_RATE', text: 'SGST RATE' },
+                    { name: 'IGST_RATE', text: 'IGST RATE' }
+                ],
 
-        fieldText: 'GCODE',
-        fieldValue: 'GCODE',
+                fieldText: 'GCODE',
+                fieldValue: 'GCODE',
 
-        headShow: true,
-        filterOpen: true,
-        autoOpen: true,
+                headShow: true,
+                filterOpen: true,
+                autoOpen: true,
 
-        pagination: true,
-        pageField: 'p',
-        pageLimitField: 'limit',
-        pageLimit: 10,
-        pageCountField: 'count',
+                pagination: true,
+                pageField: 'p',
+                pageLimitField: 'limit',
+                pageLimit: 10,
+                pageCountField: 'count',
 
-        width: 'auto',
-        urlDelay: 1
-    });
+                width: 'auto',
+                urlDelay: 1
+            });
 
-    $input.off('inputpicker.select').on(
-        'inputpicker.select',
-        function (e, item) {
+            $input.off('inputpicker.select').on(
+                'inputpicker.select',
+                function (e, item) {
 
-            if (!item) return;
+                    if (!item) return;
 
-            var gradeCode = item.GCODE || '';
+                    var gradeCode = item.GCODE || '';
 
-            $row.find('.grade-code').val(gradeCode);
-            $row.find('.grade-desc').val(item.NAME || '');
+                    $row.find('.grade-code').val(gradeCode);
+                    $row.find('.grade-desc').val(item.NAME || '');
 
-            // Get complete Grade data including GST rates
-            getGradeDetails($row, gradeCode);
+                    // Get complete Grade data including GST rates
+                    getGradeDetails($row, gradeCode);
 
-            $(this).inputpicker('hide');
+                    $(this).inputpicker('hide');
+                }
+            );
+        });
+
+
+        // =====================================
+        // GET COMPLETE GRADE DATA
+        // =====================================
+
+        function getGradeDetails($row, gradeCode) {
+
+            if (!gradeCode) {
+                clearGradeGST($row);
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
+                type: 'GET',
+
+                data: {
+                    q: gradeCode,
+                    limit: 1,
+                    p: 1
+                },
+
+                success: function (res) {
+
+                    if (
+                        res &&
+                        res.data &&
+                        res.data.length > 0
+                    ) {
+
+                        var grade = res.data[0];
+
+                        // Set description
+                        $row.find('.grade-desc')
+                            .val(grade.NAME || '');
+
+                        // Apply Grade GST rates
+                        applyGradeGST($row, grade);
+
+                    }
+                    else {
+
+                        clearGradeGST($row);
+
+                        $row.find('.grade-code').val('');
+                        $row.find('.grade-desc').val('');
+                    }
+                },
+
+                error: function (xhr) {
+
+                    console.log("GetGrade Error:", xhr.responseText);
+
+                    clearGradeGST($row);
+                }
+            });
         }
-    );
-});
+        function applyGradeGST($row, grade) {
+
+            if (!$row || !$row.length || !grade) {
+                clearGradeGST($row);
+                return;
+            }
+
+            // ==================================================
+            // VENDOR DATA
+            // ==================================================
+
+            var vendorGST = $.trim(
+                $('#VendorGSTNo').val() || ''
+            );
+
+            var vendorState = $.trim(
+                $('#VendorStateCode').val() || ''
+            );
 
 
-// =====================================
-// GET COMPLETE GRADE DATA
-// =====================================
+            // ==================================================
+            // LOCATION DATA
+            // ==================================================
 
-function getGradeDetails($row, gradeCode) {
+            var locationGST = $.trim(
+                $('#LocationGSTNo').val() || ''
+            );
 
-    if (!gradeCode) {
-        clearGradeGST($row);
-        return;
-    }
+            var locationState = $.trim(
+                $('#LocationStateCode').val() || ''
+            );
 
-    $.ajax({
-        url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
-        type: 'GET',
 
-        data: {
-            q: gradeCode,
-            limit: 1,
-            p: 1
-        },
+            // ==================================================
+            // GRADE MASTER GST
+            // ==================================================
 
-        success: function (res) {
+            var gradeCGST =
+                parseFloat(grade.CGST_RATE) || 0;
+
+            var gradeSGST =
+                parseFloat(grade.SGST_RATE) || 0;
+
+            var gradeIGST =
+                parseFloat(grade.IGST_RATE) || 0;
+
+
+            // ==================================================
+            // GST INPUTS
+            // ==================================================
+
+            var $cgstRate = $row.find(
+                'input[name$=".CGST_RT"]'
+            );
+
+            var $sgstRate = $row.find(
+                'input[name$=".SGST_RT"]'
+            );
+
+            var $igstRate = $row.find(
+                'input[name$=".IGST_RT"]'
+            );
+
+            var $cgstAmt = $row.find(
+                'input[name$=".CGST_AMT"]'
+            );
+
+            var $sgstAmt = $row.find(
+                'input[name$=".SGST_AMT"]'
+            );
+
+            var $igstAmt = $row.find(
+                'input[name$=".IGST_AMT"]'
+            );
+
+
+            // ==================================================
+            // ALWAYS CLEAR PREVIOUS GST FIRST
+            // ==================================================
+
+            $cgstRate.val('0.00');
+            $sgstRate.val('0.00');
+            $igstRate.val('0.00');
+
+            $cgstAmt.val('0.00');
+            $sgstAmt.val('0.00');
+            $igstAmt.val('0.00');
+
+
+            // ==================================================
+            // 1. BOTH VENDOR GST AND LOCATION GST EMPTY
+            //    ALL GST = ZERO
+            // ==================================================
 
             if (
-                res &&
-                res.data &&
-                res.data.length > 0
+                vendorGST === '' &&
+                locationGST === ''
             ) {
 
-                var grade = res.data[0];
+                $cgstRate.val('0.00');
+                $sgstRate.val('0.00');
+                $igstRate.val('0.00');
 
-                // Set description
-                $row.find('.grade-desc')
-                    .val(grade.NAME || '');
+                $cgstAmt.val('0.00');
+                $sgstAmt.val('0.00');
+                $igstAmt.val('0.00');
 
-                // Apply Grade GST rates
-                applyGradeGST($row, grade);
-
+                calculateRow($row);
+                return;
             }
-            else {
 
-                clearGradeGST($row);
 
-                $row.find('.grade-code').val('');
-                $row.find('.grade-desc').val('');
+            // ==================================================
+            // 2. REQUIRED GST / STATE DATA MISSING
+            //    ALL GST = ZERO
+            // ==================================================
+
+            if (
+                vendorGST === '' ||
+                vendorState === '' ||
+                locationGST === '' ||
+                locationState === ''
+            ) {
+
+                $cgstRate.val('0.00');
+                $sgstRate.val('0.00');
+                $igstRate.val('0.00');
+
+                $cgstAmt.val('0.00');
+                $sgstAmt.val('0.00');
+                $igstAmt.val('0.00');
+
+                calculateRow($row);
+                return;
             }
-        },
 
-        error: function (xhr) {
 
-            console.log("GetGrade Error:", xhr.responseText);
+            // ==================================================
+            // 3. VENDOR GST == LOCATION GST
+            //    NO GST
+            // ==================================================
 
-            clearGradeGST($row);
-        }
-    });
-}
-function applyGradeGST($row, grade) {
+            if (vendorGST === locationGST) {
 
-    if (!$row || !$row.length || !grade) {
-        clearGradeGST($row);
-        return;
-    }
+                $cgstRate.val('0.00');
+                $sgstRate.val('0.00');
+                $igstRate.val('0.00');
 
-    // ==================================================
-    // VENDOR DATA
-    // ==================================================
+                $cgstAmt.val('0.00');
+                $sgstAmt.val('0.00');
+                $igstAmt.val('0.00');
 
-    var vendorGST = $.trim(
-        $('#VendorGSTNo').val() || ''
-    );
+                calculateRow($row);
+                return;
+            }
 
-    var vendorState = $.trim(
-        $('#VendorStateCode').val() || ''
-    );
 
+            // ==================================================
+            // 4. VENDOR GST != LOCATION GST
+            //    SAME STATE -> CGST + SGST
+            // ==================================================
 
-    // ==================================================
-    // LOCATION DATA
-    // ==================================================
+            if (vendorState === locationState) {
 
-    var locationGST = $.trim(
-        $('#LocationGSTNo').val() || ''
-    );
+                $cgstRate.val(
+                    gradeCGST.toFixed(2)
+                );
 
-    var locationState = $.trim(
-        $('#LocationStateCode').val() || ''
-    );
+                $sgstRate.val(
+                    gradeSGST.toFixed(2)
+                );
 
+                $igstRate.val('0.00');
 
-    // ==================================================
-    // GRADE MASTER GST
-    // ==================================================
+                calculateRow($row);
+                return;
+            }
 
-    var gradeCGST =
-        parseFloat(grade.CGST_RATE) || 0;
 
-    var gradeSGST =
-        parseFloat(grade.SGST_RATE) || 0;
+            // ==================================================
+            // 5. VENDOR GST != LOCATION GST
+            //    DIFFERENT STATE -> IGST
+            // ==================================================
 
-    var gradeIGST =
-        parseFloat(grade.IGST_RATE) || 0;
+            $cgstRate.val('0.00');
+            $sgstRate.val('0.00');
 
+            $igstRate.val(
+                gradeIGST.toFixed(2)
+            );
 
-    // ==================================================
-    // GST INPUTS
-    // ==================================================
-
-    var $cgstRate = $row.find(
-        'input[name$=".CGST_RT"]'
-    );
-
-    var $sgstRate = $row.find(
-        'input[name$=".SGST_RT"]'
-    );
-
-    var $igstRate = $row.find(
-        'input[name$=".IGST_RT"]'
-    );
-
-    var $cgstAmt = $row.find(
-        'input[name$=".CGST_AMT"]'
-    );
-
-    var $sgstAmt = $row.find(
-        'input[name$=".SGST_AMT"]'
-    );
-
-    var $igstAmt = $row.find(
-        'input[name$=".IGST_AMT"]'
-    );
-
-
-    // ==================================================
-    // ALWAYS CLEAR PREVIOUS GST FIRST
-    // ==================================================
-
-    $cgstRate.val('0.00');
-    $sgstRate.val('0.00');
-    $igstRate.val('0.00');
-
-    $cgstAmt.val('0.00');
-    $sgstAmt.val('0.00');
-    $igstAmt.val('0.00');
-
-
-    // ==================================================
-    // 1. BOTH VENDOR GST AND LOCATION GST EMPTY
-    //    ALL GST = ZERO
-    // ==================================================
-
-    if (
-        vendorGST === '' &&
-        locationGST === ''
-    ) {
-
-        $cgstRate.val('0.00');
-        $sgstRate.val('0.00');
-        $igstRate.val('0.00');
-
-        $cgstAmt.val('0.00');
-        $sgstAmt.val('0.00');
-        $igstAmt.val('0.00');
-
-        calculateRow($row);
-        return;
-    }
-
-
-    // ==================================================
-    // 2. REQUIRED GST / STATE DATA MISSING
-    //    ALL GST = ZERO
-    // ==================================================
-
-    if (
-        vendorGST === '' ||
-        vendorState === '' ||
-        locationGST === '' ||
-        locationState === ''
-    ) {
-
-        $cgstRate.val('0.00');
-        $sgstRate.val('0.00');
-        $igstRate.val('0.00');
-
-        $cgstAmt.val('0.00');
-        $sgstAmt.val('0.00');
-        $igstAmt.val('0.00');
-
-        calculateRow($row);
-        return;
-    }
-
-
-    // ==================================================
-    // 3. VENDOR GST == LOCATION GST
-    //    NO GST
-    // ==================================================
-
-    if (vendorGST === locationGST) {
-
-        $cgstRate.val('0.00');
-        $sgstRate.val('0.00');
-        $igstRate.val('0.00');
-
-        $cgstAmt.val('0.00');
-        $sgstAmt.val('0.00');
-        $igstAmt.val('0.00');
-
-        calculateRow($row);
-        return;
-    }
-
-
-    // ==================================================
-    // 4. VENDOR GST != LOCATION GST
-    //    SAME STATE -> CGST + SGST
-    // ==================================================
-
-    if (vendorState === locationState) {
-
-        $cgstRate.val(
-            gradeCGST.toFixed(2)
-        );
-
-        $sgstRate.val(
-            gradeSGST.toFixed(2)
-        );
-
-        $igstRate.val('0.00');
-
-        calculateRow($row);
-        return;
-    }
-
-
-    // ==================================================
-    // 5. VENDOR GST != LOCATION GST
-    //    DIFFERENT STATE -> IGST
-    // ==================================================
-
-    $cgstRate.val('0.00');
-    $sgstRate.val('0.00');
-
-    $igstRate.val(
-        gradeIGST.toFixed(2)
-    );
-
-    calculateRow($row);
-}
-
-        //function applyGradeGST($row, grade) {
-
-        //    if (!$row || !$row.length || !grade) {
-        //        clearGradeGST($row);
-        //        return;
-        //    }
-
-        //    // ==================================================
-        //    // VENDOR DATA
-        //    // ==================================================
-
-        //    var vendorGST = $.trim(
-        //        $('#VendorGSTNo').val() || ''
-        //    );
-
-        //    var vendorState = $.trim(
-        //        $('#VendorStateCode').val() || ''
-        //    );
-
-
-        //    // ==================================================
-        //    // LOCATION DATA
-        //    // ==================================================
-
-        //    var locationGST = $.trim(
-        //        $('#LocationGSTNo').val() || ''
-        //    );
-
-        //    var locationState = $.trim(
-        //        $('#LocationStateCode').val() || ''
-        //    );
-
-
-        //    // ==================================================
-        //    // GRADE MASTER GST
-        //    // ==================================================
-
-        //    var gradeCGST =
-        //        parseFloat(grade.CGST_RATE) || 0;
-
-        //    var gradeSGST =
-        //        parseFloat(grade.SGST_RATE) || 0;
-
-        //    var gradeIGST =
-        //        parseFloat(grade.IGST_RATE) || 0;
-
-
-        //    // ==================================================
-        //    // GST INPUTS
-        //    // ==================================================
-
-        //    var $cgstRate = $row.find(
-        //        'input[name$=".CGST_RT"]'
-        //    );
-
-        //    var $sgstRate = $row.find(
-        //        'input[name$=".SGST_RT"]'
-        //    );
-
-        //    var $igstRate = $row.find(
-        //        'input[name$=".IGST_RT"]'
-        //    );
-
-        //    var $cgstAmt = $row.find(
-        //        'input[name$=".CGST_AMT"]'
-        //    );
-
-        //    var $sgstAmt = $row.find(
-        //        'input[name$=".SGST_AMT"]'
-        //    );
-
-        //    var $igstAmt = $row.find(
-        //        'input[name$=".IGST_AMT"]'
-        //    );
-
-
-        //    // ==================================================
-        //    // ALWAYS CLEAR PREVIOUS GST FIRST
-        //    // ==================================================
-
-        //    $cgstRate.val('0.00');
-        //    $sgstRate.val('0.00');
-        //    $igstRate.val('0.00');
-
-        //    $cgstAmt.val('0.00');
-        //    $sgstAmt.val('0.00');
-        //    $igstAmt.val('0.00');
-
-
-        //    // ==================================================
-        //    // 1. REQUIRED GST / STATE DATA MISSING
-        //    // ==================================================
-
-        //    if (
-        //        vendorGST === '' ||
-        //        vendorState === '' ||
-        //        locationGST === '' ||
-        //        locationState === ''
-        //    ) {
-
-        //        calculateRow($row);
-        //        return;
-        //    }
-
-
-        //    // ==================================================
-        //    // 2. VENDOR GST == LOCATION GST
-        //    //    NO GST
-        //    // ==================================================
-
-        //    if (vendorGST === locationGST) {
-
-        //        calculateRow($row);
-        //        return;
-        //    }
-
-
-        //    // ==================================================
-        //    // 3. VENDOR GST != LOCATION GST
-        //    //    SAME STATE -> CGST + SGST
-        //    // ==================================================
-
-        //    if (vendorState === locationState) {
-
-        //        $cgstRate.val(
-        //            gradeCGST.toFixed(2)
-        //        );
-
-        //        $sgstRate.val(
-        //            gradeSGST.toFixed(2)
-        //        );
-
-        //        $igstRate.val('0.00');
-
-        //        calculateRow($row);
-        //        return;
-        //    }
-
-
-        //    // ==================================================
-        //    // 4. VENDOR GST != LOCATION GST
-        //    //    DIFFERENT STATE -> IGST
-        //    // ==================================================
-
-        //    $cgstRate.val('0.00');
-        //    $sgstRate.val('0.00');
-
-        //    $igstRate.val(
-        //        gradeIGST.toFixed(2)
-        //    );
-
-        //    calculateRow($row);
-        //}
-
-
-
-    // ======================================================
-    // CLEAR GST FOR CURRENT ROW
-    // ======================================================
-    function clearGradeGST($row) {
-
-        if (!$row || !$row.length) {
-            return;
-        }
-
-        $row.find('input[name$=".CGST_RT"]').val('0.00');
-        $row.find('input[name$=".SGST_RT"]').val('0.00');
-        $row.find('input[name$=".IGST_RT"]').val('0.00');
-
-        $row.find('input[name$=".CGST_AMT"]').val('0.00');
-        $row.find('input[name$=".SGST_AMT"]').val('0.00');
-        $row.find('input[name$=".IGST_AMT"]').val('0.00');
-
-        if (typeof calculateRow === 'function') {
             calculateRow($row);
         }
-    }
+
+                //function applyGradeGST($row, grade) {
+
+                //    if (!$row || !$row.length || !grade) {
+                //        clearGradeGST($row);
+                //        return;
+                //    }
+
+                //    // ==================================================
+                //    // VENDOR DATA
+                //    // ==================================================
+
+                //    var vendorGST = $.trim(
+                //        $('#VendorGSTNo').val() || ''
+                //    );
+
+                //    var vendorState = $.trim(
+                //        $('#VendorStateCode').val() || ''
+                //    );
+
+
+                //    // ==================================================
+                //    // LOCATION DATA
+                //    // ==================================================
+
+                //    var locationGST = $.trim(
+                //        $('#LocationGSTNo').val() || ''
+                //    );
+
+                //    var locationState = $.trim(
+                //        $('#LocationStateCode').val() || ''
+                //    );
+
+
+                //    // ==================================================
+                //    // GRADE MASTER GST
+                //    // ==================================================
+
+                //    var gradeCGST =
+                //        parseFloat(grade.CGST_RATE) || 0;
+
+                //    var gradeSGST =
+                //        parseFloat(grade.SGST_RATE) || 0;
+
+                //    var gradeIGST =
+                //        parseFloat(grade.IGST_RATE) || 0;
+
+
+                //    // ==================================================
+                //    // GST INPUTS
+                //    // ==================================================
+
+                //    var $cgstRate = $row.find(
+                //        'input[name$=".CGST_RT"]'
+                //    );
+
+                //    var $sgstRate = $row.find(
+                //        'input[name$=".SGST_RT"]'
+                //    );
+
+                //    var $igstRate = $row.find(
+                //        'input[name$=".IGST_RT"]'
+                //    );
+
+                //    var $cgstAmt = $row.find(
+                //        'input[name$=".CGST_AMT"]'
+                //    );
+
+                //    var $sgstAmt = $row.find(
+                //        'input[name$=".SGST_AMT"]'
+                //    );
+
+                //    var $igstAmt = $row.find(
+                //        'input[name$=".IGST_AMT"]'
+                //    );
+
+
+                //    // ==================================================
+                //    // ALWAYS CLEAR PREVIOUS GST FIRST
+                //    // ==================================================
+
+                //    $cgstRate.val('0.00');
+                //    $sgstRate.val('0.00');
+                //    $igstRate.val('0.00');
+
+                //    $cgstAmt.val('0.00');
+                //    $sgstAmt.val('0.00');
+                //    $igstAmt.val('0.00');
+
+
+                //    // ==================================================
+                //    // 1. REQUIRED GST / STATE DATA MISSING
+                //    // ==================================================
+
+                //    if (
+                //        vendorGST === '' ||
+                //        vendorState === '' ||
+                //        locationGST === '' ||
+                //        locationState === ''
+                //    ) {
+
+                //        calculateRow($row);
+                //        return;
+                //    }
+
+
+                //    // ==================================================
+                //    // 2. VENDOR GST == LOCATION GST
+                //    //    NO GST
+                //    // ==================================================
+
+                //    if (vendorGST === locationGST) {
+
+                //        calculateRow($row);
+                //        return;
+                //    }
+
+
+                //    // ==================================================
+                //    // 3. VENDOR GST != LOCATION GST
+                //    //    SAME STATE -> CGST + SGST
+                //    // ==================================================
+
+                //    if (vendorState === locationState) {
+
+                //        $cgstRate.val(
+                //            gradeCGST.toFixed(2)
+                //        );
+
+                //        $sgstRate.val(
+                //            gradeSGST.toFixed(2)
+                //        );
+
+                //        $igstRate.val('0.00');
+
+                //        calculateRow($row);
+                //        return;
+                //    }
+
+
+                //    // ==================================================
+                //    // 4. VENDOR GST != LOCATION GST
+                //    //    DIFFERENT STATE -> IGST
+                //    // ==================================================
+
+                //    $cgstRate.val('0.00');
+                //    $sgstRate.val('0.00');
+
+                //    $igstRate.val(
+                //        gradeIGST.toFixed(2)
+                //    );
+
+                //    calculateRow($row);
+                //}
+
+
+
+            // ======================================================
+            // CLEAR GST FOR CURRENT ROW
+            // ======================================================
+            function clearGradeGST($row) {
+
+                if (!$row || !$row.length) {
+                    return;
+                }
+
+                $row.find('input[name$=".CGST_RT"]').val('0.00');
+                $row.find('input[name$=".SGST_RT"]').val('0.00');
+                $row.find('input[name$=".IGST_RT"]').val('0.00');
+
+                $row.find('input[name$=".CGST_AMT"]').val('0.00');
+                $row.find('input[name$=".SGST_AMT"]').val('0.00');
+                $row.find('input[name$=".IGST_AMT"]').val('0.00');
+
+                if (typeof calculateRow === 'function') {
+                    calculateRow($row);
+                }
+            }
 
 
 
 
-// =====================================
-// VALIDATE GRADE WHEN USER TYPES / PASTES
-// =====================================
+        // =====================================
+        // VALIDATE GRADE WHEN USER TYPES / PASTES
+        // =====================================
 
-$(document)
-    .off('blur.gradeValidation', '.grade-code')
-    .on('blur.gradeValidation', '.grade-code', function () {
+        $(document)
+            .off('blur.gradeValidation', '.grade-code')
+            .on('blur.gradeValidation', '.grade-code', function () {
 
-        var $input = $(this);
-        var $row = $input.closest('tr');
-        var code = $.trim($input.val() || '');
+                var $input = $(this);
+                var $row = $input.closest('tr');
+                var code = $.trim($input.val() || '');
 
-        if (!code) {
+                if (!code) {
 
-            $row.find('.grade-desc').val('');
-            clearGradeGST($row);
-            return;
-        }
+                    $row.find('.grade-desc').val('');
+                    clearGradeGST($row);
+                    return;
+                }
 
-        // One central Grade -> GST AJAX flow
-        getGradeDetails($row, code);
-    });
+                // One central Grade -> GST AJAX flow
+                getGradeDetails($row, code);
+            });
 
-    </script>*@
+            </script>*@
 
- 
+
 
     <script>
 
@@ -3502,7 +3615,7 @@ $(function () {
         return;
     }
 
-  
+
     var rowIndex = $('#mainTable tbody tr').length;
 
     $.ajax({
@@ -3609,7 +3722,7 @@ $(function () {
         });
 
     </script>
- 
+
     <script>
 
         // ======================================================

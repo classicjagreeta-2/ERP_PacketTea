@@ -75,13 +75,7 @@ namespace PacketTea.Controllers.TEA
                 return View(pagedList);
             }
         }
-        public async Task<JsonResult> GetVendor(
-       string q = "",
-       int limit = 25,
-       string fieldValue = "",
-       string fieldText = "",
-       string value = "",
-       int p = 1)
+        public async Task<JsonResult> GetVendor( string q = "",   int limit = 25, string fieldValue = "",  string fieldText = "",  string value = "",  int p = 1)
         {
             if (string.IsNullOrEmpty(q))
             {
@@ -90,10 +84,7 @@ namespace PacketTea.Controllers.TEA
 
             string acode = "72000200";
 
-            var resp = await Services.FinanceGetAsync<PageModel<GetByPageSubCodeDDL>>(
-                $"/api/BH21/GetByPageSubCodeDDLWithGST" +
-                $"?Acode={acode}" +
-                $"&search={q}" +
+            var resp = await Services.FinanceGetAsync<PageModel<GetByPageSubCodeDDL>>( $"/api/BH21/GetByPageSubCodeDDLWithGST" + $"?Acode={acode}" +  $"&search={q}" +
                 $"&page={p}" +
                 $"&pageSize={limit}"
             );
@@ -178,48 +169,7 @@ namespace PacketTea.Controllers.TEA
                 count = resp?.Data.rowCount ?? 0
             }, JsonRequestBehavior.AllowGet);
         }
-        //    public async Task<JsonResult> GetSize(
-        //string q = "",
-        //int limit = 50,
-        //string fieldValue = "",
-        //string fieldText = "",
-        //string value = "",
-        //int p = 1)
-        //    {
-        //        try
-        //        {
-        //            // Do NOT replace empty q with value.
-        //            // Empty q means: show all records.
-        //            q = q ?? "";
-
-        //            // Make sure page size is never 0
-        //            if (limit <= 0)
-        //            {
-        //                limit = 50;
-        //            }
-
-        //            var resp = await Services.GetAsync<PageValue<M_CHESTSZ>>(
-        //                $"/api/TeaPurchase/GetSize?search={Uri.EscapeDataString(q)}&page={p}&pageSize={limit}"
-        //            );
-
-        //            var data = resp?.Data?.results ?? new List<M_CHESTSZ>();
-
-        //            return Json(new
-        //            {
-        //                data = data,
-        //                count = resp?.Data?.rowCount ?? 0
-        //            }, JsonRequestBehavior.AllowGet);
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            return Json(new
-        //            {
-        //                data = new List<M_CHESTSZ>(),
-        //                count = 0,
-        //                error = ex.Message
-        //            }, JsonRequestBehavior.AllowGet);
-        //        }
-        //    }
+   
         public async Task<JsonResult> GetGrade(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             if (string.IsNullOrEmpty(q))
@@ -273,14 +223,7 @@ namespace PacketTea.Controllers.TEA
                 count = count
             }, JsonRequestBehavior.AllowGet);
         }
-        public async Task<JsonResult> GetDocType(
-            string q = "",
-            int limit = 10,
-            string fieldValue = "",
-            string fieldText = "",
-            string value = "",
-            int p = 1,
-            string unit = "")
+        public async Task<JsonResult> GetDocType(string q = "", int limit = 10,  string fieldValue = "", string fieldText = "", string value = "", int p = 1, string unit = "")
         {
             if (string.IsNullOrEmpty(q))
             {
@@ -329,13 +272,7 @@ namespace PacketTea.Controllers.TEA
             }, JsonRequestBehavior.AllowGet);
         }
 
-        public async Task<JsonResult> GetLocation(
-            string q = "",
-            int limit = 0,
-            string fieldValue = "",
-            string fieldText = "",
-            string value = "",
-            int p = 1)
+        public async Task<JsonResult> GetLocation( string q = "", int limit = 0,   string fieldValue = "", string fieldText = "", string value = "",  int p = 1)
         {
             if (string.IsNullOrEmpty(q))
             {
@@ -354,6 +291,27 @@ namespace PacketTea.Controllers.TEA
                 count = resp?.Data.rowCount ?? 0
             }, JsonRequestBehavior.AllowGet);
         }
+
+        public async Task<JsonResult> GetWarehouse(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        {
+            if (string.IsNullOrEmpty(q))
+            {
+                q = value; 
+            }
+
+            var resp = await Services.GetAsync<PageValue<M_PMAST>>(
+                $"/api/TeaPurchase/GetByWareHouse?search={q}&page={p}&pageSize={limit}"
+            );
+
+            var data = resp?.Data.results;
+
+            return Json(new
+            {
+                data = data ?? new List<M_PMAST>(),
+                count = resp?.Data.rowCount ?? 0
+            }, JsonRequestBehavior.AllowGet);
+        }
+
         public async Task<JsonResult> GetBroker( string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             if (string.IsNullOrEmpty(q))
