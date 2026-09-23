@@ -1140,6 +1140,135 @@ function showVendorAlert(message) {
 
 
 // ======================================================
+// VENDOR APPLY + GST CONFIRMATION
+//
+// The inputpicker never raises a "select" event; a pick
+// writes the code into the original .vendor-code and
+// triggers 'change', and its visible clone (which also
+// carries .vendor-code) goes through the blur validation.
+// Every path ends here.
+// ======================================================
+
+// Vendor currently applied to the document
+var appliedVendor = { code: '', name: '', state: '', gst: '' };
+
+var vendorGstPending = false;
+
+
+function setVendorFields(v) {
+
+    $('.vendor-code').val(v.code);
+
+    $('.vendor-code.inputpicker-input').data('value', v.code);
+
+    $('.vendor-desc').val(v.name);
+
+    $('#VendorStateCode').val(v.state);
+
+    $('#VendorGSTNo').val(v.gst);
+
+    appliedVendor = {
+        code: v.code,
+        name: v.name,
+        state: v.state,
+        gst: v.gst
+    };
+}
+
+
+function applyVendorWithGstCheck(v) {
+
+    if (!v || vendorGstPending) {
+        return;
+    }
+
+    // Same vendor as already applied -> nothing to recalculate
+    if (v.code.toUpperCase() === appliedVendor.code.toUpperCase()) {
+        setVendorFields(v);
+        return;
+    }
+
+    function applyVendor() {
+
+        vendorGstPending = false;
+
+        setVendorFields(v);
+
+        if (typeof recalculateAllGradeGST === 'function') {
+            recalculateAllGradeGST();
+        }
+    }
+
+    function restoreVendor() {
+
+        vendorGstPending = false;
+
+        setVendorFields(appliedVendor);
+    }
+
+    // Ask in Add and Edit mode whenever GST is already calculated
+    vendorGstPending = true;
+
+    confirmGSTChange(applyVendor, restoreVendor, true);
+}
+
+
+// Picked from the list
+$(document)
+    .off('change.vendorGst', '.vendor-code.inputpicker-original')
+    .on('change.vendorGst', '.vendor-code.inputpicker-original', function () {
+
+        var code = $.trim($(this).val() || '');
+
+        if (code && !vendorGstPending) {
+            validateVendor($(this), code);
+        }
+    });
+
+
+// Edit mode: load the saved vendor's State Code / GST No
+// so a later change can be compared against it.
+$(function () {
+
+    var code = $.trim($('.vendor-code').first().val() || '');
+
+    appliedVendor.code = code;
+    appliedVendor.name = $.trim($('.vendor-desc').val() || '');
+
+    if (!code) {
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("GetVendor", "PacketTeaPurchaseEntry")',
+        type: 'GET',
+        data: { q: code, limit: 1, p: 1 },
+        success: function (res) {
+
+            var vendor = res && res.data && res.data[0];
+
+            if (!vendor ||
+                $.trim(vendor.subcode || '').toUpperCase() !== code.toUpperCase()) {
+                return;
+            }
+
+            var v = {
+                status: 'valid',
+                code: $.trim(vendor.subcode || ''),
+                name: $.trim(vendor.acname || ''),
+                state: $.trim(vendor.statE_CODE || ''),
+                gst: $.trim(vendor.gsT_NO || '')
+            };
+
+            vendorValidationMap.set(code.toUpperCase(), v);
+
+            setVendorFields(v);
+        }
+    });
+});
+
+
+// ======================================================
 // VALIDATE VENDOR
 // ======================================================
 
@@ -1179,17 +1308,7 @@ function validateVendor($input, code) {
 
         if (cached.status === 'valid') {
 
-            $input.val(cached.code);
-
-            $('.vendor-desc').val(cached.name);
-
-            $('#VendorStateCode').val(cached.state);
-
-            $('#VendorGSTNo').val(cached.gst);
-
-            if (typeof recalculateAllGradeGST === 'function') {
-                recalculateAllGradeGST();
-            }
+            applyVendorWithGstCheck(cached);
 
             return;
         }
@@ -1332,25 +1451,12 @@ function validateVendor($input, code) {
 
 
             // ==========================================
-            // SET VALUES
+            // SET VALUES (+ GST CONFIRMATION)
             // ==========================================
 
-            $input.val(vendorCode);
-
-            $('.vendor-desc').val(vendorName);
-
-            $('#VendorStateCode').val(vendorState);
-
-            $('#VendorGSTNo').val(vendorGST);
-
-
-            // ==========================================
-            // GST RECALCULATION
-            // ==========================================
-
-            if (typeof recalculateAllGradeGST === 'function') {
-                recalculateAllGradeGST();
-            }
+            applyVendorWithGstCheck(
+                vendorValidationMap.get(key)
+            );
         },
 
 
@@ -1582,7 +1688,13 @@ $(document).on('click', '.vendor-code', function () {
 
                 // ======================================
                 // GST CONFIRMATION
+                // Only when the State Code changes
                 // ======================================
+
+                if (state.toUpperCase() === oldState.toUpperCase()) {
+                    applyVendor();
+                    return;
+                }
 
                 confirmGSTChange(
                     applyVendor,
@@ -1635,9 +1747,8 @@ $(document)
                     return;
                 }
 
-                if (cached.status === 'valid') {
-                    return;
-                }
+                // 'valid' falls through: validateVendor applies
+                // it from cache (no AJAX) with the GST check.
             }
 
 
@@ -2774,171 +2885,172 @@ $(document).on('click', '.location-desc', function () {
 
 });
 
+// ======================================================
+// LOCATION CHANGE + GST CONFIRMATION
+//
+// The inputpicker stops click propagation inside its list
+// and never raises a "select" event; a pick writes the CODE
+// into the original #LocationName and triggers 'change'.
+// ======================================================
+
+// Location currently applied to the document
+var appliedLocation = {
+    code: $.trim($('#LocationCode').val() || ''),
+    name: $.trim($('#LocationName').val() || ''),
+    state: '',
+    gst: ''
+};
+
+var locationGstPending = false;
+
+
+function findLocation(code, callback) {
+
+    var rows = [];
+
+    try {
+        rows = $('#LocationName').inputpicker('data') || [];
+    } catch (e) {
+        rows = [];
+    }
+
+    for (var i = 0; i < rows.length; i++) {
+        if ($.trim(rows[i].CODE || '').toUpperCase() === code.toUpperCase()) {
+            callback(rows[i]);
+            return;
+        }
+    }
+
+    $.ajax({
+        url: '@Url.Action("GetLocation", "PacketTeaPurchaseEntry")',
+        type: 'GET',
+        data: { q: code, limit: 25, p: 1 },
+        success: function (res) {
+
+            var list = (res && res.data) || [];
+
+            for (var j = 0; j < list.length; j++) {
+                if ($.trim(list[j].CODE || '').toUpperCase() === code.toUpperCase()) {
+                    callback(list[j]);
+                    return;
+                }
+            }
+
+            callback(null);
+        },
+        error: function (xhr) {
+            console.log("GetLocation ERROR:", xhr.responseText);
+            callback(null);
+        }
+    });
+}
+
+
+function setLocationFields(loc) {
+
+    $('#LocationCode').val(loc.code);
+    $('#LocationStateCode').val(loc.state);
+    $('#LocationGSTNo').val(loc.gst);
+
+    appliedLocation = $.extend({}, loc);
+}
+
+
+// Put the picker back on the previously applied location
+function restoreLocationPicker() {
+
+    var $orig = $('#LocationName');
+
+    $orig.val(appliedLocation.code);
+
+    var $clone = $orig.data('inputpicker-input');
+
+    if ($clone && $clone.length) {
+        $clone.val(appliedLocation.name);
+        $clone.data('value', appliedLocation.code);
+    }
+}
+
+
 $(document)
-    .off(
-        'click.locationSelect',
-        '#inputpicker-wrapped-list .inputpicker-element'
-    )
-    .on(
-        'click.locationSelect',
-        '#inputpicker-wrapped-list .inputpicker-element',
-        function () {
+    .off('change.locationGst', '#LocationName')
+    .on('change.locationGst', '#LocationName', function () {
 
-            var $pickerRow = $(this);
+        var code = $.trim($(this).val() || '');
 
-            var code = $.trim(
-                $pickerRow.attr('data-value') || ''
-            );
+        if (
+            !code ||
+            locationGstPending ||
+            code.toUpperCase() === appliedLocation.code.toUpperCase()
+        ) {
+            return;
+        }
 
-            if (!code) {
+        locationGstPending = true;
+
+        findLocation(code, function (row) {
+
+            if (!row) {
+                locationGstPending = false;
                 return;
             }
 
+            var newLoc = {
+                code: $.trim(row.CODE || code),
+                name: $.trim(row.NAME || ''),
+                state: $.trim(row.STATE_CODE || ''),
+                gst: $.trim(row.GST_NO || '')
+            };
 
-            // ==========================================
-            // OLD LOCATION VALUES
-            // ==========================================
+            function applyLocation() {
 
-            var oldLocationName =
-                $.trim($('#LocationName').val() || '');
+                locationGstPending = false;
 
-            var oldLocationCode =
-                $.trim($('#LocationCode').val() || '');
+                setLocationFields(newLoc);
 
-            var oldLocationState =
-                $.trim($('#LocationStateCode').val() || '');
-
-            var oldLocationGST =
-                $.trim($('#LocationGSTNo').val() || '');
-
-
-            // ==========================================
-            // APPLY LOCATION
-            // ==========================================
-
-            function loadAndApplyLocation() {
-
-                $.ajax({
-
-                    url: '@Url.Action("GetLocation", "PacketTeaPurchaseEntry")',
-
-                    type: 'GET',
-
-                    data: {
-                        q: code,
-                        limit: 1,
-                        p: 1
-                    },
-
-                    success: function (res) {
-
-                        if (
-                            !res ||
-                            !res.data ||
-                            res.data.length === 0
-                        ) {
-                            return;
-                        }
-
-                        var location = res.data[0];
-
-
-                        // ==========================================
-                        // LOCATION VALUES
-                        // ==========================================
-
-                        var locationName =
-                            $.trim(location.NAME || '');
-
-                        var locationCode =
-                            $.trim(location.CODE || code);
-
-                        var locationState =
-                            $.trim(location.STATE_CODE || '');
-
-                        var locationGST =
-                            $.trim(location.GST_NO || '');
-
-
-                        // ==========================================
-                        // SET LOCATION
-                        // ==========================================
-
-                        $('#LocationName').val(locationName);
-
-                        $('#LocationCode').val(locationCode);
-
-                        $('#LocationStateCode').val(locationState);
-
-                        $('#LocationGSTNo').val(locationGST);
-
-
-                        // ==========================================
-                        // HIDE PICKER
-                        // ==========================================
-
-                        $('.inputpicker-wrapped-list').remove();
-
-
-                        // ==========================================
-                        // RECALCULATE GST
-                        // ==========================================
-
-                        if (
-                            typeof recalculateAllGradeGST ===
-                            'function'
-                        ) {
-                            recalculateAllGradeGST();
-                        }
-                    },
-
-                    error: function (xhr) {
-
-                        console.log(
-                            "GetLocation ERROR:",
-                            xhr.responseText
-                        );
-                    }
-                });
+                if (typeof recalculateAllGradeGST === 'function') {
+                    recalculateAllGradeGST();
+                }
             }
-
-
-            // ==========================================
-            // RESTORE OLD LOCATION
-            // ==========================================
 
             function restoreLocation() {
 
-                $('#LocationName').val(
-                    oldLocationName
-                );
+                locationGstPending = false;
 
-                $('#LocationCode').val(
-                    oldLocationCode
-                );
-
-                $('#LocationStateCode').val(
-                    oldLocationState
-                );
-
-                $('#LocationGSTNo').val(
-                    oldLocationGST
-                );
-
-                $('.inputpicker-wrapped-list').remove();
+                restoreLocationPicker();
             }
 
+            // Ask in Add and Edit mode whenever GST is already calculated
+            confirmGSTChange(applyLocation, restoreLocation, true);
+        });
+    });
 
-            // ==========================================
-            // GST CONFIRMATION
-            // ==========================================
 
-            confirmGSTChange(
-                loadAndApplyLocation,
-                restoreLocation
-            );
+// Edit mode: load the saved location's State Code / GST No
+// so a later change can be compared against it.
+$(function () {
+
+    appliedLocation.code = $.trim($('#LocationCode').val() || '');
+    appliedLocation.name = $.trim($('#LocationName').val() || '');
+
+    if (!appliedLocation.code) {
+        return;
+    }
+
+    findLocation(appliedLocation.code, function (row) {
+
+        if (!row) {
+            return;
         }
-    );
+
+        setLocationFields({
+            code: appliedLocation.code,
+            name: $.trim(row.NAME || appliedLocation.name),
+            state: $.trim(row.STATE_CODE || ''),
+            gst: $.trim(row.GST_NO || '')
+        });
+    });
+});
 
 
 
@@ -3348,24 +3460,30 @@ $(document)
 
         // ======================================================
         // GST CONFIRMATION FOR:
-        // TOTAL NET WT / RATE / DISCOUNT %
+        // BAGS / NET WT / TOTAL NET WT (QTY) / RATE / DISCOUNT %
         // ======================================================
 
         $(document)
             .off(
                 'focus.gstChange',
-                '.total-net-wt, .rate, .disc-per'
+                '.bags, .net-wt, .total-net-wt, .rate, .disc-per'
             )
             .on(
                 'focus.gstChange',
-                '.total-net-wt, .rate, .disc-per',
+                '.bags, .net-wt, .total-net-wt, .rate, .disc-per',
                 function () {
 
-                    // Store old value before user changes it
-                    $(this).data(
-                        'gst-old-value',
-                        $(this).val()
-                    );
+                    var $row = $(this).closest('tr');
+
+                    // Store old values before user changes them.
+                    // Bags / Net Wt also rewrite Total Net Wt, so
+                    // keep all three weight fields for restore.
+                    $(this).data('gst-old-value', {
+                        bags: $row.find('.bags').val(),
+                        netWt: $row.find('.net-wt').val(),
+                        totalNetWt: $row.find('.total-net-wt').val(),
+                        self: $(this).val()
+                    });
                 }
             );
 
@@ -3373,11 +3491,11 @@ $(document)
         $(document)
             .off(
                 'change.gstChange',
-                '.total-net-wt, .rate, .disc-per'
+                '.bags, .net-wt, .total-net-wt, .rate, .disc-per'
             )
             .on(
                 'change.gstChange',
-                '.total-net-wt, .rate, .disc-per',
+                '.bags, .net-wt, .total-net-wt, .rate, .disc-per',
                 function () {
 
                     var $input = $(this);
@@ -3388,8 +3506,8 @@ $(document)
                     var newValue =
                         $input.val();
 
-                    var oldValue =
-                        $input.data('gst-old-value');
+                    var old =
+                        $input.data('gst-old-value') || {};
 
 
                     // ==========================================
@@ -3397,8 +3515,8 @@ $(document)
                     // ==========================================
 
                     if (
-                        String(newValue) ===
-                        String(oldValue)
+                        (parseFloat(newValue) || 0) ===
+                        (parseFloat(old.self) || 0)
                     ) {
                         calculateRow($row);
                         return;
@@ -3421,7 +3539,13 @@ $(document)
 
                     function restoreChange() {
 
-                        $input.val(oldValue);
+                        if ($input.is('.bags, .net-wt, .total-net-wt')) {
+                            $row.find('.bags').val(old.bags);
+                            $row.find('.net-wt').val(old.netWt);
+                            $row.find('.total-net-wt').val(old.totalNetWt);
+                        } else {
+                            $input.val(old.self);
+                        }
 
                         calculateRow($row);
                     }
@@ -3488,10 +3612,17 @@ $(document)
 
 
 
-        function confirmGSTChange(onYes, onNo) {
+        // Edit mode = existing document (DOCNO present)
+        function isEditMode() {
+            return $.trim($('#DOCNO').val() || '') !== '';
+        }
 
-            // No GST calculated yet -> directly continue
-            if (!isGSTAlreadyCalculated()) {
+
+        // askInAddMode: Vendor / Location changes ask in Add mode too
+        function confirmGSTChange(onYes, onNo, askInAddMode) {
+
+            // Add mode (unless asked for), or no GST calculated yet -> directly continue
+            if ((!askInAddMode && !isEditMode()) || !isGSTAlreadyCalculated()) {
 
                 if (typeof onYes === 'function') {
                     onYes();
