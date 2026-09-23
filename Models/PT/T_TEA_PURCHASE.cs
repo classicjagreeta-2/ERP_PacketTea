@@ -129,5 +129,7 @@ namespace PacketTea.Models.PT
         public virtual string LOCATIONDESC { get; set; }
         public virtual string MARKDESC { get; set; }
         public virtual string SIZEDESC { get; set; }
+        public virtual string CATDESC { get; set; }
+        
     }
 }

@@ -88,12 +88,32 @@
                 </td>
 
                 <!-- Category -->
+                <!-- Category (auto-filled from Grade) -->
                 <td>
-                    <input type="text"
+                    <input type="hidden"
                            name="T_TEA_DETAIL[@(RowIndex + j)].CAT"
                            value="@det.CAT"
-                           class="form-control" />
+                           class="cat-code" />
+                    <input type="hidden"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].SUBCAT"
+                           value="@det.SUBCAT"
+                           class="subcat-code" />
+                    @*<input type="hidden"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].SUBCATDESC"
+                           value="@det.SUBCATDESC"
+                           class="subcat-desc" />*@
+                    <input type="text"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].CATDESC"
+                           value="@det.CATDESC"
+                           class="form-control cat-desc"
+                           readonly />
                 </td>
+                @*<td>
+            <input type="text"
+                   name="T_TEA_DETAIL[@(RowIndex + j)].CATDESC"
+                   value="@det.CATDESC"
+                   class="form-control" />
+        </td>*@
 
 
                 <!-- Bags -->
@@ -127,8 +147,8 @@
                 <td>
                     <input type="text"
                            value="@(det.QTY?.ToString("0.000") ?? "0.000")"
-                           class="form-control req text-right total-net-wt" 
-                           readonly/>
+                           class="form-control req text-right total-net-wt"
+                            />
                 </td>
 
 
@@ -260,11 +280,11 @@
 
                 <!-- Total Amt -->
                 <td style="width:100px;">
-                   <input type="text"
+                    <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].TOT_AMT"
                            value="@(det.TOT_AMT?.ToString("0.00") ?? "0.00")"
                            class="form-control text-right tot-amt"
-                           readonly 
+                           readonly
                            style="width:100px;" />
                 </td>
 

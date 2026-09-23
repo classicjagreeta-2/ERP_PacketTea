@@ -70,7 +70,10 @@ namespace Finance.Models.PT
         public virtual string TERMINAL_ID { get; set; }
         public virtual string LOCKEDBYUSERID { get; set; }
         public virtual DateTime? LOCKEDUNTIL { get; set; }
-
+        public virtual string cat { get; set; }
+        public virtual string catdesc { get; set; }
+        public virtual string subcat { get; set; }
+        public virtual string subcatdesc { get; set; }
 
 
 

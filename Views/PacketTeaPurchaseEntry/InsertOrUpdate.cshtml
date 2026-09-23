@@ -2317,6 +2317,403 @@ $(document).on('click', '.trans-code', function () {
     </script>
 
     <script>
+        // ===============================
+// GRADE PICKER + GST RATE LOGIC
+// ===============================
+
+$(document).on('click', '.grade-code', function () {
+
+    var $input = $(this);
+    var $row = $input.closest('tr');
+
+    $('.inputpicker-wrapped-list').remove();
+
+    if ($input.data('inputpicker')) {
+        $input.inputpicker('show');
+        return;
+    }
+
+    $input.inputpicker({
+        url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
+
+        fields: [
+            { name: 'GCODE', text: 'CODE' },
+            { name: 'NAME', text: 'NAME' },
+            { name: 'cat', text: 'CAT' },
+            { name: 'catdesc', text: 'CAT NAME' },
+            { name: 'subcat', text: 'SUBCAT' },
+            { name: 'subcatdesc', text: 'SUBCAT NAME' },
+            { name: 'CGST_RATE', text: 'CGST RATE' },
+            { name: 'SGST_RATE', text: 'SGST RATE' },
+            { name: 'IGST_RATE', text: 'IGST RATE' }
+        ],
+
+        fieldText: 'GCODE',
+        fieldValue: 'GCODE',
+
+        headShow: true,
+        filterOpen: true,
+        autoOpen: true,
+
+        pagination: true,
+        pageField: 'p',
+        pageLimitField: 'limit',
+        pageLimit: 10,
+        pageCountField: 'count',
+
+        width: 'auto',
+        urlDelay: 1
+    });
+
+    $input.off('inputpicker.select').on(
+        'inputpicker.select',
+        function (e, item) {
+
+            if (!item) return;
+
+            var gradeCode = item.GCODE || '';
+
+            $row.find('.grade-code').val(gradeCode);
+            $row.find('.grade-desc').val(item.NAME || '');
+
+            // Fill CAT / SUBCAT / SUBCATDESC / CATDESC straight from the picker item
+            applyGradeCategory($row, item);
+
+            // Still fetch full details (GST rates etc.)
+            getGradeDetails($row, gradeCode);
+
+            $(this).inputpicker('hide');
+        }
+    );
+});
+
+
+// =====================================
+// GET COMPLETE GRADE DATA
+// =====================================
+
+function getGradeDetails($row, gradeCode) {
+
+    if (!gradeCode) {
+        clearGradeGST($row);
+        applyGradeCategory($row, {});
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
+        type: 'GET',
+
+        data: {
+            q: gradeCode,
+            limit: 1,
+            p: 1
+        },
+
+        success: function (res) {
+
+            if (
+                res &&
+                res.data &&
+                res.data.length > 0
+            ) {
+
+                var grade = res.data[0];
+
+                // Set description
+                $row.find('.grade-desc')
+                    .val(grade.NAME || '');
+
+                // Apply CAT / SUBCAT / SUBCATDESC / CATDESC
+                applyGradeCategory($row, grade);
+
+                // Apply Grade GST rates
+                applyGradeGST($row, grade);
+            }
+            else {
+
+                clearGradeGST($row);
+                applyGradeCategory($row, {});
+
+                $row.find('.grade-code').val('');
+                $row.find('.grade-desc').val('');
+            }
+        },
+
+        error: function (xhr) {
+
+            console.log("GetGrade Error:", xhr.responseText);
+
+            clearGradeGST($row);
+            applyGradeCategory($row, {});
+        }
+    });
+}
+
+
+// =====================================
+// APPLY CAT / SUBCAT / SUBCATDESC / CATDESC
+// =====================================
+
+function applyGradeCategory($row, grade) {
+
+    if (!$row || !$row.length) {
+        return;
+    }
+
+    grade = grade || {};
+
+    $row.find('.cat-code').val(grade.cat || '');
+    $row.find('.subcat-code').val(grade.subcat || '');
+    $row.find('.subcat-desc').val(grade.subcatdesc || '');
+    $row.find('.cat-desc').val(grade.catdesc || '');
+}
+
+
+function applyGradeGST($row, grade) {
+
+    if (!$row || !$row.length || !grade) {
+        clearGradeGST($row);
+        return;
+    }
+
+    // ==================================================
+    // VENDOR DATA
+    // ==================================================
+
+    var vendorGST = $.trim(
+        $('#VendorGSTNo').val() || ''
+    );
+
+    var vendorState = $.trim(
+        $('#VendorStateCode').val() || ''
+    );
+
+
+    // ==================================================
+    // LOCATION DATA
+    // ==================================================
+
+    var locationGST = $.trim(
+        $('#LocationGSTNo').val() || ''
+    );
+
+    var locationState = $.trim(
+        $('#LocationStateCode').val() || ''
+    );
+
+
+    // ==================================================
+    // GRADE MASTER GST
+    // ==================================================
+
+    var gradeCGST =
+        parseFloat(grade.CGST_RATE) || 0;
+
+    var gradeSGST =
+        parseFloat(grade.SGST_RATE) || 0;
+
+    var gradeIGST =
+        parseFloat(grade.IGST_RATE) || 0;
+
+
+    // ==================================================
+    // GST INPUTS
+    // ==================================================
+
+    var $cgstRate = $row.find(
+        'input[name$=".CGST_RT"]'
+    );
+
+    var $sgstRate = $row.find(
+        'input[name$=".SGST_RT"]'
+    );
+
+    var $igstRate = $row.find(
+        'input[name$=".IGST_RT"]'
+    );
+
+    var $cgstAmt = $row.find(
+        'input[name$=".CGST_AMT"]'
+    );
+
+    var $sgstAmt = $row.find(
+        'input[name$=".SGST_AMT"]'
+    );
+
+    var $igstAmt = $row.find(
+        'input[name$=".IGST_AMT"]'
+    );
+
+
+    // ==================================================
+    // ALWAYS CLEAR PREVIOUS GST FIRST
+    // ==================================================
+
+    $cgstRate.val('0.00');
+    $sgstRate.val('0.00');
+    $igstRate.val('0.00');
+
+    $cgstAmt.val('0.00');
+    $sgstAmt.val('0.00');
+    $igstAmt.val('0.00');
+
+
+    // ==================================================
+    // 1. BOTH VENDOR GST AND LOCATION GST EMPTY
+    //    ALL GST = ZERO
+    // ==================================================
+
+    if (
+        vendorGST === '' &&
+        locationGST === ''
+    ) {
+
+        $cgstRate.val('0.00');
+        $sgstRate.val('0.00');
+        $igstRate.val('0.00');
+
+        $cgstAmt.val('0.00');
+        $sgstAmt.val('0.00');
+        $igstAmt.val('0.00');
+
+        calculateRow($row);
+        return;
+    }
+
+
+    // ==================================================
+    // 2. REQUIRED GST / STATE DATA MISSING
+    //    ALL GST = ZERO
+    // ==================================================
+
+    if (
+        vendorGST === '' ||
+        vendorState === '' ||
+        locationGST === '' ||
+        locationState === ''
+    ) {
+
+        $cgstRate.val('0.00');
+        $sgstRate.val('0.00');
+        $igstRate.val('0.00');
+
+        $cgstAmt.val('0.00');
+        $sgstAmt.val('0.00');
+        $igstAmt.val('0.00');
+
+        calculateRow($row);
+        return;
+    }
+
+
+    // ==================================================
+    // 3. VENDOR GST == LOCATION GST
+    //    NO GST
+    // ==================================================
+
+    if (vendorGST === locationGST) {
+
+        $cgstRate.val('0.00');
+        $sgstRate.val('0.00');
+        $igstRate.val('0.00');
+
+        $cgstAmt.val('0.00');
+        $sgstAmt.val('0.00');
+        $igstAmt.val('0.00');
+
+        calculateRow($row);
+        return;
+    }
+
+
+    // ==================================================
+    // 4. VENDOR GST != LOCATION GST
+    //    SAME STATE -> CGST + SGST
+    // ==================================================
+
+    if (vendorState === locationState) {
+
+        $cgstRate.val(
+            gradeCGST.toFixed(2)
+        );
+
+        $sgstRate.val(
+            gradeSGST.toFixed(2)
+        );
+
+        $igstRate.val('0.00');
+
+        calculateRow($row);
+        return;
+    }
+
+
+    // ==================================================
+    // 5. VENDOR GST != LOCATION GST
+    //    DIFFERENT STATE -> IGST
+    // ==================================================
+
+    $cgstRate.val('0.00');
+    $sgstRate.val('0.00');
+
+    $igstRate.val(
+        gradeIGST.toFixed(2)
+    );
+
+    calculateRow($row);
+}
+
+
+// ======================================================
+// CLEAR GST FOR CURRENT ROW
+// ======================================================
+function clearGradeGST($row) {
+
+    if (!$row || !$row.length) {
+        return;
+    }
+
+    $row.find('input[name$=".CGST_RT"]').val('0.00');
+    $row.find('input[name$=".SGST_RT"]').val('0.00');
+    $row.find('input[name$=".IGST_RT"]').val('0.00');
+
+    $row.find('input[name$=".CGST_AMT"]').val('0.00');
+    $row.find('input[name$=".SGST_AMT"]').val('0.00');
+    $row.find('input[name$=".IGST_AMT"]').val('0.00');
+
+    if (typeof calculateRow === 'function') {
+        calculateRow($row);
+    }
+}
+
+
+// =====================================
+// VALIDATE GRADE WHEN USER TYPES / PASTES
+// =====================================
+
+$(document)
+    .off('blur.gradeValidation', '.grade-code')
+    .on('blur.gradeValidation', '.grade-code', function () {
+
+        var $input = $(this);
+        var $row = $input.closest('tr');
+        var code = $.trim($input.val() || '');
+
+        if (!code) {
+
+            $row.find('.grade-desc').val('');
+            clearGradeGST($row);
+            applyGradeCategory($row, {});
+            return;
+        }
+
+        // One central Grade -> GST AJAX flow
+        getGradeDetails($row, code);
+    });
+    </script>
+
+    @*<script>
 
         // ===============================
 // GRADE PICKER + GST RATE LOGIC
@@ -2340,6 +2737,10 @@ $(document).on('click', '.grade-code', function () {
         fields: [
             { name: 'GCODE', text: 'CODE' },
             { name: 'NAME', text: 'NAME' },
+            { name: 'cat', text: 'CAT' },
+            { name: 'catdesc', text: 'CAT NAME' },
+            { name: 'subcat', text: 'SUBCAT' },
+            { name: 'subcatdesc', text: 'SUBCAT NAME' },
             { name: 'CGST_RATE', text: 'CGST RATE' },
             { name: 'SGST_RATE', text: 'SGST RATE' },
             { name: 'IGST_RATE', text: 'IGST RATE' }
@@ -2836,7 +3237,7 @@ $(document)
         getGradeDetails($row, code);
     });
 
-    </script>
+    </script>*@
 
  
 
@@ -3208,20 +3609,7 @@ $(function () {
         });
 
     </script>
-    @*<script>
-            // netwt* rate=amt, //
-            $(document).on('input change', '.total-net-wt, .rate', function () {
-
-                var $row = $(this).closest('tr');
-
-                var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
-                var rate = parseFloat($row.find('.rate').val()) || 0;
-
-                var amount = totalNetWt * rate;
-
-                $row.find('.amount').val(amount.toFixed(2));
-            });
-        </script>*@
+ 
     <script>
 
         // ======================================================
@@ -3667,56 +4055,170 @@ $(function () {
                 }
             });
         }
+        // ======================================================
+        // REAL-TIME WEIGHT CALCULATION
+        // ======================================================
+
         function calculateWeight($row, source) {
+
+            if (!$row || !$row.length) {
+                return;
+            }
+
             var bags = parseFloat($row.find('.bags').val()) || 0;
             var netWt = parseFloat($row.find('.net-wt').val()) || 0;
             var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
 
+
+            // ==================================================
+            // BAGS / NET WT CHANGED
+            // TOTAL NET WT = BAGS × NET WT
+            // ==================================================
+
             if (source === 'bags' || source === 'net-wt') {
 
-                // TOTAL NET WT = BAGS × NET WT
                 if (bags > 0 && netWt > 0) {
+
                     totalNetWt = bags * netWt;
 
                     $row.find('.total-net-wt')
                         .val(totalNetWt.toFixed(3));
                 }
+                else {
 
-            } else if (source === 'total-net-wt') {
+                    // Clear total when calculation is not possible
+                    $row.find('.total-net-wt').val('');
+                }
+            }
 
-                // NET WT = TOTAL NET WT ÷ BAGS
+
+            // ==================================================
+            // TOTAL NET WT CHANGED
+            // NET WT = TOTAL NET WT / BAGS
+            // ==================================================
+
+            else if (source === 'total-net-wt') {
+
                 if (bags > 0 && totalNetWt > 0) {
+
                     netWt = totalNetWt / bags;
 
                     $row.find('.net-wt')
                         .val(netWt.toFixed(3));
                 }
+                else {
+
+                    $row.find('.net-wt').val('');
+                }
             }
+
+
+            // ==================================================
+            // AFTER WEIGHT CALCULATION
+            // RECALCULATE AMOUNT / GST / TOTAL
+            // ==================================================
+
+            calculateRow($row);
         }
 
 
-        // Bags change
+        // ======================================================
+        // BAGS - REAL TIME
+        // ======================================================
+
         $(document)
             .off('input.weightCalculation', '.bags')
             .on('input.weightCalculation', '.bags', function () {
-                calculateWeight($(this).closest('tr'), 'bags');
+
+                calculateWeight(
+                    $(this).closest('tr'),
+                    'bags'
+                );
+
             });
 
 
-        // Net Wt change
+        // ======================================================
+        // NET WT - REAL TIME
+        // ======================================================
+
         $(document)
             .off('input.weightCalculation', '.net-wt')
             .on('input.weightCalculation', '.net-wt', function () {
-                calculateWeight($(this).closest('tr'), 'net-wt');
+
+                calculateWeight(
+                    $(this).closest('tr'),
+                    'net-wt'
+                );
+
             });
 
 
-        // Total Net Wt change
+        // ======================================================
+        // TOTAL NET WT - REAL TIME
+        // ======================================================
+
         $(document)
             .off('input.weightCalculation', '.total-net-wt')
             .on('input.weightCalculation', '.total-net-wt', function () {
-                calculateWeight($(this).closest('tr'), 'total-net-wt');
+
+                calculateWeight(
+                    $(this).closest('tr'),
+                    'total-net-wt'
+                );
+
             });
+
+        //function calculateWeight($row, source) {
+        //    var bags = parseFloat($row.find('.bags').val()) || 0;
+        //    var netWt = parseFloat($row.find('.net-wt').val()) || 0;
+        //    var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
+
+        //    if (source === 'bags' || source === 'net-wt') {
+
+        //        // TOTAL NET WT = BAGS × NET WT
+        //        if (bags > 0 && netWt > 0) {
+        //            totalNetWt = bags * netWt;
+
+        //            $row.find('.total-net-wt')
+        //                .val(totalNetWt.toFixed(3));
+        //        }
+
+        //    } else if (source === 'total-net-wt') {
+
+        //        // NET WT = TOTAL NET WT ÷ BAGS
+        //        if (bags > 0 && totalNetWt > 0) {
+        //            netWt = totalNetWt / bags;
+
+        //            $row.find('.net-wt')
+        //                .val(netWt.toFixed(3));
+        //        }
+        //    }
+        //}
+
+
+        //// Bags change
+        //$(document)
+        //    .off('input.weightCalculation', '.bags')
+        //    .on('input.weightCalculation', '.bags', function () {
+        //        calculateWeight($(this).closest('tr'), 'bags');
+        //    });
+
+
+        //// Net Wt change
+        //$(document)
+        //    .off('input.weightCalculation', '.net-wt')
+        //    .on('input.weightCalculation', '.net-wt', function () {
+        //        calculateWeight($(this).closest('tr'), 'net-wt');
+        //    });
+
+
+        //// Total Net Wt change
+        //$(document)
+        //    .off('input.weightCalculation', '.total-net-wt')
+        //    .on('input.weightCalculation', '.total-net-wt', function () {
+        //        calculateWeight($(this).closest('tr'), 'total-net-wt');
+        //    });
     </script>
 
     <script>
