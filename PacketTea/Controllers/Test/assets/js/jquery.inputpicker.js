@@ -2269,7 +2269,7 @@
         debugger;
         var input = $(this);
         var _searchTerm = input.val();
-        if (_searchTerm.length > 0 && _searchTerm.length < 3) {
+        if (_searchTerm.length > 0 && _searchTerm.length < 1) {
             return;
             // Do nothing if it's less than 3 characters   
         }
