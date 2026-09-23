@@ -144,7 +144,7 @@
                 <input type="hidden" id="hiddenDOCTYPE" />
                 <input type="hidden" id="hiddenDOCTYPETYPE" />
                 @*<input type="hidden" id="LocationStateCode" />
-                <input type="hidden" id="LocationGSTNo" />*@
+                    <input type="hidden" id="LocationGSTNo" />*@
 
                 <input type="hidden" id="VendorStateCode" />
                 <input type="hidden" id="VendorGSTNo" />
@@ -1070,7 +1070,7 @@
         });
     </script>
 
- <script>
+    <script>
         // ======================================================
         // RECALCULATE GST FOR ALL EXISTING GRADE ROWS
         // ======================================================
@@ -1590,141 +1590,7 @@ $(document).on('click', '.vendor-code', function () {
                 );
             }
         );
-    //$input
-    //    .off('inputpicker.select.vendor')
-    //    .on(
-    //        'inputpicker.select.vendor',
-    //        function (e, item) {
-
-    //            if (!item) {
-    //                return;
-    //            }
-
-    //            var $this = $(this);
-
-
-    //            // ======================================
-    //            // GST CHANGE CONFIRMATION
-    //            // ======================================
-
-    //            if (!confirmGSTChange()) {
-    //                return;
-    //            }
-
-
-    //            // ======================================
-    //            // GET SELECTED VALUES DIRECTLY
-    //            // ======================================
-
-    //            var code =
-    //                $.trim(item.subcode || '');
-
-    //            var name =
-    //                $.trim(item.acname || '');
-
-    //            var state =
-    //                $.trim(item.statE_CODE || '');
-
-    //            var gst =
-    //                $.trim(item.gsT_NO || '');
-
-
-    //            // ======================================
-    //            // EMPTY
-    //            // ======================================
-
-    //            if (!code) {
-
-    //                clearVendor($this);
-
-    //                $this.inputpicker('hide');
-
-    //                return;
-    //            }
-
-
-    //            // ======================================
-    //            // SET CODE
-    //            // ======================================
-
-    //            $this.val(code);
-
-
-    //            // ======================================
-    //            // IMPORTANT
-    //            // SET NAME IMMEDIATELY
-    //            // ======================================
-
-    //            $('.vendor-desc').val(name);
-
-
-    //            // ======================================
-    //            // SET STATE
-    //            // ======================================
-
-    //            $('#VendorStateCode').val(state);
-
-
-    //            // ======================================
-    //            // SET GST
-    //            // ======================================
-
-    //            $('#VendorGSTNo').val(gst);
-
-
-    //            // ======================================
-    //            // HIDE PICKER
-    //            // ======================================
-
-    //            $this.inputpicker('hide');
-
-
-    //            // ======================================
-    //            // STATE VALIDATION
-    //            // ======================================
-
-    //            if (!state) {
-
-    //                vendorValidationMap.delete(
-    //                    code.toUpperCase()
-    //                );
-
-    //                clearVendor($this);
-
-    //                showVendorAlert(
-    //                    'Vendor State Code is not available.'
-    //                );
-
-    //                return;
-    //            }
-
-
-    //            // ======================================
-    //            // STORE VALID VENDOR
-    //            // ======================================
-
-    //            vendorValidationMap.set(
-    //                code.toUpperCase(),
-    //                {
-    //                    status: 'valid',
-    //                    code: code,
-    //                    name: name,
-    //                    state: state,
-    //                    gst: gst
-    //                }
-    //            );
-
-
-    //            // ======================================
-    //            // RECALCULATE GST
-    //            // ======================================
-
-    //            if (typeof recalculateAllGradeGST === 'function') {
-    //                recalculateAllGradeGST();
-    //            }
-    //        }
-    //    );
-
+  
 });
 
 
@@ -2461,161 +2327,353 @@ function getGradeDetails($row, gradeCode) {
         }
     });
 }
+function applyGradeGST($row, grade) {
+
+    if (!$row || !$row.length || !grade) {
+        clearGradeGST($row);
+        return;
+    }
+
+    // ==================================================
+    // VENDOR DATA
+    // ==================================================
+
+    var vendorGST = $.trim(
+        $('#VendorGSTNo').val() || ''
+    );
+
+    var vendorState = $.trim(
+        $('#VendorStateCode').val() || ''
+    );
 
 
-        function applyGradeGST($row, grade) {
+    // ==================================================
+    // LOCATION DATA
+    // ==================================================
 
-            if (!$row || !$row.length || !grade) {
-                clearGradeGST($row);
-                return;
-            }
+    var locationGST = $.trim(
+        $('#LocationGSTNo').val() || ''
+    );
 
-            // ==================================================
-            // VENDOR DATA
-            // ==================================================
-
-            var vendorGST = $.trim(
-                $('#VendorGSTNo').val() || ''
-            );
-
-            var vendorState = $.trim(
-                $('#VendorStateCode').val() || ''
-            );
+    var locationState = $.trim(
+        $('#LocationStateCode').val() || ''
+    );
 
 
-            // ==================================================
-            // LOCATION DATA
-            // ==================================================
+    // ==================================================
+    // GRADE MASTER GST
+    // ==================================================
 
-            var locationGST = $.trim(
-                $('#LocationGSTNo').val() || ''
-            );
+    var gradeCGST =
+        parseFloat(grade.CGST_RATE) || 0;
 
-            var locationState = $.trim(
-                $('#LocationStateCode').val() || ''
-            );
+    var gradeSGST =
+        parseFloat(grade.SGST_RATE) || 0;
 
-
-            // ==================================================
-            // GRADE MASTER GST
-            // ==================================================
-
-            var gradeCGST =
-                parseFloat(grade.CGST_RATE) || 0;
-
-            var gradeSGST =
-                parseFloat(grade.SGST_RATE) || 0;
-
-            var gradeIGST =
-                parseFloat(grade.IGST_RATE) || 0;
+    var gradeIGST =
+        parseFloat(grade.IGST_RATE) || 0;
 
 
-            // ==================================================
-            // GST INPUTS
-            // ==================================================
+    // ==================================================
+    // GST INPUTS
+    // ==================================================
 
-            var $cgstRate = $row.find(
-                'input[name$=".CGST_RT"]'
-            );
+    var $cgstRate = $row.find(
+        'input[name$=".CGST_RT"]'
+    );
 
-            var $sgstRate = $row.find(
-                'input[name$=".SGST_RT"]'
-            );
+    var $sgstRate = $row.find(
+        'input[name$=".SGST_RT"]'
+    );
 
-            var $igstRate = $row.find(
-                'input[name$=".IGST_RT"]'
-            );
+    var $igstRate = $row.find(
+        'input[name$=".IGST_RT"]'
+    );
 
-            var $cgstAmt = $row.find(
-                'input[name$=".CGST_AMT"]'
-            );
+    var $cgstAmt = $row.find(
+        'input[name$=".CGST_AMT"]'
+    );
 
-            var $sgstAmt = $row.find(
-                'input[name$=".SGST_AMT"]'
-            );
+    var $sgstAmt = $row.find(
+        'input[name$=".SGST_AMT"]'
+    );
 
-            var $igstAmt = $row.find(
-                'input[name$=".IGST_AMT"]'
-            );
-
-
-            // ==================================================
-            // ALWAYS CLEAR PREVIOUS GST FIRST
-            // ==================================================
-
-            $cgstRate.val('0.00');
-            $sgstRate.val('0.00');
-            $igstRate.val('0.00');
-
-            $cgstAmt.val('0.00');
-            $sgstAmt.val('0.00');
-            $igstAmt.val('0.00');
+    var $igstAmt = $row.find(
+        'input[name$=".IGST_AMT"]'
+    );
 
 
-            // ==================================================
-            // 1. REQUIRED GST / STATE DATA MISSING
-            // ==================================================
+    // ==================================================
+    // ALWAYS CLEAR PREVIOUS GST FIRST
+    // ==================================================
 
-            if (
-                vendorGST === '' ||
-                vendorState === '' ||
-                locationGST === '' ||
-                locationState === ''
-            ) {
+    $cgstRate.val('0.00');
+    $sgstRate.val('0.00');
+    $igstRate.val('0.00');
 
-                calculateRow($row);
-                return;
-            }
+    $cgstAmt.val('0.00');
+    $sgstAmt.val('0.00');
+    $igstAmt.val('0.00');
 
 
-            // ==================================================
-            // 2. VENDOR GST == LOCATION GST
-            //    NO GST
-            // ==================================================
+    // ==================================================
+    // 1. BOTH VENDOR GST AND LOCATION GST EMPTY
+    //    ALL GST = ZERO
+    // ==================================================
 
-            if (vendorGST === locationGST) {
+    if (
+        vendorGST === '' &&
+        locationGST === ''
+    ) {
 
-                calculateRow($row);
-                return;
-            }
+        $cgstRate.val('0.00');
+        $sgstRate.val('0.00');
+        $igstRate.val('0.00');
 
+        $cgstAmt.val('0.00');
+        $sgstAmt.val('0.00');
+        $igstAmt.val('0.00');
 
-            // ==================================================
-            // 3. VENDOR GST != LOCATION GST
-            //    SAME STATE -> CGST + SGST
-            // ==================================================
-
-            if (vendorState === locationState) {
-
-                $cgstRate.val(
-                    gradeCGST.toFixed(2)
-                );
-
-                $sgstRate.val(
-                    gradeSGST.toFixed(2)
-                );
-
-                $igstRate.val('0.00');
-
-                calculateRow($row);
-                return;
-            }
+        calculateRow($row);
+        return;
+    }
 
 
-            // ==================================================
-            // 4. VENDOR GST != LOCATION GST
-            //    DIFFERENT STATE -> IGST
-            // ==================================================
+    // ==================================================
+    // 2. REQUIRED GST / STATE DATA MISSING
+    //    ALL GST = ZERO
+    // ==================================================
 
-            $cgstRate.val('0.00');
-            $sgstRate.val('0.00');
+    if (
+        vendorGST === '' ||
+        vendorState === '' ||
+        locationGST === '' ||
+        locationState === ''
+    ) {
 
-            $igstRate.val(
-                gradeIGST.toFixed(2)
-            );
+        $cgstRate.val('0.00');
+        $sgstRate.val('0.00');
+        $igstRate.val('0.00');
 
-            calculateRow($row);
-        }
+        $cgstAmt.val('0.00');
+        $sgstAmt.val('0.00');
+        $igstAmt.val('0.00');
+
+        calculateRow($row);
+        return;
+    }
+
+
+    // ==================================================
+    // 3. VENDOR GST == LOCATION GST
+    //    NO GST
+    // ==================================================
+
+    if (vendorGST === locationGST) {
+
+        $cgstRate.val('0.00');
+        $sgstRate.val('0.00');
+        $igstRate.val('0.00');
+
+        $cgstAmt.val('0.00');
+        $sgstAmt.val('0.00');
+        $igstAmt.val('0.00');
+
+        calculateRow($row);
+        return;
+    }
+
+
+    // ==================================================
+    // 4. VENDOR GST != LOCATION GST
+    //    SAME STATE -> CGST + SGST
+    // ==================================================
+
+    if (vendorState === locationState) {
+
+        $cgstRate.val(
+            gradeCGST.toFixed(2)
+        );
+
+        $sgstRate.val(
+            gradeSGST.toFixed(2)
+        );
+
+        $igstRate.val('0.00');
+
+        calculateRow($row);
+        return;
+    }
+
+
+    // ==================================================
+    // 5. VENDOR GST != LOCATION GST
+    //    DIFFERENT STATE -> IGST
+    // ==================================================
+
+    $cgstRate.val('0.00');
+    $sgstRate.val('0.00');
+
+    $igstRate.val(
+        gradeIGST.toFixed(2)
+    );
+
+    calculateRow($row);
+}
+
+        //function applyGradeGST($row, grade) {
+
+        //    if (!$row || !$row.length || !grade) {
+        //        clearGradeGST($row);
+        //        return;
+        //    }
+
+        //    // ==================================================
+        //    // VENDOR DATA
+        //    // ==================================================
+
+        //    var vendorGST = $.trim(
+        //        $('#VendorGSTNo').val() || ''
+        //    );
+
+        //    var vendorState = $.trim(
+        //        $('#VendorStateCode').val() || ''
+        //    );
+
+
+        //    // ==================================================
+        //    // LOCATION DATA
+        //    // ==================================================
+
+        //    var locationGST = $.trim(
+        //        $('#LocationGSTNo').val() || ''
+        //    );
+
+        //    var locationState = $.trim(
+        //        $('#LocationStateCode').val() || ''
+        //    );
+
+
+        //    // ==================================================
+        //    // GRADE MASTER GST
+        //    // ==================================================
+
+        //    var gradeCGST =
+        //        parseFloat(grade.CGST_RATE) || 0;
+
+        //    var gradeSGST =
+        //        parseFloat(grade.SGST_RATE) || 0;
+
+        //    var gradeIGST =
+        //        parseFloat(grade.IGST_RATE) || 0;
+
+
+        //    // ==================================================
+        //    // GST INPUTS
+        //    // ==================================================
+
+        //    var $cgstRate = $row.find(
+        //        'input[name$=".CGST_RT"]'
+        //    );
+
+        //    var $sgstRate = $row.find(
+        //        'input[name$=".SGST_RT"]'
+        //    );
+
+        //    var $igstRate = $row.find(
+        //        'input[name$=".IGST_RT"]'
+        //    );
+
+        //    var $cgstAmt = $row.find(
+        //        'input[name$=".CGST_AMT"]'
+        //    );
+
+        //    var $sgstAmt = $row.find(
+        //        'input[name$=".SGST_AMT"]'
+        //    );
+
+        //    var $igstAmt = $row.find(
+        //        'input[name$=".IGST_AMT"]'
+        //    );
+
+
+        //    // ==================================================
+        //    // ALWAYS CLEAR PREVIOUS GST FIRST
+        //    // ==================================================
+
+        //    $cgstRate.val('0.00');
+        //    $sgstRate.val('0.00');
+        //    $igstRate.val('0.00');
+
+        //    $cgstAmt.val('0.00');
+        //    $sgstAmt.val('0.00');
+        //    $igstAmt.val('0.00');
+
+
+        //    // ==================================================
+        //    // 1. REQUIRED GST / STATE DATA MISSING
+        //    // ==================================================
+
+        //    if (
+        //        vendorGST === '' ||
+        //        vendorState === '' ||
+        //        locationGST === '' ||
+        //        locationState === ''
+        //    ) {
+
+        //        calculateRow($row);
+        //        return;
+        //    }
+
+
+        //    // ==================================================
+        //    // 2. VENDOR GST == LOCATION GST
+        //    //    NO GST
+        //    // ==================================================
+
+        //    if (vendorGST === locationGST) {
+
+        //        calculateRow($row);
+        //        return;
+        //    }
+
+
+        //    // ==================================================
+        //    // 3. VENDOR GST != LOCATION GST
+        //    //    SAME STATE -> CGST + SGST
+        //    // ==================================================
+
+        //    if (vendorState === locationState) {
+
+        //        $cgstRate.val(
+        //            gradeCGST.toFixed(2)
+        //        );
+
+        //        $sgstRate.val(
+        //            gradeSGST.toFixed(2)
+        //        );
+
+        //        $igstRate.val('0.00');
+
+        //        calculateRow($row);
+        //        return;
+        //    }
+
+
+        //    // ==================================================
+        //    // 4. VENDOR GST != LOCATION GST
+        //    //    DIFFERENT STATE -> IGST
+        //    // ==================================================
+
+        //    $cgstRate.val('0.00');
+        //    $sgstRate.val('0.00');
+
+        //    $igstRate.val(
+        //        gradeIGST.toFixed(2)
+        //    );
+
+        //    calculateRow($row);
+        //}
 
 
 
@@ -2669,255 +2727,9 @@ $(document)
 
     </script>
 
-    @*<script>
+ 
 
-        $(document).on('click', '.grade-code', function () {
-
-            var $input = $(this);
-            var $row = $input.closest('tr');
-
-            $('.inputpicker-wrapped-list').remove();
-
-            // Already initialized
-            if ($input.data('inputpicker')) {
-                $input.inputpicker('show');
-                return;
-            }
-
-            $input.inputpicker({
-                url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
-
-                fields: [
-                    { name: 'GCODE', text: 'CODE' },
-                    { name: 'NAME', text: 'NAME' }
-                ],
-
-                fieldText: 'GCODE',
-                fieldValue: 'GCODE',
-
-                headShow: true,
-                filterOpen: true,
-                autoOpen: true,
-
-                pagination: true,
-                pageField: 'p',
-                pageLimitField: 'limit',
-                pageLimit: 10,
-                pageCountField: 'count',
-
-                width: 'auto',
-                urlDelay: 1
-            });
-
-
-            // =====================================================
-            // SELECT GRADE
-            // =====================================================
-            $input.off('inputpicker.select').on(
-                'inputpicker.select',
-                function (e, item) {
-
-                    if (!item) return;
-
-                    // IMPORTANT:
-                    // Only update the current row
-                    $row.find('.grade-code').val(item.GCODE);
-                    $row.find('.grade-desc').val(item.NAME || '');
-
-                    $(this).inputpicker('hide');
-                }
-            );
-
-        });
-
-
-        // =====================================================
-        // CHANGE GRADE CODE
-        // =====================================================
-        $(document).on('change', '.grade-code', function () {
-
-            var $input = $(this);
-            var $row = $input.closest('tr');
-
-            var code = $.trim($input.val());
-
-            if (!code) {
-                $row.find('.grade-desc').val('');
-                return;
-            }
-
-            $.ajax({
-                url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
-                type: 'GET',
-
-                data: {
-                    q: code,
-                    limit: 1,
-                    p: 1
-                },
-
-                success: function (res) {
-
-                    if (
-                        res &&
-                        res.data &&
-                        res.data.length > 0
-                    ) {
-
-                        // IMPORTANT:
-                        // Only current row
-                        $row.find('.grade-desc')
-                            .val(res.data[0].NAME || '');
-
-                    } else {
-
-                        $row.find('.grade-desc').val('');
-                    }
-                },
-
-                error: function (xhr) {
-
-                    console.log("GetGrade Error:", xhr.responseText);
-
-                    $row.find('.grade-desc').val('');
-                }
-            });
-
-        });
-
-
-        // =====================================================
-        // BLUR GRADE CODE
-        // =====================================================
-        $(document).on('blur', '.grade-code', function () {
-
-            var $input = $(this);
-            var $row = $input.closest('tr');
-
-            var code = $.trim($input.val());
-
-            setTimeout(function () {
-
-                if (!code) {
-                    $row.find('.grade-desc').val('');
-                    return;
-                }
-
-                $.ajax({
-                    url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
-                    type: 'GET',
-
-                    data: {
-                        q: code,
-                        limit: 1,
-                        p: 1
-                    },
-
-                    success: function (res) {
-
-                        if (
-                            !res ||
-                            !res.data ||
-                            res.data.length === 0
-                        ) {
-
-                            // Only current row
-                            $input.val('');
-                            $row.find('.grade-desc').val('');
-                        }
-                    },
-
-                    error: function (xhr) {
-                        console.log("Grade validation error:", xhr.responseText);
-                    }
-                });
-
-            }, 200);
-
-        });
-
-            </script>*@
-
-    @*<script>
-
-        $(document).on('click', '.location-desc', function () {
-
-    var $input = $(this);
-
-    $('.inputpicker-wrapped-list').remove();
-
-    if ($input.data('inputpicker')) {
-        $input.inputpicker('show');
-        return;
-    }
-
-    $input.inputpicker({
-
-        url: '@Url.Action("GetLocation", "PacketTeaPurchaseEntry")',
-
-        fields: [
-            { name: 'CODE', text: 'CODE' },
-            { name: 'NAME', text: 'NAME' },
-            { name: 'CITY', text: 'CITY' },
-            { name: 'STATE_CODE', text: 'STATE CODE' },
-            { name: 'PIN', text: 'PIN' },
-            { name: 'GST_NO', text: 'GST NO' }
-        ],
-
-        fieldText: 'NAME',
-        fieldValue: 'CODE',
-
-        headShow: true,
-        filterOpen: true,
-        autoOpen: true,
-
-        pagination: true,
-        pageField: 'p',
-        pageLimitField: 'limit',
-        pageLimit: 10,
-        pageCountField: 'count',
-
-        width: 'auto',
-        urlDelay: 1
-    });
-
-
-    $input
-        .off('inputpicker.select')
-        .on('inputpicker.select', function (e, item) {
-
-            if (!item) return;
-
-            console.log("LOCATION:", item);
-
-
-            // Location display
-            $input.val(item.NAME || '');
-
-            // Location code
-            $('#LocationCode').val(item.CODE || '');
-
-            // Location state
-            $('#LocationStateCode')
-                .val($.trim(item.STATE_CODE || ''));
-
-            // Location GST
-            $('#LocationGSTNo')
-                .val($.trim(item.GST_NO || ''));
-
-
-            // Recalculate GST mode
-            recalculateAllGradeGST();
-
-
-            $(this).inputpicker('hide');
-        });
-
-});
-
-    </script>*@
-
-<script>
+    <script>
 
 $(document).on('click', '.location-desc', function () {
 
@@ -3127,138 +2939,11 @@ $(document)
             );
         }
     );
-// ==========================================================
-// LOCATION SELECT
-// ==========================================================
-
-@*$(document)
-    .off('click.locationSelect', '#inputpicker-wrapped-list .inputpicker-element')
-    .on(
-        'click.locationSelect',
-        '#inputpicker-wrapped-list .inputpicker-element',
-        function () {
-
-            var $row = $(this);
-
-            var code = $.trim(
-                $row.attr('data-value') || ''
-            );
-
-            console.log("LOCATION ROW CLICKED");
-            console.log("LOCATION CODE:", code);
-
-            if (!code) {
-                return;
-            }
 
 
-            // ==========================================
-            // GST CHANGE CONFIRMATION
-            // ==========================================
 
-            if (!confirmGSTChange()) {
-                return;
-            }
+    </script>
 
-
-            // ==========================================
-            // GET LOCATION
-            // ==========================================
-
-            $.ajax({
-
-                url: '@Url.Action("GetLocation", "PacketTeaPurchaseEntry")',
-
-                type: 'GET',
-
-                data: {
-                    q: code,
-                    limit: 1,
-                    p: 1
-                },
-
-                success: function (res) {
-
-                    console.log(
-                        "GET LOCATION RESPONSE:",
-                        res
-                    );
-
-                    if (
-                        !res ||
-                        !res.data ||
-                        res.data.length === 0
-                    ) {
-                        return;
-                    }
-
-                    var location = res.data[0];
-
-
-                    // ==========================================
-                    // SET LOCATION
-                    // ==========================================
-
-                    //$('#LocationName').val(
-                    //    location.NAME || ''
-                    //);
-
-                    //$('#LocationCode').val(
-                    //    location.CODE || code
-                    //);
-                    var locationName = location.NAME || '';
-                    var locationCode = location.CODE || code;
-
-                    $('#LocationName').val(locationName);
-                    $('#LocationCode').val(locationCode);
-                    //$('#LocationDesc').val(locationName);
-
-                    $('#LocationStateCode').val(
-                        $.trim(location.STATE_CODE || '')
-                    );
-
-                    $('#LocationGSTNo').val(
-                        $.trim(location.GST_NO || '')
-                    );
-
-
-                    console.log(
-                        "Location Code:",
-                        $('#LocationCode').val()
-                    );
-
-                    console.log(
-                        "Location State:",
-                        $('#LocationStateCode').val()
-                    );
-
-                    console.log(
-                        "Location GST:",
-                        $('#LocationGSTNo').val()
-                    );
-
-
-                    // ==========================================
-                    // RECALCULATE GST
-                    // ==========================================
-
-                    recalculateAllGradeGST();
-                },
-
-                error: function (xhr) {
-
-                    console.log(
-                        "GetLocation ERROR:",
-                        xhr.responseText
-                    );
-                }
-            });
-        }
-    );*@
-
-
-</script>    
-    
     <script>
         $(document).on('click', '#btnAddRow', function (e) {
 
@@ -3304,45 +2989,7 @@ $(document)
         return;
     }
 
-    //// =========================
-    //// ✅ DUPLICATE ITCD CHECK
-    //// =========================
-    //var seen = {};
-    //var duplicate = false;
-
-    //$('#mainTable tbody tr').each(function () {
-
-    //    var itcd = $(this).find('.item-code').val().trim();
-
-    //    if (!itcd) return;
-
-    //    if (seen[itcd]) {
-    //        duplicate = true;
-    //        $(this).find('.item-code').css('border', '1px solid red');
-    //    } else {
-    //        seen[itcd] = true;
-    //        $(this).find('.item-code').css('border', '');
-    //    }
-    //});
-
-    //if (duplicate) {
-    //    $.confirm({
-    //        title: "Duplicate Item",
-    //        type: "red",
-    //        content: "<b>Duplicate ITCD is not allowed.</b>",
-    //        buttons: {
-    //            ok: {
-    //                text: "OK",
-    //                btnClass: "btn-danger"
-    //            }
-    //        }
-    //    });
-    //    return;
-    //}
-
-    // =========================
-    // ✅ ADD ROW (UNCHANGED)
-    // =========================
+  
     var rowIndex = $('#mainTable tbody tr').length;
 
     $.ajax({
@@ -3370,7 +3017,7 @@ $(document)
             renumberLines();
 
             // Apply current vendor/location GST
-            recalculateAllGradeGST();
+            //recalculateAllGradeGST();
 
             // Calculate row
             calculateRow($row);
@@ -3839,7 +3486,7 @@ $(document)
         }
 
 
-     
+
 
         function confirmGSTChange(onYes, onNo) {
 
@@ -3888,8 +3535,57 @@ $(document)
                     }
                 }
             });
-        } 
+        }
+        function calculateWeight($row, source) {
+            var bags = parseFloat($row.find('.bags').val()) || 0;
+            var netWt = parseFloat($row.find('.net-wt').val()) || 0;
+            var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
 
+            if (source === 'bags' || source === 'net-wt') {
+
+                // TOTAL NET WT = BAGS × NET WT
+                if (bags > 0 && netWt > 0) {
+                    totalNetWt = bags * netWt;
+
+                    $row.find('.total-net-wt')
+                        .val(totalNetWt.toFixed(3));
+                }
+
+            } else if (source === 'total-net-wt') {
+
+                // NET WT = TOTAL NET WT ÷ BAGS
+                if (bags > 0 && totalNetWt > 0) {
+                    netWt = totalNetWt / bags;
+
+                    $row.find('.net-wt')
+                        .val(netWt.toFixed(3));
+                }
+            }
+        }
+
+
+        // Bags change
+        $(document)
+            .off('input.weightCalculation', '.bags')
+            .on('input.weightCalculation', '.bags', function () {
+                calculateWeight($(this).closest('tr'), 'bags');
+            });
+
+
+        // Net Wt change
+        $(document)
+            .off('input.weightCalculation', '.net-wt')
+            .on('input.weightCalculation', '.net-wt', function () {
+                calculateWeight($(this).closest('tr'), 'net-wt');
+            });
+
+
+        // Total Net Wt change
+        $(document)
+            .off('input.weightCalculation', '.total-net-wt')
+            .on('input.weightCalculation', '.total-net-wt', function () {
+                calculateWeight($(this).closest('tr'), 'total-net-wt');
+            });
     </script>
 
     <script>
