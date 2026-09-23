@@ -26,12 +26,23 @@ namespace Finance.Controllers.TEA
 
         private async Task<(StockReportResult Report, string Error)> LoadAsync(string fromDate, string toDate, string units, string qtyWt, string order)
         {
+            if (string.IsNullOrWhiteSpace(SessionHelper.GetUser()?.Salesdb))
+                return (null, "Sales schema is not set for this company (CLASSIC_CONTROL.SCHEMA_SALES).");
+
             var unitList = (units ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                                         .Select(u => u.Trim())
                                         .Where(u => u.Length > 0 && !u.Equals("All", StringComparison.OrdinalIgnoreCase))
                                         .ToList();
-            var response = await Services.SalesPostAsync<StockReportResult>("/api/StockReport/GetReport",
-                new { FromDate = fromDate, ToDate = toDate, Units = unitList, QtyWt = qtyWt, Order = order });
+            ResponseApiModel<StockReportResult> response;
+            try
+            {
+                response = await Services.SalesPostAsync<StockReportResult>("/api/StockReport/GetReport",
+                    new { FromDate = fromDate, ToDate = toDate, Units = unitList.Count == 0 ? null : unitList, QtyWt = qtyWt, Order = order });
+            }
+            catch (Exception ex)
+            {
+                return (null, FullsStockActualController.ApiCallError(ex));
+            }
             if (!response.IsSuccessStatusCode || response.Data == null)
                 return (null, !string.IsNullOrEmpty(response.Message) ? response.Message : "Unable to build the report.");
             if (response.Data.Rows == null || response.Data.Rows.Count == 0)
@@ -97,7 +108,7 @@ namespace Finance.Controllers.TEA
                 {
                     var name = "StockReport-" + (report.FromDate ?? "").Replace("/", "") + "-" + (report.ToDate ?? "").Replace("/", "") + ".xlsx";
                     var r = ClassicExcel.SaveAndOpen(wb, name, Request);
-                    return Json(new { success = true, opened = r.Opened, fileName = r.FileName }, JsonRequestBehavior.AllowGet);
+                    return Json(new { success = true, opened = r.Opened, fileName = r.FileName, token = r.Token }, JsonRequestBehavior.AllowGet);
                 }
             }
             catch (Exception ex)
@@ -106,11 +117,11 @@ namespace Finance.Controllers.TEA
             }
         }
 
-        public ActionResult DownloadExcel(string file)
+        public ActionResult DownloadExcel(string token)
         {
-            var bytes = ClassicExcel.Read(file);
-            if (bytes == null) return HttpNotFound();
-            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", System.IO.Path.GetFileName(file));
+            var bytes = ClassicExcel.Take(token, out var name);
+            if (bytes == null) return HttpNotFound("The report has expired - please generate it again.");
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
         }
 
         // Text: character-format (dot-matrix) listing, as Fulls Stock Actual's Text --
@@ -126,7 +137,7 @@ namespace Finance.Controllers.TEA
                 var text = BuildText(report, SessionHelper.GetUser()?.getUserName ?? "");
                 var name = "StockReport-" + (report.FromDate ?? "").Replace("/", "") + "-" + (report.ToDate ?? "").Replace("/", "") + ".txt";
                 var r = ClassicExcel.SaveTextAndOpen(text, name, Request);
-                return Json(new { success = true, opened = r.Opened, fileName = r.FileName }, JsonRequestBehavior.AllowGet);
+                return Json(new { success = true, opened = r.Opened, fileName = r.FileName, token = r.Token }, JsonRequestBehavior.AllowGet);
             }
             catch (Exception ex)
             {
@@ -134,11 +145,11 @@ namespace Finance.Controllers.TEA
             }
         }
 
-        public ActionResult DownloadText(string file)
+        public ActionResult DownloadText(string token)
         {
-            var bytes = ClassicExcel.Read(file);
-            if (bytes == null) return HttpNotFound();
-            return File(bytes, "text/plain", System.IO.Path.GetFileName(file));
+            var bytes = ClassicExcel.Take(token, out var name);
+            if (bytes == null) return HttpNotFound("The report has expired - please generate it again.");
+            return File(bytes, "text/plain", name);
         }
 
         // Same 19 movement columns as the HTML / Crystal pages. Code 6, description 20

@@ -1353,7 +1353,9 @@
             if (showSelectAll) {
                 var allFilteredData = pageInfo.allData;
                 var allSelected = allFilteredData.length > 0;
-                for (var a = 0; a < allFilteredData.length; a++) {
+                // selectAllClears: "All" means no filter -- it is ticked when nothing is picked.
+                if (_set(input, 'selectAllClears')) allSelected = arr_value.length == 0;
+                else for (var a = 0; a < allFilteredData.length; a++) {
                     if (_inArray(allFilteredData[a][fieldValue], arr_value) == -1) {
                         allSelected = false;
                         break;
@@ -1443,7 +1445,9 @@
             var value = _o(input).val();
             var arr_value = value ? value.toString().split(delimiter) : [];
 
-            for (var k = 0; k < currentData.length; k++) {
+            // selectAllClears: "All" drops the individual picks instead of ticking every row.
+            if (_set(input, 'selectAllClears')) arr_value = [];
+            else for (var k = 0; k < currentData.length; k++) {
                 var idx = _inArray(currentData[k][fieldValue], arr_value);
                 if (wasAllSelected) {   // Deselect every row currently shown
                     if (idx > -1) arr_value.splice(idx, 1);
@@ -2049,6 +2053,10 @@
             var d = new_data[i];
             $("<li class=\"inputpicker-element\" data-value=\"" + d[fieldValue] + "\"><span>" + d[fieldText] + "</span> <a href=\"javascript:void(0);\" onclick=\"$(this).closest('.inputpicker-div').find('input').inputpicker('removeValue', $(this).parent().data('value') );event.stopPropagation();\" onmouseover=\"$(this).prev().addClass();\" tabindex='-1'>x</a></li>").insertBefore(li_input);
         }
+        // selectAllClears: an empty value is shown as an "All" tag (not removable).
+        if (!new_data.length && _set(input, 'selectAllClears')) {
+            $("<li class=\"inputpicker-element\"><span></span></li>").find('span').text(_set(input, 'selectAllText') || 'All').end().insertBefore(li_input);
+        }
 
         // input.remove();
 
@@ -2561,6 +2569,12 @@
          * Text shown for the "All" row
          */
         selectAllText: 'All',
+
+        /**
+         * When true the "All" row means "no filter": clicking it clears the picks
+         * (value becomes empty) instead of selecting every row
+         */
+        selectAllClears: false,
 
         /**
          * Tag

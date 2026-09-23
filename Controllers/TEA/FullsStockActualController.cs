@@ -13,7 +13,7 @@ using System.Web.Mvc;
 namespace Finance.Controllers.TEA
 {
     // "Fulls Stock Actual" report -- ported from VB6 rep_dank_tpm.frm. Parameters:
-    // As On, Unit (All / manufacturing unit), Order (Item Code / Item Name / Custom).
+    // As On, Unit (All = no filter, or a checked list of manufacturing units), Order (Item Code / Item Name / Custom).
     // The API (FullsStockActual/GetReport, Sales schema) computes the stock;
     // Graphics renders a Crystal PDF (~/CrystalReport/FullsStockActual.rpt), HTML
     // renders the VB6 printed layout as a paged page, both in a new tab; Excel
@@ -25,17 +25,40 @@ namespace Finance.Controllers.TEA
             return View();
         }
 
+        // Used by both report pages. A failure used to come back as an empty list, which
+        // looked like an empty Unit picker with no reason given -- the API's message is
+        // returned instead so the page can show it.
         public async Task<JsonResult> GetUnits()
         {
+            if (string.IsNullOrWhiteSpace(SessionHelper.GetUser()?.Salesdb))
+                return Json(new { error = "Sales schema is not set for this company (CLASSIC_CONTROL.SCHEMA_SALES). Open the menu page again, or ask for the control file to be updated." }, JsonRequestBehavior.AllowGet);
+
             var response = await Services.SalesGetAsync<List<FullsStockUnit>>("/api/FullsStockActual/GetUnits");
-            var list = (response.IsSuccessStatusCode ? response.Data : null) ?? new List<FullsStockUnit>();
-            return Json(list, JsonRequestBehavior.AllowGet);
+            if (!response.IsSuccessStatusCode || response.Data == null)
+                return Json(new { error = string.IsNullOrEmpty(response.Message) ? "Unable to load the unit list." : response.Message }, JsonRequestBehavior.AllowGet);
+            return Json(response.Data, JsonRequestBehavior.AllowGet);
         }
 
-        private async Task<(FullsStockReport Report, string Error)> LoadAsync(string asOn, string unit, string order)
+        private async Task<(FullsStockReport Report, string Error)> LoadAsync(string asOn, string units, string order)
         {
-            var response = await Services.SalesPostAsync<FullsStockReport>("/api/FullsStockActual/GetReport",
-                new { AsOn = asOn, Unit = unit, Order = order });
+            if (string.IsNullOrWhiteSpace(SessionHelper.GetUser()?.Salesdb))
+                return (null, "Sales schema is not set for this company (CLASSIC_CONTROL.SCHEMA_SALES).");
+
+            // "All" (or nothing picked) is sent as null = no unit filter.
+            var unitList = (units ?? "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                        .Select(u => u.Trim())
+                                        .Where(u => u.Length > 0 && !u.Equals("All", StringComparison.OrdinalIgnoreCase))
+                                        .ToList();
+            ResponseApiModel<FullsStockReport> response;
+            try
+            {
+                response = await Services.SalesPostAsync<FullsStockReport>("/api/FullsStockActual/GetReport",
+                    new { AsOn = asOn, Units = unitList.Count == 0 ? null : unitList, Order = order });
+            }
+            catch (Exception ex)
+            {
+                return (null, ApiCallError(ex));
+            }
             if (!response.IsSuccessStatusCode || response.Data == null)
                 return (null, !string.IsNullOrEmpty(response.Message) ? response.Message : "Unable to build the report.");
             if (response.Data.Items == null || response.Data.Items.Count == 0)
@@ -43,11 +66,20 @@ namespace Finance.Controllers.TEA
             return (response.Data, null);
         }
 
+        // An exception here (API down, HttpClient's 100s timeout) used to escape as a 500
+        // page, which Excel/Text could only report as "Unable to generate the report.".
+        internal static string ApiCallError(Exception ex)
+        {
+            if (ex is TaskCanceledException || ex.GetBaseException() is TaskCanceledException)
+                return "The report server did not answer in time. Try a single unit, or try again later.";
+            return "Could not reach the report server: " + ex.GetBaseException().Message;
+        }
+
         // HTML: the VB6 printed layout as a paged page (Views/FullsStockActual/Graphics.cshtml),
         // opened in a new tab by the Index page.
-        public async Task<ActionResult> Html(string asOn, string unit, string order)
+        public async Task<ActionResult> Html(string asOn, string units, string order)
         {
-            var (report, error) = await LoadAsync(asOn, unit, order);
+            var (report, error) = await LoadAsync(asOn, units, order);
             if (error != null)
             {
                 ViewBag.Error = error;
@@ -60,13 +92,13 @@ namespace Finance.Controllers.TEA
 
         // Graphics: Crystal PDF from ~/CrystalReport/FullsStockActual.rpt (data source
         // FullsStockCrystal / CrystalReport/FullsStockActual.xsd), shown inline in a new tab.
-        public async Task<ActionResult> Graphics(string asOn, string unit, string order)
+        public async Task<ActionResult> Graphics(string asOn, string units, string order)
         {
             var rpt = Server.MapPath("~/CrystalReport/FullsStockActual.rpt");
             if (!System.IO.File.Exists(rpt))
-                return CrystalMissing("FullsStockActual.rpt", Url.Action("Html", new { asOn, unit, order }));
+                return CrystalMissing("FullsStockActual.rpt", Url.Action("Html", new { asOn, units, order }));
 
-            var (report, error) = await LoadAsync(asOn, unit, order);
+            var (report, error) = await LoadAsync(asOn, units, order);
             if (error != null)
                 return Content("<div style='font-family:Arial;margin:40px'><b>Fulls Stock Actual</b><br/><br/>" +
                                HttpUtility.HtmlEncode(error) + "</div>", "text/html");
@@ -104,9 +136,9 @@ namespace Finance.Controllers.TEA
         // Excel: earlier Excel files in C:\classic are deleted, the workbook is saved
         // there and opened in Excel (ClassicExcel). When it cannot be opened on this
         // machine the page downloads it through DownloadExcel instead.
-        public async Task<ActionResult> Excel(string asOn, string unit, string order)
+        public async Task<ActionResult> Excel(string asOn, string units, string order)
         {
-            var (report, error) = await LoadAsync(asOn, unit, order);
+            var (report, error) = await LoadAsync(asOn, units, order);
             if (error != null)
                 return Json(new { success = false, message = error }, JsonRequestBehavior.AllowGet);
             try
@@ -115,7 +147,7 @@ namespace Finance.Controllers.TEA
                 {
                     var name = "FullsStockActual-" + (report.AsOn ?? "").Replace("/", "") + ".xlsx";
                     var r = ClassicExcel.SaveAndOpen(wb, name, Request);
-                    return Json(new { success = true, opened = r.Opened, fileName = r.FileName }, JsonRequestBehavior.AllowGet);
+                    return Json(new { success = true, opened = r.Opened, fileName = r.FileName, token = r.Token }, JsonRequestBehavior.AllowGet);
                 }
             }
             catch (Exception ex)
@@ -127,9 +159,9 @@ namespace Finance.Controllers.TEA
         // Text: VB6 "Character Format" (JAGREPORT1_DMPPRN) -- a fixed-width dot-matrix
         // listing saved to C:\classic and opened in the default .txt program; downloaded
         // through DownloadText when it cannot be opened on this machine.
-        public async Task<ActionResult> Text(string asOn, string unit, string order)
+        public async Task<ActionResult> Text(string asOn, string units, string order)
         {
-            var (report, error) = await LoadAsync(asOn, unit, order);
+            var (report, error) = await LoadAsync(asOn, units, order);
             if (error != null)
                 return Json(new { success = false, message = error }, JsonRequestBehavior.AllowGet);
             try
@@ -137,7 +169,7 @@ namespace Finance.Controllers.TEA
                 var text = BuildText(report, SessionHelper.GetUser()?.getUserName ?? "");
                 var name = "FullsStockActual-" + (report.AsOn ?? "").Replace("/", "") + ".txt";
                 var r = ClassicExcel.SaveTextAndOpen(text, name, Request);
-                return Json(new { success = true, opened = r.Opened, fileName = r.FileName }, JsonRequestBehavior.AllowGet);
+                return Json(new { success = true, opened = r.Opened, fileName = r.FileName, token = r.Token }, JsonRequestBehavior.AllowGet);
             }
             catch (Exception ex)
             {
@@ -145,11 +177,11 @@ namespace Finance.Controllers.TEA
             }
         }
 
-        public ActionResult DownloadText(string file)
+        public ActionResult DownloadText(string token)
         {
-            var bytes = ClassicExcel.Read(file);
-            if (bytes == null) return HttpNotFound();
-            return File(bytes, "text/plain", System.IO.Path.GetFileName(file));
+            var bytes = ClassicExcel.Take(token, out var name);
+            if (bytes == null) return HttpNotFound("The report has expired - please generate it again.");
+            return File(bytes, "text/plain", name);
         }
 
         // VB6 DMPPRN column widths (ITCD 6, name 30, MRP 6, MFG 10, batch 10, qty,
@@ -219,11 +251,11 @@ namespace Finance.Controllers.TEA
             return sb.ToString();
         }
 
-        public ActionResult DownloadExcel(string file)
+        public ActionResult DownloadExcel(string token)
         {
-            var bytes = ClassicExcel.Read(file);
-            if (bytes == null) return HttpNotFound();
-            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", System.IO.Path.GetFileName(file));
+            var bytes = ClassicExcel.Take(token, out var name);
+            if (bytes == null) return HttpNotFound("The report has expired - please generate it again.");
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
         }
 
         // VB6 JAGREPORT1_EXPORTTOEXCEL: title rows, a two-row header (fill colour

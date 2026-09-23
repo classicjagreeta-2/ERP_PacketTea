@@ -6,6 +6,7 @@
 <link rel="stylesheet" href="~/libraries/assetspo/css/jquery-ui.css">
 <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
 <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+<link rel="stylesheet" href="~/libraries/MULTI_SELECT_DROPDOWN/jquery.inputpicker.css">
 
 <style>
     .form-col-30 { width: 30%; padding: 0 10px; margin-bottom: 10px; }
@@ -14,6 +15,10 @@
     .fsa-radio input { margin: 0; }
     .rpt-btn { background-color: #404E67; color: #fff; }
     .rpt-btn[disabled] { opacity: .5; cursor: wait; }
+    .inputpicker-div.inputpicker-multiple { box-sizing: border-box !important; overflow: hidden !important; width: 100% !important; max-width: 100% !important; height: 30px !important; max-height: 30px !important; }
+    .inputpicker-multiple { white-space: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; }
+    .inputpicker-multiple ul { display: flex !important; flex-wrap: nowrap !important; white-space: nowrap !important; overflow: hidden !important; margin: 0; padding: 0; }
+    .inputpicker-multiple ul > li { flex: 0 0 auto; }
 </style>
 
 <div class="general-container">
@@ -73,9 +78,7 @@
 
                             <div class="form-col-20">
                                 <label>Unit <span>(*)</span></label>
-                                <select id="Unit" class="form-control">
-                                    <option value="All">All</option>
-                                </select>
+                                <input type="text" id="Unit" class="form-control unit-code" autocomplete="off" />
                             </div>
 
                             <div class="form-col-30">
@@ -99,6 +102,7 @@
 
 <script src="~/Controllers/Test/assets/js/jquery-ui.js"></script>
 <script src="~/Controllers/Test/assets/js/custom.js"></script>
+<script src="~/libraries/MULTI_SELECT_DROPDOWN/jquery.inputpicker.js"></script>
 <script>
     $(function () {
 
@@ -119,10 +123,42 @@
             $("#AsOn").datepicker("show");
         });
 
-        // VB6 Form_Load: "All" + manufacturing units.
+        // Unit: "All" (no filter) or a checked list of manufacturing units.
+        $("#Unit").val("All");
+        var unitData = null;
         $.getJSON('@Url.Action("GetUnits", "FullsStockActual")', function (list) {
-            $.each(list || [], function (_, u) {
-                $("#Unit").append($("<option>").val(u.CODE).text(u.CODE + " - " + u.NAME));
+            if (list && list.error) { unitData = []; alertBox(list.error); return; }
+            unitData = $.map(list || [], function (u) { return { CODE: u.CODE, NAME: u.NAME }; });
+        }).fail(function () { unitData = []; alertBox("Unable to load the unit list."); });
+
+        $(document).on("click", ".unit-code", function () {
+            var $input = $(this);
+            $(".inputpicker-wrapped-list").remove();
+            if ($input.data("inputpicker")) {
+                $input.inputpicker("show");
+                return;
+            }
+            if (unitData === null) return;
+            if ($input.val() === "All") $input.val("");
+            $input.inputpicker({
+                data: unitData,
+                fields: [
+                    { name: "CODE", text: "CODE", width: "70px" },
+                    { name: "NAME", text: "NAME", width: "180px" }
+                ],
+                fieldValue: "CODE",
+                fieldText: "CODE",
+                multiple: true,
+                checkbox: true,
+                selectAll: true,
+                selectAllText: "All",
+                selectAllClears: true,
+                delimiter: ",",
+                filterOpen: true,
+                headShow: true,
+                autoOpen: true,
+                width: "auto",
+                height: "220px"
             });
         });
 
@@ -136,6 +172,16 @@
             });
         }
 
+        // The Excel/Text request itself failed (no JSON came back), so say why.
+        function requestFailed(xhr) {
+            var body = (xhr && xhr.responseText) || "";
+            if (!xhr || xhr.status === 0) { alertBox("Unable to generate the report: the server could not be reached."); return; }
+            if (/id="Password"|name="Password"/i.test(body)) { alertBox("Your session has expired. Please log in again."); return; }
+            var m = body.match(/<title>([\s\S]*?)<\/title>/i);
+            var detail = $.trim(m ? $("<div>").html(m[1]).text() : body.substring(0, 200));
+            alertBox("Unable to generate the report (HTTP " + xhr.status + ")" + (detail ? ": " + $("<div>").text(detail).html() : "."));
+        }
+
         function params() {
             var asOn = $.trim($("#AsOn").val());
             if (!/^\d{2}\/\d{2}\/\d{4}$/.test(asOn)) {
@@ -144,7 +190,8 @@
             }
             return $.param({
                 asOn: asOn,
-                unit: $("#Unit").val() || "All",
+                // Empty = "All" = no unit filter.
+                units: $.trim($("#Unit").val() || ""),
                 order: $("input[name='Order']:checked").val() || "CUSTOM"
             });
         }
@@ -174,11 +221,11 @@
                         return;
                     }
                     if (!r.opened) {
-                        window.location.href = '@Url.Action("DownloadText", "FullsStockActual")?file=' + encodeURIComponent(r.fileName);
+                        window.location.href = '@Url.Action("DownloadText", "FullsStockActual")?token=' + encodeURIComponent(r.token);
                     }
-                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report generated: ") + r.fileName, "green");
+                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report downloaded: ") + r.fileName, "green");
                 })
-                .fail(function () { alertBox("Unable to generate the report."); })
+                .fail(requestFailed)
                 .always(function () { $btn.prop("disabled", false).text("Text"); });
         });
 
@@ -195,11 +242,11 @@
                         return;
                     }
                     if (!r.opened) {
-                        window.location.href = '@Url.Action("DownloadExcel", "FullsStockActual")?file=' + encodeURIComponent(r.fileName);
+                        window.location.href = '@Url.Action("DownloadExcel", "FullsStockActual")?token=' + encodeURIComponent(r.token);
                     }
-                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report generated: ") + r.fileName, "green");
+                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report downloaded: ") + r.fileName, "green");
                 })
-                .fail(function () { alertBox("Unable to generate the report."); })
+                .fail(requestFailed)
                 .always(function () { $btn.prop("disabled", false).text("Excel"); });
         });
     });

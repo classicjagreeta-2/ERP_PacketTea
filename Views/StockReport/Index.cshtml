@@ -161,8 +161,9 @@
         // Unit: "All" or a checked list of manufacturing units (VB6 checkbox list).
         var unitData = null;
         $.getJSON('@Url.Action("GetUnits", "FullsStockActual")', function (list) {
+            if (list && list.error) { unitData = []; alertBox(list.error); return; }
             unitData = $.map(list || [], function (u) { return { CODE: u.CODE, NAME: u.NAME }; });
-        });
+        }).fail(function () { unitData = []; alertBox("Unable to load the unit list."); });
 
         $(document).on("click", ".unit-code", function () {
             var $input = $(this);
@@ -185,6 +186,7 @@
                 checkbox: true,
                 selectAll: true,
                 selectAllText: "All",
+                selectAllClears: true,
                 delimiter: ",",
                 filterOpen: true,
                 headShow: true,
@@ -209,17 +211,28 @@
             return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
         }
 
+        // The Excel/Text request itself failed (no JSON came back), so say why.
+        function requestFailed(xhr) {
+            var body = (xhr && xhr.responseText) || "";
+            if (!xhr || xhr.status === 0) { alertBox("Unable to generate the report: the server could not be reached."); return; }
+            if (/id="Password"|name="Password"/i.test(body)) { alertBox("Your session has expired. Please log in again."); return; }
+            var m = body.match(/<title>([\s\S]*?)<\/title>/i);
+            var detail = $.trim(m ? $("<div>").html(m[1]).text() : body.substring(0, 200));
+            alertBox("Unable to generate the report (HTTP " + xhr.status + ")" + (detail ? ": " + $("<div>").text(detail).html() : "."));
+        }
+
         function params() {
             var from = $.trim($("#FromDate").val()), to = $.trim($("#ToDate").val());
             var f = parseDate(from), t = parseDate(to);
             if (!f) { alertBox("Please enter the From date (dd/mm/yyyy)."); return null; }
             if (!t) { alertBox("Please enter the To date (dd/mm/yyyy)."); return null; }
             if (f > t) { alertBox("From date cannot be after To date."); return null; }
+            // Empty = "All" = no unit filter.
             var units = $.trim($("#Unit").val() || "");
             return $.param({
                 fromDate: from,
                 toDate: to,
-                units: units === "" ? "All" : units,
+                units: units,
                 qtyWt: $("input[name='QtyWt']:checked").val() || "BOTH",
                 order: $("input[name='Order']:checked").val() || "CODE"
             });
@@ -250,11 +263,11 @@
                         return;
                     }
                     if (!r.opened) {
-                        window.location.href = '@Url.Action("DownloadText", "StockReport")?file=' + encodeURIComponent(r.fileName);
+                        window.location.href = '@Url.Action("DownloadText", "StockReport")?token=' + encodeURIComponent(r.token);
                     }
-                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report generated: ") + r.fileName, "green");
+                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report downloaded: ") + r.fileName, "green");
                 })
-                .fail(function () { alertBox("Unable to generate the report."); })
+                .fail(requestFailed)
                 .always(function () { $btn.prop("disabled", false).text("Text"); });
         });
 
@@ -271,11 +284,11 @@
                         return;
                     }
                     if (!r.opened) {
-                        window.location.href = '@Url.Action("DownloadExcel", "StockReport")?file=' + encodeURIComponent(r.fileName);
+                        window.location.href = '@Url.Action("DownloadExcel", "StockReport")?token=' + encodeURIComponent(r.token);
                     }
-                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report generated: ") + r.fileName, "green");
+                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report downloaded: ") + r.fileName, "green");
                 })
-                .fail(function () { alertBox("Unable to generate the report."); })
+                .fail(requestFailed)
                 .always(function () { $btn.prop("disabled", false).text("Excel"); });
         });
     });
