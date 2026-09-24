@@ -631,12 +631,11 @@ namespace PacketTea.Controllers.TEA
                 detail.PROMPT_DATE = head.PROMPT_DATE;
 
                 detail.BROK_CODE = head.BROK_CODE;
-                detail.WAREHOUSE = head.WAREHOUSE;
 
-                detail.DO_NO = head.DO_NO;
-                detail.DO_DT = head.DO_DT;
+                //detail.DO_NO = head.DO_NO;
+                //detail.DO_DT = head.DO_DT;
 
-                detail.ALLOCATION = head.ALLOCATION;
+                //detail.ALLOCATION = head.ALLOCATION;
 
                 detail.REMARKS = head.REMARKS;
 
@@ -670,8 +669,8 @@ namespace PacketTea.Controllers.TEA
                 detail.O_USERNEW = Environment.UserName;
                 detail.T_IDNEW = Environment.MachineName;
 
-                detail.USER_NAME_NEW = user.getUserName;
-                detail.USER_ENTDT_NEW = DateTime.Now;
+                //detail.USER_NAME_NEW = user.getUserName;
+                //detail.USER_ENTDT_NEW = DateTime.Now;
 
                 detail.OS_USER = Environment.UserName;
                 detail.TERMINAL_ID = Environment.MachineName;
@@ -682,35 +681,110 @@ namespace PacketTea.Controllers.TEA
                 slNo++;
             }
 
+            //try
+            //{
+            // Send ONLY details because API expects:
+            // IEnumerable<T_TEA_PURCHASE>
+            //var json = JsonSerializer.Serialize(details);
+            //var purchases = details;
+            //            var response = await Services.PostAsync<List<T_TEA_PURCHASE>>(
+            //    "/api/TeaPurchase/SaveOrUpdateAll",
+            //    details
+            //);
+
+            //            if (response.IsSuccessStatusCode)
+            //            {
+            //                TempData["toastrSuccess"] =
+            //                    $"{head.DOCNO} Packet Tea Purchase Entry Saved Successfully";
+            //            }
+            //            else
+            //            {
+            //                TempData["toastrError"] =
+            //                    "Packet Tea Purchase Entry was not saved successfully.";
+            //            }
+            //        }
+            //        catch (Exception ex)
+            //        {
+            //            TempData["toastrError"] =
+            //                "Error while saving Packet Tea Purchase Entry: " + ex.Message;
+            //        }
+
+            //        return RedirectToAction("Index");
             try
             {
-                // Send ONLY details because API expects:
-                // IEnumerable<T_TEA_PURCHASE>
-                var json = JsonSerializer.Serialize(details);
-                var purchases = details;
                 var response = await Services.PostAsync<List<T_TEA_PURCHASE>>(
-        "/api/TeaPurchase/SaveOrUpdateAll",
-        details
-    );
+                    "/api/TeaPurchase/SaveOrUpdateAll",
+                    details
+                );
 
-                if (response.IsSuccessStatusCode)
+                // =========================
+                // NEW ENTRY
+                // =========================
+                if (head.ID == 0)
                 {
-                    TempData["toastrSuccess"] =
-                        $"{head.DOCNO} Packet Tea Purchase Entry Saved Successfully";
+                    if (response != null && response.IsSuccessStatusCode)
+                    {
+                        TempData["toastrSuccess"] =
+                            $"{head.DOCNO} Packet Tea Purchase Entry Saved Successfully";
+
+                        return RedirectToAction("Index");
+                    }
+                    else
+                    {
+                        ViewBag.toastrError =
+                            response?.Message ??
+                              $"{head.DOCNO} Packet Tea Purchase Entry Save Failed";
+
+                        return View("InsertOrUpdate", model);
+                    }
                 }
+
+                // =========================
+                // UPDATE ENTRY
+                // =========================
                 else
                 {
-                    TempData["toastrError"] =
-                        "Packet Tea Purchase Entry was not saved successfully.";
+                    head.USER_ENTDT_NEW = DateTime.Now;
+                    head.USER_NAME_NEW = user.getUserName;
+                    if (response != null && response.IsSuccessStatusCode)
+                    {
+                        TempData["toastrSuccess"] =
+                            $"{head.DOCNO} Packet Tea Purchase Entry Updated Successfully";
+
+                        return RedirectToAction("Index");
+                    }
+                    else
+                    {
+                        ViewBag.toastrError =
+                            response?.Message ??
+                              $"{head.DOCNO} Packet Tea Purchase Entry Update Failed";
+
+                        return View("InsertOrUpdate", model);
+                    }
                 }
             }
             catch (Exception ex)
             {
-                TempData["toastrError"] =
-                    "Error while saving Packet Tea Purchase Entry: " + ex.Message;
-            }
+                // =========================
+                // NEW ERROR
+                // =========================
+                if (head.ID == 0)
+                {
+                    ViewBag.toastrError =
+                        "Error while saving Packet Tea Purchase Entry: " + ex.Message;
+                }
 
-            return RedirectToAction("Index");
+                // =========================
+                // UPDATE ERROR
+                // =========================
+                else
+                {
+                    ViewBag.toastrError =
+                        "Error while updating Packet Tea Purchase Entry: " + ex.Message;
+                }
+
+                return View("InsertOrUpdate", model);
+            }
         }
 
     }

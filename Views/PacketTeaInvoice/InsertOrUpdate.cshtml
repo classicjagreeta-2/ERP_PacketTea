@@ -791,7 +791,7 @@
             });
         </script>*@
 
-    <script>
+<script>
     $(document).ready(function () {
 
         console.log("Save script loaded");
@@ -828,12 +828,17 @@
                 success: function (res) {
 
                     console.log("SERVER RESPONSE:", res);
+                        if (res.success) {
 
-                    if (res.success) {
-                        toastr.success(res.message);
-                    } else {
-                        toastr.error(res.message);
-                    }
+                            toastr.success(res.message);
+
+                            setTimeout(function () {
+                                window.location.href = '@Url.Action("Index", "PacketTeaInvoice")';
+                            }, 500);
+
+                        } else {
+                            toastr.error(res.message);
+                        }
                 },
 
                 error: function (xhr, status, error) {
@@ -850,7 +855,7 @@
         });
 
     });
-    </script>
+</script>
 
     <script>
         function validateForm() {
@@ -1084,7 +1089,10 @@ model.unbL_HED.tm = 'T';
 
                 freeRow.srlno = index + 1;
 
-                freeRow.plcrcd = $(this).find(".FreeTeaCode").val();
+                //freeRow.plcrcd = $(this).find(".FreeTeaCode").val();
+                var code = $.trim($(this).find(".FreeTeaCode").val());
+
+                freeRow.plcrcd = code !== "" ? code : null;
                 freeRow.plcrqty = parseFloat($(this).find(".txtFreeTeaQty").val()) || 0;
                 freeRow.plcrrate = parseFloat($(this).find(".txtFreeTeaRate").val()) || 0;
                 freeRow.plcrval = parseFloat($(this).find(".txtFreeTeaAmount").val()) || 0;
@@ -1274,7 +1282,8 @@ model.unbL_HED.tm = 'T';
 
                 var freeRow = {
                     srlno: parseInt($row.find(".txtFreeSlNo").val()) || 0,
-                    PLCRCD: $row.find(".FreeTeaCode").val() || "",
+                    /*  PLCRCD: $row.find(".FreeTeaCode").val() || "",*/
+                    PLCRCD: $.trim($row.find(".FreeTeaCode").val()) || null,
                     PLCRQTY: parseFloat($row.find(".txtFreeTeaQty").val()) || 0,
                     PLCRRATE: parseFloat($row.find(".txtFreeTeaRate").val()) || 0,
                     PLCRVAL: parseFloat($row.find(".txtFreeTeaAmount").val()) || 0
