@@ -191,7 +191,7 @@
                             </div>
 
                             <div class="title-heading">
-                                PT NO. : @(Model.T_TEA_HEAD.UNIT ?? "")@(Model.T_TEA_HEAD.DOCNO ?? "")
+                                DOC NO. :  @(Model.T_TEA_HEAD.DOCNO ?? "")
                             </div>
                         </div>
 
@@ -273,7 +273,7 @@
                                 <div class="form-col-20">
                                     <label>Vendor Name</label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.VENDORNAME, new { @class = "form-control vendor-desc", @readonly = "readonly" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.VENDORNAME, new { @class = "form-control vendor-desc", @readonly = "readonly", tabindex = "-1" })
 
                                 </div>
 
@@ -308,7 +308,7 @@
                                 <div class="form-col-10">
                                     <label>Bill No <span>(*)</span></label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.BILLNO, new { @class = "form-control req" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.BILLNO, new { @class = "form-control req", maxlength = "16" })
                                 </div>
                                 <div class="form-col-10">
                                     <label>Date </label>
@@ -329,18 +329,18 @@
                                 <div class="form-col-10">
                                     <label>Action Sale number</label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.SALE_NO, new { @class = "form-control" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.SALE_NO, new { @class = "form-control" , maxlength = "7" })
                                 </div>
 
                                 <div class="form-col-10">
                                     <label>Vehicle No</label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.VEH_NO, new { @class = "form-control" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.VEH_NO, new { @class = "form-control" , maxlength = "15" })
                                 </div>
                                 <div class="form-col-10">
                                     <label>CN NO</label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.CONCT_DOCNO, new { @class = "form-control" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.CONCT_DOCNO, new { @class = "form-control" , maxlength = "10" })
                                 </div>
                                 <div class="form-col-10">
                                     <label>Date</label>
@@ -357,7 +357,7 @@
                                 <div class="form-col-10">
                                     <label>E-Way Bill No </label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.EWAYBILLNO, new { @class = "form-control" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.EWAYBILLNO, new { @class = "form-control" , maxlength = "16" })
                                 </div>
                                 <div class="form-col-10">
                                     <label>Date </label>
@@ -460,14 +460,14 @@
                                             <th>Category</th>
                                             <th>Bags  <span style="font-weight: bold; color: red;">(*)</span></th>
                                             <th style="text-align:right;">Net Wt  <span style="font-weight: bold; color: red;">(*)</span></th>
-                                            <th style="text-align:right;">Gross Wt <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Gross Wt </th>
                                             <th style="text-align:right;">Total Net Wt <span style="font-weight: bold; color: red;">(*)</span></th>
                                             <th>Size Code <span style="font-weight: bold; color: red;">(*)</span></th>
                                             <th>Size</th>
                                             <th style="text-align:right;">Rate  <span style="font-weight: bold; color: red;">(*)</span></th>
                                             <th style="text-align:right;">Amount</th>
-                                            <th style="text-align:right;">Disc %  <span style="font-weight: bold; color: red;">(*)</span></th>
-                                            <th style="text-align:right;">Disc Value  <span style="font-weight: bold; color: red;">(*)</span></th>
+                                            <th style="text-align:right;">Disc %  </th>
+                                            <th style="text-align:right;">Disc Value</th>
                                             <th style="text-align:right;">Taxable Amt</th>
                                             <th style="text-align:right;">CGST %</th>
                                             <th style="text-align:right;">CGST Amt</th>
@@ -506,10 +506,10 @@
                                 </div>
                                 <div class="form-col-20">
                                     <label>Description</label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.REMARKS, new { @class = "form-control ", @readonly = "readonly" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.REMARKS, new { @class = "form-control ", @readonly = "readonly", tabindex = "-1" })
                                 </div>
                                 <div class="form-col-10">
-                                    <label>Detd. on Amt.</label>
+                                    <label>Detd. on Amt. <span>(*)</span></label>
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_DETD, new { @class = "form-control " })
                                 </div>
                                 <div class="form-col-10">
@@ -907,7 +907,7 @@
     </script>
     <script>
         $(function () {
-            var $dateInputs = $(" #EWayBillNoDate ,#BillNoDate ,#CnNoDate");
+            var $dateInputs = $(" #EWayBillNoDate ,#BillNoDate ,#CnNoDate ,.dodate");
 
             // clean old instances
             $dateInputs.each(function () {
@@ -958,6 +958,25 @@
                 }
             });
 
+
+            // ⭐ ADD THIS HERE
+            // For dynamically added .dodate rows
+            $(document).on("click", ".dodate", function () {
+
+                var $this = $(this);
+
+                if (!$this.hasClass("hasDatepicker")) {
+
+                    $this.datepicker({
+                        dateFormat: "dd/mm/yy",
+                        maxDate: 0
+                    });
+
+                }
+
+                $this.datepicker("show");
+            });
+
             // overlay click closes calendar
             $(document).on("click", ".ui-datepicker-overlay", function () {
                 if (activeInput) $(activeInput).datepicker("hide");
@@ -974,8 +993,10 @@
             $("#CnNoDate").on("click", function () {
                 $(this).datepicker("show");
             });
-
-
+            
+            $("#dodate").on("click", function () {
+                   $(this).datepicker("show");
+               });
         });
     </script>
 
@@ -1027,7 +1048,7 @@
     </script>
     <script>
         // ── Manual typing max date validation (InquiryDate, OrderDueDate) ──
-        $(document).on("blur", " #EWayBillNoDate , #BillNoDate, #CnNoDate", function () {
+        $(document).on("blur", " #EWayBillNoDate , #BillNoDate, #CnNoDate ,.dodate", function () {
             var $el = $(this);
             var val = $el.val();
             if (!val) return;
@@ -2205,11 +2226,11 @@ $(document).on('change', '.broker-code', function () {
 
 });
     </script>
-
     <script>
         $(document).on('click', '.warehouse-code', function () {
 
     var $input = $(this);
+    var $row = $input.closest('tr');
 
     $('.inputpicker-wrapped-list').remove();
 
@@ -2238,85 +2259,93 @@ $(document).on('change', '.broker-code', function () {
         urlDelay: 1
     });
 
-    // ✅ SELECT EVENT (FIXED)
+    // SELECT
     $input.off('inputpicker.select').on('inputpicker.select', function (e, item) {
 
         if (!item) return;
 
-        // 🔥 direct selector (NO tr)
-        $('.warehouse-code').val(item.CODE);
-        $('.warehouse-desc').val(item.NAME || '');
+        // ✅ Only update the current row
+        $row.find('.warehouse-code').val(item.CODE);
+        $row.find('.warehouse-desc').val(item.NAME || '');
 
         $(this).inputpicker('hide');
     });
-
 });
 
 
-// ✅ CHANGE EVENT (FIXED)
+// CHANGE
         $(document).on('change', '.warehouse-code', function () {
 
-    var code = $(this).val();
+    var $input = $(this);
+    var $row = $input.closest('tr');
+    var code = $input.val();
 
     if (!code) {
-        $('.warehouse-desc').val('');
+        $row.find('.warehouse-desc').val('');
         return;
     }
 
     $.ajax({
         url: '@Url.Action("GetWarehouse", "PacketTeaPurchaseEntry")',
         type: 'GET',
-        data: { q: code, limit: 1, p: 1 },
+        data: {
+            q: code,
+            limit: 1,
+            p: 1
+        },
         success: function (res) {
 
             if (res && res.data && res.data.length > 0) {
-                $('.warehouse-desc').val(res.data[0].NAME || '');
+
+                // ✅ Only current row
+                $row.find('.warehouse-desc').val(res.data[0].NAME || '');
+
             } else {
-                $('.warehouse-desc').val('');
+
+                $row.find('.warehouse-desc').val('');
             }
         }
     });
-            $(document).on('blur', '.warehouse-code', function () {
+});
+
+
+// BLUR
+        $(document).on('blur', '.warehouse-code', function () {
 
     var $input = $(this);
+    var $row = $input.closest('tr');
     var code = $input.val().trim();
 
-    // small delay → allows inputpicker select to complete first
     setTimeout(function () {
 
-        // ❌ if empty → clear desc
         if (!code) {
-            $('.warehouse-desc').val('');
+            $row.find('.warehouse-desc').val('');
             return;
         }
 
-        // 🔍 verify code from server
         $.ajax({
             url: '@Url.Action("GetWarehouse", "PacketTeaPurchaseEntry")',
             type: 'GET',
-            data: { q: code, limit: 1, p: 1 },
+            data: {
+                q: code,
+                limit: 1,
+                p: 1
+            },
             success: function (res) {
 
-                // ❌ NO RESULT → CLEAR BOTH
                 if (!res || !res.data || res.data.length === 0) {
 
-                    $input.val('');                 // 🔥 clear code
-                    $('.warehouse-desc').val('');       // 🔥 clear desc
-
+                    // ✅ Only current row
+                    $input.val('');
+                    $row.find('.warehouse-desc').val('');
                 }
-
-                // ✅ VALID → keep as is (already handled in change)
             }
         });
 
-    }, 200); // important delay
-
-});
-
-
-
+    }, 200);
 });
     </script>
+
 
 
     <script>
@@ -4137,9 +4166,10 @@ $(function () {
                 type: "orange",
 
                 content:
-                    "GST is already calculated.<br><br>" +
-                    "Changing Vendor, Location, Total Net Wt, Rate or Discount % " +
-                    "will recalculate GST.",
+                    "GST has already been calculated for this entry.<br><br>" +
+                    "If you changing the Vendor, Location, Total Net Wt, Rate, or Discount % " +
+                    "will require the GST to be recalculated.<br><br>" +
+                    "Do you want to continue?",
 
                 buttons: {
 
@@ -4383,8 +4413,189 @@ $(function () {
         });
 
     </script>
+    <script>
+
+        $(document).on('focus click', '.decimal3', function () {
+
+            var el = this;
+
+            setTimeout(function () {
+                if (!el.readOnly && !el.disabled) {
+                    el.select();
+                }
+            }, 0);
+
+        });
 
 
+        $(document).on('input', '.decimal3', function () {
+
+            var val = this.value;
+
+            // allow only numbers and decimal
+            if (!/^\d*\.?\d*$/.test(val)) {
+                this.value = val.slice(0, -1);
+                return;
+            }
+
+            var parts = val.split('.');
+
+            // limit to 3 decimals
+            if (parts.length === 2 && parts[1].length > 3) {
+                this.value = parts[0] + '.' + parts[1].substring(0, 3);
+            }
+
+        });
+
+
+        $(document).on('blur', '.decimal3', function () {
+
+            var val = parseFloat(this.value);
+
+            if (!isNaN(val)) {
+                this.value = val.toFixed(3);
+            } else {
+                this.value = "0.000";
+            }
+
+        });
+    </script>
+    <script>
+        // ✅ AUTO SELECT (same behavior)
+        $(document).on('focus click', '.decimal2', function () {
+
+            var el = this;
+
+            setTimeout(function () {
+                if (!el.readOnly && !el.disabled) {
+                    el.select();
+                }
+            }, 0);
+
+        });
+
+
+        // ✅ INPUT CONTROL (max 2 decimal)
+        $(document).on('input', '.decimal2', function () {
+
+            var val = this.value;
+
+            // allow only numbers + dot
+            if (!/^\d*\.?\d*$/.test(val)) {
+                this.value = val.slice(0, -1);
+                return;
+            }
+
+            var parts = val.split('.');
+
+            // limit to 2 decimal places
+            if (parts.length === 2 && parts[1].length > 2) {
+                this.value = parts[0] + '.' + parts[1].substring(0, 2);
+            }
+
+        });
+
+
+        // ✅ FORMAT ON BLUR → F2
+        $(document).on('blur', '.decimal2', function () {
+
+            var val = parseFloat(this.value);
+
+            if (!isNaN(val)) {
+                this.value = val.toFixed(2);   // 🔥 F2
+            } else {
+                this.value = "0.00";           // 🔥 default
+            }
+
+        });
+    </script>
+    <script>
+        $(document).on('focus click', '.decimal0', function () {
+
+            var el = this;
+
+            setTimeout(function () {
+                if (!el.readOnly && !el.disabled) {
+                    el.select();
+                }
+            }, 0);
+
+        });
+
+
+        $(document).on('input', '.decimal0', function () {
+
+            var val = this.value;
+
+            // allow only numbers
+            if (!/^\d*$/.test(val)) {
+                this.value = val.slice(0, -1);
+                return;
+            }
+
+        });
+
+
+        $(document).on('blur', '.decimal0', function () {
+
+            var val = parseFloat(this.value);
+
+            if (!isNaN(val)) {
+                this.value = val.toFixed(0);
+            } else {
+                this.value = "0";
+            }
+
+        });
+    </script>
+
+
+    <script>
+        $(document).on('focus click', '.decimal4', function () {
+
+            var el = this;
+
+            setTimeout(function () {
+                if (!el.readOnly && !el.disabled) {
+                    el.select();
+                }
+            }, 0);
+
+        });
+
+
+        $(document).on('input', '.decimal4', function () {
+
+            var val = this.value;
+
+            // allow only numbers + dot
+            if (!/^\d*\.?\d*$/.test(val)) {
+                this.value = val.slice(0, -1);
+                return;
+            }
+
+            var parts = val.split('.');
+
+            // limit to 4 decimal places
+            if (parts.length === 2 && parts[1].length > 4) {
+                this.value = parts[0] + '.' + parts[1].substring(0, 4);
+            }
+
+        });
+
+
+        $(document).on('blur', '.decimal4', function () {
+
+            var val = parseFloat(this.value);
+
+            if (!isNaN(val)) {
+                this.value = val.toFixed(4);
+            } else {
+                this.value = "0.0000";
+            }
+
+        });
+    </script>
 </body>
 </html>
 

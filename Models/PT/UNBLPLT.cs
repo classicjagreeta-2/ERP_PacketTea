@@ -22,9 +22,9 @@ namespace PacketTea.Models.PT
 
         public virtual string PLCRCD { get; set; }
 
-        public virtual decimal PLCRQTY { get; set; }
+        public virtual decimal? PLCRQTY { get; set; } = 0;
 
-        public virtual decimal PLCRVAL { get; set; }
+        public virtual decimal? PLCRVAL { get; set; } = 0;
 
         public virtual string TM { get; set; }
 
@@ -48,6 +48,6 @@ namespace PacketTea.Models.PT
 
         public virtual string TERMINAL_ID { get; set; }
 
-        public virtual decimal? PLCRRATE { get; set; }
+        public virtual decimal? PLCRRATE { get; set; } = 0;
     }
 }
