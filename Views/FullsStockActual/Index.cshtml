@@ -1,5 +1,5 @@
 @{
-    ViewBag.Title = "Fulls Stock Actual";
+    ViewBag.Title = "Stock Report - (Batch wise)";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
@@ -48,7 +48,7 @@
             <div class="row">
                 <div class="col-md-3 align-items-center">
                     <div class="header-left">
-                        <div class="title-heading">Fulls Stock Actual</div>
+                        <div class="title-heading">Stock Report - (Batch wise)</div>
                     </div>
                 </div>
                 <div class="col-md-9 d-flex justify-content-end align-items-center" style="padding-right:2.2%">
@@ -123,12 +123,16 @@
             $("#AsOn").datepicker("show");
         });
 
-        // Unit: "All" (no filter) or a checked list of manufacturing units.
+        // Unit: "All" (every unit the user is linked to in USER_SCHEMA_LINK) or a checked
+        // list of those units. The server only returns the user's own units; when there is
+        // just one it is selected up front.
         $("#Unit").val("All");
         var unitData = null;
         $.getJSON('@Url.Action("GetUnits", "FullsStockActual")', function (list) {
             if (list && list.error) { unitData = []; alertBox(list.error); return; }
             unitData = $.map(list || [], function (u) { return { CODE: u.CODE, NAME: u.NAME }; });
+            if (unitData.length === 0) { alertBox("No unit is linked to your login. Ask for unit access to be granted."); return; }
+            if (unitData.length === 1) $("#Unit").val(unitData[0].CODE);
         }).fail(function () { unitData = []; alertBox("Unable to load the unit list."); });
 
         $(document).on("click", ".unit-code", function () {
@@ -164,7 +168,7 @@
 
         function alertBox(msg, type) {
             $.confirm({
-                title: 'Fulls Stock Actual',
+                title: 'Stock Report - (Batch wise)',
                 type: type || 'red',
                 content: msg,
                 typeAnimated: true,

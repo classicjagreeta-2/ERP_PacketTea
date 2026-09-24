@@ -1650,6 +1650,8 @@
     <Content Include="Content\libraries\assets\pages\session-idle-Timeout\session-idle-Timeout-custom.js" />
     <Content Include="Content\libraries\assets\pages\session-idle-Timeout\session_timeout.min.js" />
     <Content Include="Content\libraries\assets\pages\sessionTimeout\sessionTimeout-custom.js" />
+    <Content Include="Content\libraries\assets\pages\sessionTimeout\jquery.sessionTimeout.js" />
+    <Content Include="Content\libraries\assets\pages\sessionTimeout\jquery.timeago.js" />
     <Content Include="Content\libraries\assets\pages\social-timeline\social.js" />
     <Content Include="Content\libraries\assets\pages\social-timeline\timeline.css" />
     <Content Include="Content\libraries\assets\pages\sortable-custom.js" />
@@ -5469,6 +5471,7 @@
     <Content Include="Views\PacketTeaPurchaseEntry\Index.cshtml" />
     <Content Include="Views\PacketTeaPurchaseEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\MasterBlendEntry\Index.cshtml" />
+    <Content Include="Views\MasterBlendEntry\_ListRows.cshtml" />
     <Content Include="Views\MasterBlendEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\AWREntry\Index.cshtml" />
     <Content Include="Views\AWREntry\InsertOrUpdate.cshtml" />
@@ -5479,8 +5482,11 @@
     <Content Include="Views\PacketTeaNote\Index.cshtml" />
     <Content Include="Views\PacketTeaNote\InsertOrUpdate.cshtml" />
     <Content Include="Views\FinalBlendEntry\Index.cshtml" />
+    <Content Include="Views\FinalBlendEntry\_ListRows.cshtml" />
     <Content Include="Views\FinalBlendEntry\InsertOrUpdate.cshtml" />
     <Content Include="Views\Packing\Index.cshtml" />
+    <Content Include="Views\Packing\_ListRows.cshtml" />
+    <Content Include="Scripts\list-infinite-scroll.js" />
     <Content Include="Views\Packing\InsertOrUpdate.cshtml" />
     <Content Include="Views\BlendEntry\Index.cshtml" />
     <Content Include="Views\BlendEntry\InsertOrUpdate.cshtml" />

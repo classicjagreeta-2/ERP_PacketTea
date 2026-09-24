@@ -39,7 +39,7 @@
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Fulls Stock Actual - @Model.AsOn</title>
+    <title>Stock Report - (Batch wise) - @Model.AsOn</title>
     <style>
         @@page { size: A4 portrait; margin: 8mm; }
         body { margin: 0; background: #e9e9e9; font-family: "Arial Narrow", Arial, sans-serif; font-stretch: condensed; color: #000; }
@@ -68,13 +68,13 @@
 <body>
     @if (ViewBag.Error != null)
     {
-        <div class="err"><b>Fulls Stock Actual</b><br /><br />@ViewBag.Error</div>
+        <div class="err"><b>Stock Report - (Batch wise)</b><br /><br />@ViewBag.Error</div>
     }
     else
     {
         <div class="toolbar">
             <button type="button" onclick="window.print()">Print</button>
-            <span>Fulls Stock (Actual) closing report as on @Model.AsOn &nbsp;|&nbsp; Unit: @Model.Unit &nbsp;|&nbsp; @pages.Count page(s)</span>
+            <span>Stock Report - (Batch wise) &nbsp;|&nbsp; As On: @Model.AsOn &nbsp;|&nbsp; Unit: @Model.Unit &nbsp;|&nbsp; @pages.Count page(s)</span>
         </div>
 
         for (int p = 0; p < pages.Count; p++)
@@ -84,7 +84,8 @@
                     <div>@Model.Company</div>
                     <div>@Model.Address</div>
                     <div class="pg">Page: @(p + 1)</div>
-                    <div>FULLS STOCK (Actual) CLOSING REPORT AS ON @Model.AsOn</div>
+                    <div><b>Stock Report - (Batch wise)</b></div>
+                    <div>As On: @Model.AsOn &nbsp;&nbsp; Unit: @Model.Unit</div>
                 </div>
                 <table>
                     <colgroup>
@@ -181,7 +182,7 @@
                 </table>
                 @if (p == pages.Count - 1)
                 {
-                    <div class="foot">Report: Fulls Stock Actual &nbsp;&nbsp; User: @Model.RunBy &nbsp;&nbsp; Run: @Model.RunAt</div>
+                    <div class="foot">Report: Stock Report - (Batch wise) &nbsp;&nbsp; User: @Model.RunBy &nbsp;&nbsp; Run: @Model.RunAt</div>
                 }
             </div>
         }

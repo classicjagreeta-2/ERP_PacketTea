@@ -1,10 +1,11 @@
-@model PacketTea.Models.PT.BLEND_PACKING_DATA
+﻿@model PacketTea.Models.PT.BLEND_PACKING_DATA
 @using Newtonsoft.Json
 @{
     ViewBag.Title = "Packing Entry";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     bool isEdit = ViewBag.IsEdit ?? false;
+    bool lockedFromList = ViewBag.LockedFromList ?? false;
     var head = Model;
 }
 
@@ -14,10 +15,23 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <!-- Root UI lookup convention (see CLAUDE.md's "lookup pickers" rule) -- same
+         jquery.inputpicker include PacketTeaPurchaseEntry/InsertOrUpdate.cshtml already
+         uses, replacing this screen's earlier bespoke centered-modal picker. -->
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <script src="~/libraries/assetspo/js/custom.js"></script>
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <style>
+        .inputpicker-wrapped-list .inputpicker-active td,
+        .inputpicker-wrapped-list .inputpicker-active th { background: #404e68 !important; color: #fff !important; font-weight: bold; }
+        .inputpicker-wrapped-list { min-width: max-content !important; }
+        .inputpicker-wrapped-list table { width: max-content !important; }
         /* Same additions as Master/Final Blend Entry's InsertOrUpdate views. */
         input[readonly] { background-color: #f3f4f7; color: #555; }
+        /* purchase-order.css hard-codes .accordion-container to a fixed 350px scroll area --
+           see Master Blend Entry's InsertOrUpdate for the rationale. Let the standalone
+           Unit / Blend Type strip above Header size to its own content. */
+        .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         #gridTable th, #gridTable td { white-space: nowrap; }
         #gridTable td input { min-width: 80px; }
         .grid-pick-btn { width: 20px; height: 21px; padding: 0; margin-left: 2px; vertical-align: middle; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; font-size: 11px; line-height: 1; }
@@ -67,6 +81,35 @@
                 </div>
             </div>
 
+            <!-- Unit / Blend Type -- its own section above Header, same as Master Blend Entry's
+                 InsertOrUpdate (Packet Type is the same underlying value as Blend Type, so it is not
+                 repeated here -- it is still picked on the list page's "New" row). Unit is restricted
+                 to what the user picked on the list page (itself scoped to USER_SCHEMA_LINK) and is
+                 posted on Save. Blend Type locks read-only once Unit + Packing Type were chosen on the
+                 list page (lockedFromList) and in Edit mode. -->
+            <div class="accordion-container compact-accordion">
+                <div class="accordion">
+                    <div class="accordion-header active"><span class="txt">Unit / Blend Type</span></div>
+                    <div class="accordion-body">
+                        <div class="form-row">
+                            <div class="form-col-20">
+                                <label>Unit</label>
+                                <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                            </div>
+                                            <div class="form-col-20">
+                                <label>Blend Type <span>(*)</span></label>
+                                <select id="BLEND_TYPE" @((isEdit || lockedFromList) ? "disabled" : "")>
+                                    @foreach (var bt in blendTypes)
+                                    {
+                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="accordion-container">
 
                 <div class="accordion">
@@ -75,22 +118,13 @@
 
                         <div class="form-row">
                             <div class="form-col-20">
-                                <label>Blend Type <span>(*)</span></label>
-                                <select id="BLEND_TYPE" @(isEdit ? "disabled" : "")>
-                                    @foreach (var bt in blendTypes)
-                                    {
-                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="form-col-20">
                                 <label>Doc No</label>
                                 <input type="text" id="DOCNO" value="@head.DOCNO" readonly placeholder="(auto)" />
                             </div>
                             <div class="form-col-20">
                                 <label>Doc Date <span>(*)</span></label>
                                 <input type="date" id="DOCDT" value="@(head.DOCDT?.ToString("yyyy-MM-dd"))"
-                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
+                                       min="@ViewBag.MinDocDate" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
                             </div>
                             <div class="form-col-20">
                                 <label>Blend No <span>(*)</span></label>
@@ -199,14 +233,9 @@
 
     <div class="popup-overlay" id="pickerOverlay"></div>
 
-    <div class="popup-box picker-box" id="genericPicker">
-        <div class="popup-header">
-            <h2 id="pickerTitle">Select</h2>
-            <button type="button" class="close-btn" onclick="closePicker()">X</button>
-        </div>
-        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
-        <div class="picker-body" id="pickerBody"></div>
-    </div>
+    <!-- Mark/Grade/Chest Size/Allocation/Sales Centre now use jquery.inputpicker
+         (Root UI convention -- see CLAUDE.md's "lookup pickers" rule), which renders its
+         own anchored dropdown next to the field itself -- no shared modal markup needed. -->
 
     <!-- Final Blend picker -- used both by the header "Blend No" field and by
          each row's own "Blend" pick button (see BlendPackingController's class
@@ -247,7 +276,7 @@
         $('#appAlertOverlay, #appAlertBox').fadeIn(120);
     }
 
-    $('#pickerOverlay, #genericPicker, #blendPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    $('#pickerOverlay, #blendPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.Details));
@@ -384,18 +413,20 @@
     });
 
     // =========================================================
-    // Row-level lookups (Mark/Grade/Chest Size/Allocation) -- generic picker,
-    // same pattern as Master/Final Blend Entry's header pickers.
+    // Header/row field lookups -- jquery.inputpicker (Root UI convention: an anchored,
+    // paginated picker under the field itself -- see CLAUDE.md's "lookup pickers" rule).
+    // Replaces this screen's earlier bespoke centered-modal picker (#genericPicker, now
+    // removed) -- same pattern as Master/Final Blend Entry's header pickers. Row-level
+    // lookups (Mark/Grade/Chest Size/Allocation) anchor to that row's own text input
+    // (rowField) since inputpicker needs a real <input>, not the "..." button itself.
     // =========================================================
     var pickerConfig = {
-        mark: { url: '@Url.Action("GetMark", "Packing")', cols: [['MCD', 'Code'], ['MDESC', 'Garden/Mark']] },
-        grade: { url: '@Url.Action("GetBlendGrade", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']] },
-        chestsize: { url: '@Url.Action("GetChestSize", "Packing")', cols: [['SZ_CODE', 'Code'], ['SZ_DESC', 'Description']] },
-        allocation: { url: '@Url.Action("GetAllocation", "Packing")', cols: [['CODE', 'Code'], ['DESCN', 'Description']] },
-        salescentre: { url: '@Url.Action("GetSalesCentre", "Packing")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SaleCentre' }
+        mark: { url: '@Url.Action("GetMark", "Packing")', fields: [{ name: 'MCD', text: 'Code' }, { name: 'MDESC', text: 'Garden/Mark' }], rowField: '.f-mark' },
+        grade: { url: '@Url.Action("GetBlendGrade", "Packing")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], rowField: '.f-grade' },
+        chestsize: { url: '@Url.Action("GetChestSize", "Packing")', fields: [{ name: 'SZ_CODE', text: 'Code' }, { name: 'SZ_DESC', text: 'Description' }], rowField: '.f-szcode' },
+        allocation: { url: '@Url.Action("GetAllocation", "Packing")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'DESCN', text: 'Description' }], rowField: '.f-alloc' },
+        salescentre: { url: '@Url.Action("GetSalesCentre", "Packing")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'SaleCentre' }
     };
-    var activePicker = null;
-    var pickerXhr = null, pickerReqSeq = 0;
 
     $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
     $('#gridBody').on('click', '.f-mark-btn', function () { rowPicker(this, 'mark', function (r, row) { r.MARK = row.MCD; $(this).closest('tr').find('.f-mark').val(row.MCD); }); });
@@ -404,52 +435,50 @@
     $('#gridBody').on('click', '.f-alloc-btn', function () { rowPicker(this, 'allocation', function (r, row) { r.ALLOCATION = row.CODE; $(this).closest('tr').find('.f-alloc').val(row.CODE); }); });
 
     function rowPicker(btn, key, apply) {
+        var cfg = pickerConfig[key];
         var $tr = $(btn).closest('tr'), r = findRow($tr.data('cid'));
         if (!r) return;
-        openPicker(key, null, function (row) { apply.call(btn, r, row); });
+        openPicker(key, $tr.find(cfg.rowField), function (row) { apply.call(btn, r, row); });
     }
 
     function openPicker(key, $input, onSelect) {
-        activePicker = { key: key, input: $input, onSelect: onSelect };
-        $('#pickerTitle').text('Select ' + key);
-        $('#pickerSearch').val('');
-        $('#pickerBody').empty().removeData('rows');
-        $('#pickerOverlay, #genericPicker').fadeIn(120);
-        loadPickerData('');
-        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
-    }
-    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+        var cfg = pickerConfig[key];
+        $('.inputpicker-wrapped-list').remove();
 
-    function loadPickerData(term) {
-        var cfg = pickerConfig[activePicker.key];
-        var myReq = ++pickerReqSeq;
-        if (pickerXhr) { pickerXhr.abort(); }
-        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
-            if (myReq !== pickerReqSeq) return;
-            data = data || [];
-            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
-            data.forEach(function (row, i) {
-                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) { return '<td>' + (row[c[0]] == null ? '' : row[c[0]]) + '</td>'; }).join('') + '</tr>';
-            });
-            html += '</tbody></table>';
-            $('#pickerBody').html(html);
-            $('#pickerBody').data('rows', data);
+        if ($input.data('inputpicker')) {
+            $input.inputpicker('show');
+            return;
+        }
+
+        $input.inputpicker({
+            url: cfg.url,
+            fields: cfg.fields,
+            fieldText: cfg.fields[0].name,
+            fieldValue: cfg.fields[0].name,
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+            width: 'auto',
+            urlDelay: 1
+        });
+
+        $input.off('inputpicker.select').on('inputpicker.select', function (e, row) {
+            if (!row) return;
+            if (onSelect) {
+                onSelect(row);
+            } else if (cfg.target) {
+                $('#' + cfg.target).val(row[cfg.fields[0].name]);
+                $('#' + cfg.target + '_disp').val(row[cfg.fields[1].name] || '');
+            }
+            $(this).inputpicker('hide');
+            renderTotalsOnly();
         });
     }
-
-    $('#pickerBody').on('click', 'tr[data-i]', function () {
-        var data = $('#pickerBody').data('rows');
-        var row = data[$(this).data('i')];
-        var cfg = pickerConfig[activePicker.key];
-        if (activePicker.onSelect) {
-            activePicker.onSelect(row);
-        } else if (cfg.target) {
-            $('#' + cfg.target).val(row[cfg.cols[0][0]]);
-            $('#' + cfg.target + '_disp').val(row[cfg.cols[1][0]] || '');
-        }
-        closePicker();
-        renderTotalsOnly();
-    });
 
     // =========================================================
     // Final Blend picker (header "Blend No" AND each row's own "Blend"
@@ -470,7 +499,7 @@
     $('#gridBody').on('click', '.f-blend-btn', function () { openBlendPicker($(this).closest('tr').data('cid')); });
 
     function loadBlendList(term) {
-        $.getJSON('@Url.Action("GetFinalBlendList", "Packing")', { blendType: $('#BLEND_TYPE').val(), search: term }, function (data) {
+        $.getJSON('@Url.Action("GetFinalBlendList", "Packing")', { blendType: $('#BLEND_TYPE').val(), unit: $('#UNIT_disp').val(), search: term }, function (data) {
             data = data || [];
             var html = '<table><thead><tr><th>Blend No</th><th>Doc No</th><th>Blend Qty</th><th>Packed Qty</th><th>Remaining</th><th>Rate</th></tr></thead><tbody>';
             data.forEach(function (b, i) {
@@ -510,7 +539,7 @@
 
     function applyBlendToRow(blendDocNo, blendDocDt, cid) {
         $.get('@Url.Action("GetFinalBlendRowValues", "Packing")', {
-            docno: blendDocNo, docdt: blendDocDt, blendType: $('#BLEND_TYPE').val(),
+            docno: blendDocNo, docdt: blendDocDt, blendType: $('#BLEND_TYPE').val(), unit: $('#UNIT_disp').val(),
             excludeDocNo: $('#DOCNO').val(), excludeDocDt: $('#DOCDT').val()
         }, function (v) {
             if (!v) return;
@@ -560,12 +589,16 @@
                 DOCNO: $('#DOCNO').val(),
                 DOCDT: $('#DOCDT').val(),
                 BLEND_TYPE: $('#BLEND_TYPE').val(),
+                // The Unit picked on the list (new) / the record's own Unit (edit) -- stored
+                // as-is; the server checks a new document's Unit against the user's units.
+                UNIT: $('#UNIT_disp').val(),
                 BlendDocNo: $('#BlendDocNo').val(),
                 BlendDocDt: $('#BlendDocDt').val(),
                 SaleCentre: $('#SaleCentre').val(),
                 Remarks: $('#Remarks').val(),
                 ShortExcess: num($('#ShortExcess').val()),
-                Details: valid
+                Details: valid,
+                IsNew: !IS_EDIT
             };
 
             $.ajax({

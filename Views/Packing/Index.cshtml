@@ -1,4 +1,4 @@
-@using PacketTea.Utility
+﻿@using PacketTea.Utility
 @model List<PacketTea.Models.PT.BLEND_PACKING_DATA>
 
 @{
@@ -6,6 +6,15 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     var currentBlendType = (string)ViewBag.BlendType;
+    var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
+
+    // AEDV column -- per-row Edit/Delete shortcuts (Packing Entry has no View mode, same
+    // as its toolbar), each rendered only when the user holds that right. UX only:
+    // PackingController re-checks every right server-side.
+    var perm = ViewBag.Permission as PacketTea.Helpers.AEDV;
+    var canEdit = perm?.Edit ?? false;
+    var canDelete = perm?.Delete ?? false;
+    Func<string, string> btLabel = code => (code != null && blendTypes != null && blendTypes.ContainsKey(code)) ? blendTypes[code] : code;
 }
 
 <!doctype html>
@@ -34,19 +43,45 @@
             text-decoration: none; transition: background .15s ease;
         }
         .action-btns ul li a:hover, .action-btns ul li button:hover:not(:disabled) { background: var(--mbe-bg); color: var(--mbe-text); }
-        #blendTypeFilter {
-            border: 1px solid var(--mbe-border); border-radius: 6px; padding: 7px 10px;
-            background: #fff; color: var(--mbe-text); font-size: 13px;
-        }
+        .action-btns ul li button:disabled { opacity: .4; cursor: not-allowed; }
+
         .title-heading { padding: 18px 20px 14px; font-size: 20px; font-weight: 700; color: var(--mbe-text); }
+
         #searchInput { border: 1px solid var(--mbe-border); border-radius: 6px; }
+
         .table-responsive { padding: 0 20px; overflow-x: auto; }
-        table.main-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        /* Chunked list (same behaviour as ERP_Inventory's Purchase Order list): fixed-height
+           scroll box with a sticky header; the next chunk of rows loads when the box is
+           scrolled to the bottom -- see Scripts/list-infinite-scroll.js. */
+        #tableScroll { max-height: calc(100vh - 380px); min-height: 240px; overflow: auto; }
+        #tableScroll table.main-table thead th { position: sticky; top: 0; z-index: 3; }
+        /* Match Purchase Order's own list font exactly -- see Master Blend Entry's Index
+           for the full rationale. */
+        table.main-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: Arial, Helvetica, sans-serif; }
         table.main-table th, table.main-table td { border: 1px solid var(--mbe-border); padding: 8px 10px; }
         table.main-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
         table.main-table tbody tr:nth-child(even) { background: #f8f9fc; }
         table.main-table tbody tr:hover { background: #eef3ff; }
         .dataTables_info { padding: 10px 20px 0; color: var(--mbe-muted); font-size: 12.5px; }
+
+        table.detail-sub-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table.detail-sub-table th, table.detail-sub-table td { border: 1px solid var(--mbe-border); padding: 6px 8px; }
+        table.detail-sub-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.detail-sub-table tbody tr:nth-child(even) { background: #fff; }
+
+        /* "New" inline row -- same pattern as Master/Final Blend Entry's list: pick Unit +
+           Packing Type here first, then the pencil icon (enabled only once both are
+           picked) opens the root Packing Entry window with both locked in. */
+        tr.new-entry-row td { background: #eef3ff; vertical-align: middle; }
+        tr.new-entry-row select { border: 1px solid var(--mbe-border); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; }
+        tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
+        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: var(--mbe-accent); }
+
+        /* AEDV column -- per-row Edit/Delete icons. */
+        td.aedv-cell { white-space: nowrap; text-align: center; }
+        td.aedv-cell a.row-aedv { display: inline-block; padding: 2px 6px; font-size: 14px; color: var(--mbe-accent); text-decoration: none; }
+        td.aedv-cell a.row-aedv.row-delete { color: #c0392b; }
+        td.aedv-cell a.row-aedv:hover { background: var(--mbe-bg); border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -56,16 +91,23 @@
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
                 <li>
-                    <select id="blendTypeFilter" class="form-control" style="width:170px;display:inline-block;">
-                        @foreach (var bt in blendTypes)
-                        {
-                            <option value="@bt.Key" selected="@(bt.Key == currentBlendType)">@bt.Value (@bt.Key)</option>
-                        }
-                    </select>
+                    <a href="javascript:void(0)" id="btnNew"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-plus"></i> New
+                    </a>
                 </li>
-                <li><a href="javascript:void(0)" id="btnNew"><i class="fa fa-plus"></i> New</a></li>
-                <li><a href="javascript:void(0)" id="editBtn"><i class="fa fa-pencil"></i> Edit</a></li>
-                <li><a href="javascript:void(0)" id="deleteBtn"><i class="fa fa-trash-o"></i> Delete</a></li>
+                <li>
+                    <a href="javascript:void(0)" id="editBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-pencil"></i> Edit
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="deleteBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Delete ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-trash-o"></i> Delete
+                    </a>
+                </li>
                 <li style="margin-left:auto">
                     <label style="margin:0;color:var(--mbe-muted);font-size:12px;font-weight:700;letter-spacing:.05em;">LIST</label>
                 </li>
@@ -81,53 +123,30 @@
             </div>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive" id="tableScroll">
             <table class="border main-table" id="packingTable">
                 <thead>
                     <tr>
                         <th style="width:26px;"></th>
+                        <th style="width:26px;"></th>
+                        <th>Unit</th>
+                        <th>Packing Type</th>
                         <th>Doc No</th>
                         <th>Date</th>
                         <th>Blend No</th>
-                        <th>Blend Date</th>
-                        <th>Party</th>
-                        <th>Shipping Mark</th>
+                        <th>Date</th>
                         <th>Location</th>
-                        <th>Remarks</th>
+                        <th>Packing Qty.</th>
                         <th>Short/Excess</th>
-                        <th>Total Bag</th>
-                        <th>Total Qty</th>
+                        <th>Party</th>
+                        <th>AEDV</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @if (Model != null && Model.Count > 0)
+                <tbody id="listBody">
+                    @Html.Partial("_ListRows", Model)
+                    @if (Model == null || Model.Count == 0)
                     {
-                        foreach (var row in Model)
-                        {
-                            <tr>
-                                <td>
-                                    <input type="radio" name="rowSel" class="row-check"
-                                           value="@row.DOCNO"
-                                           data-docdt="@(row.DOCDT?.ToString("yyyy-MM-dd"))"
-                                           data-blendtype="@currentBlendType" />
-                                </td>
-                                <td>@row.DOCNO</td>
-                                <td>@(row.DOCDT?.ToString("dd/MM/yyyy"))</td>
-                                <td>@row.BlendDocNo</td>
-                                <td>@(string.IsNullOrEmpty(row.BlendDocDate) ? "" : DateTime.Parse(row.BlendDocDate).ToString("dd/MM/yyyy"))</td>
-                                <td>@row.PartyName</td>
-                                <td>@row.ShipMark</td>
-                                <td>@row.SaleCentreName</td>
-                                <td>@row.Remarks</td>
-                                <td class="text-right">@row.ShortExcess</td>
-                                <td class="text-right">@row.TotalBag</td>
-                                <td class="text-right">@row.TotalQty</td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr><td colspan="12" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="13" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -135,64 +154,168 @@
         @{
             int pageSize = (int)ViewBag.PageSize;
             int rowCount = (int)ViewBag.RowCount;
-            int currentPage = (int)ViewBag.Page;
-            int pageCount = pageSize > 0 ? (int)Math.Ceiling(rowCount / (double)pageSize) : 1;
         }
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;flex-wrap:wrap;gap:8px;">
-            <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-                <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
-                <span style="color:var(--mbe-muted);font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
-                <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
-            </div>
-        </div>
+        <div id="listLoading" style="display:none;text-align:center;padding:8px 0 0;color:var(--mbe-muted);font-size:12.5px;">Loading...</div>
+        <div class="dataTables_info">Showing <span id="shownCount">@(Model?.Count ?? 0)</span> of @rowCount</div>
     </div>
 
+    <script src="~/Scripts/list-infinite-scroll.js"></script>
     <script>
         $(function () {
-            $('#blendTypeFilter').on('change', function () { reload(); });
-
             var searchTimer;
             $('#searchInput').on('input', function () {
                 clearTimeout(searchTimer);
                 searchTimer = setTimeout(reload, 400);
             });
 
-            function reload(page) {
+            // The Packet Type / Unit dropdowns that used to sit in the toolbar are gone -- Unit
+            // and Packing Type are now only picked in the "New" inline row, so the list shows
+            // every type for the units the user is linked to (see PackingController.Index).
+            // Changing the search text reloads the list from the first chunk.
+            function reload() {
                 window.location.href = '@Url.Action("Index", "Packing")'
-                    + '?blendType=' + encodeURIComponent($('#blendTypeFilter').val())
-                    + '&searchString=' + encodeURIComponent($('#searchInput').val())
-                    + '&page=' + (page || 1);
+                    + '?searchString=' + encodeURIComponent($('#searchInput').val());
             }
 
-            $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
-            $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
-
-            $('#btnNew').on('click', function () {
-                window.location.href = '@Url.Action("InsertOrUpdate", "Packing")'
-                    + '?blendType=' + encodeURIComponent($('#blendTypeFilter').val());
+            // Chunked loading: the first chunk is rendered with the page, further chunks are
+            // appended as the list is scrolled to the bottom (Scripts/list-infinite-scroll.js).
+            initInfiniteList({
+                scroll: '#tableScroll', body: '#listBody', loading: '#listLoading', count: '#shownCount',
+                url: '@Url.Action("Index", "Packing")',
+                search: $('#searchInput').val(), pageSize: @pageSize, total: @rowCount, startPage: 1
             });
 
-            $('#editBtn').on('click', function () {
-                var $c = $('.row-check:checked');
-                if ($c.length === 0) { alert('Please select a record to edit.'); return; }
+            // "+" toggle -- reveals the packing lines for that row. Every open re-fetches them
+            // via GetRowDetail instead of trusting what was rendered at page load.
+            $('#packingTable').on('click', '.row-expand-btn', function () {
+                var $btn = $(this);
+                var $detail = $('#' + $btn.data('target'));
+                var opening = !$detail.is(':visible');
+                $detail.toggle(opening);
+                $btn.text(opening ? '-' : '+');
+
+                if (opening) {
+                    var $body = $detail.find('.detail-items-body');
+                    var msg = function (t) { return '<tr><td colspan="15" style="text-align:center;color:var(--mbe-muted);">' + t + '</td></tr>'; };
+                    $.get('@Url.Action("GetRowDetail", "Packing")', {
+                        docno: $detail.data('docno'),
+                        docdt: $detail.data('docdt'),
+                        blendType: $detail.data('blendtype'),
+                        unit: $detail.data('unit')
+                    }).done(function (r) {
+                        if (!r || !r.success) { $body.html(msg('Unable to load packing lines.')); return; }
+                        var items = r.details || [];
+                        if (items.length === 0) { $body.html(msg('No packing lines')); return; }
+                        $body.empty();
+                        var n2 = function (v) { return Number(v || 0).toFixed(2); };
+                        items.forEach(function (d, i) {
+                            var packDate = d.PACK_DATE ? new Date(d.PACK_DATE).toLocaleDateString('en-GB') : '';
+                            $('<tr>').append(
+                                '<td>' + (d.SL_NO || (i + 1)) + '</td>',
+                                '<td>' + (d.MarkName || d.MARK || '') + '</td>',
+                                '<td>' + (d.GradeName || d.GRADE || '') + '</td>',
+                                '<td>' + (d.INVNO || '') + '</td>',
+                                '<td>' + packDate + '</td>',
+                                '<td style="text-align:right;">' + (d.BAG_CHEST || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.CHESTSLF || 0) + '</td>',
+                                '<td style="text-align:right;">' + (d.CHESTSLT || 0) + '</td>',
+                                '<td style="text-align:right;">' + n2(d.GROSS) + '</td>',
+                                '<td style="text-align:right;">' + n2(d.NET != null ? d.NET : (d.GROSS || 0) - (d.TARE || 0)) + '</td>',
+                                '<td style="text-align:right;">' + (d.QTY || 0) + '</td>',
+                                '<td>' + (d.SzDesc || d.SZ_CODE || '') + '</td>',
+                                '<td style="text-align:right;">' + n2(d.RATE) + '</td>',
+                                '<td style="text-align:right;">' + n2(d.AMOUNT) + '</td>',
+                                '<td>' + (d.AllocationName || d.ALLOCATION || '') + '</td>'
+                            ).appendTo($body);
+                        });
+                    }).fail(function () { $body.html(msg('Unable to load packing lines.')); });
+                }
+            });
+
+            // "New" inline row -- see the CSS comment above; same pattern as Master/Final
+            // Blend Entry's list page (navigates in the same tab).
+            var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
+            var PACKET_TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(blendTypes));
+
+            function buildNewRow() {
+                var unitOpts = '<option value="">Select Unit</option>' +
+                    UNIT_LIST.map(function (u) { return '<option value="' + u.CODE + '">' + u.CODE + ' - ' + (u.NAME || '') + '</option>'; }).join('');
+                var typeOpts = '<option value="">Select Packing Type</option>' +
+                    Object.keys(PACKET_TYPES).map(function (k) { return '<option value="' + k + '">' + PACKET_TYPES[k] + ' (' + k + ')</option>'; }).join('');
+                return '<tr id="newUnitRow" class="new-entry-row">' +
+                    '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Packing Entry"></i></td>' +
+                    // Unit picker spans 3 columns (Unit / Blend Type / Doc No) so the "CODE - Name" text isn't clipped;
+                    // the table's own columns are untouched.
+                    '<td colspan="3"><select id="newRowUnit">' + unitOpts + '</select></td>' +
+                    '<td colspan="2"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
+                    '<td colspan="6"></td>' +
+                    '</tr>';
+            }
+
+            function refreshGoNewState() {
+                var ready = !!$('#newRowUnit').val() && !!$('#newRowPacketType').val();
+                $('.go-new').toggleClass('is-ready', ready);
+            }
+
+            $('#btnNew').on('click', function () {
+                if ($('#newUnitRow').length) return;
+                $('#listBody').prepend(buildNewRow());
+                if (UNIT_LIST.length === 1) $('#newRowUnit').val(UNIT_LIST[0].CODE);
+                refreshGoNewState();
+            });
+
+            $('#packingTable').on('change', '#newRowUnit, #newRowPacketType', refreshGoNewState);
+
+            $('#packingTable').on('click', '.go-new', function () {
+                var unit = $('#newRowUnit').val(), packetType = $('#newRowPacketType').val();
+                if (!unit) { alert('Please select Unit first'); return; }
+                if (!packetType) { alert('Please select Packing Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "Packing")'
-                    + '?docno=' + encodeURIComponent($c.val())
-                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
-                    + '&blendType=' + encodeURIComponent($c.data('blendtype'));
+                    + '?unit=' + encodeURIComponent(unit)
+                    + '&blendType=' + encodeURIComponent(packetType);
+            });
+
+            // Row selection is checkboxes (so more than one can be ticked at once) -- Edit/Delete
+            // only make sense against exactly one row, so guard the same way Master/Final do.
+            function getSingleChecked(action) {
+                var $c = $('.row-check:checked');
+                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
+                return $c;
+            }
+
+            // Shared by the toolbar buttons (act on the ticked row) and the AEDV column's
+            // per-row icons (act on their own row).
+            function goEdit(docno, docdt, blendType) {
+                window.location.href = '@Url.Action("InsertOrUpdate", "Packing")'
+                    + '?docno=' + encodeURIComponent(docno)
+                    + '&docdt=' + encodeURIComponent(docdt)
+                    + '&blendType=' + encodeURIComponent(blendType);
+            }
+
+            function doDelete(docno, docdt, blendType) {
+                if (!confirm('Are you sure you want to delete Packing Doc No ' + docno + ' ?')) return;
+
+                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "Packing")' })
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: docno }))
+                    .append($('<input>', { type: 'hidden', name: 'docdt', value: docdt }))
+                    .append($('<input>', { type: 'hidden', name: 'blendType', value: blendType }))
+                    .appendTo('body').submit();
+            }
+
+            $('#editBtn').on('click', function () {
+                var $c = getSingleChecked('edit');
+                if ($c) goEdit($c.val(), $c.data('docdt'), $c.data('blendtype'));
             });
 
             $('#deleteBtn').on('click', function () {
-                var $c = $('.row-check:checked');
-                if ($c.length === 0) { alert('Please select a record to delete.'); return; }
-                if (!confirm('Are you sure you want to delete Packing Doc No ' + $c.val() + ' ?')) return;
-
-                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "Packing")' })
-                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
-                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
-                    .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
-                    .appendTo('body').submit();
+                var $c = getSingleChecked('delete');
+                if ($c) doDelete($c.val(), $c.data('docdt'), $c.data('blendtype'));
             });
+
+            // AEDV column icons (only rendered for rights the user holds).
+            $('#packingTable').on('click', 'a.row-edit', function () { var d = $(this).data(); goEdit(d.docno, d.docdt, d.blendtype); });
+            $('#packingTable').on('click', 'a.row-delete', function () { var d = $(this).data(); doDelete(d.docno, d.docdt, d.blendtype); });
         });
     </script>
 </body>

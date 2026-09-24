@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using PacketTea;
 using PacketTea.Models;
 using PacketTea.Models.PT;
 using PacketTea.Utility;
@@ -37,22 +38,50 @@ namespace Finance.Controllers.TEA
             !string.IsNullOrEmpty(CurrentUnit) ? CurrentUnit :
             (blendType != null && BlendTypeUnit.TryGetValue(blendType, out var u) ? u : "");
 
+        // User.UnitList for the PacketTea module (see JwtMiddleware.cs) -- backs the list
+        // page's Unit picker, same as MasterBlendEntryController/FinalBlendEntryController
+        // (reuses the same generic, module-scoped API endpoint rather than duplicating it).
+        private async Task<List<UnitOption>> GetUnitsForUserAsync()
+        {
+            var response = await Services.GetAsync<List<UnitOption>>("/api/TeaBlend/GetUnitsForUser");
+            return (response.IsSuccessStatusCode ? response.Data : null) ?? new List<UnitOption>();
+        }
+
         // GET: Packing
-        public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15)
+        // Scoped to the Units the user is linked to (and to `unit` / `blendType` when given) --
+        // see MasterBlendEntryController.Index.
+        public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15, string unit = "")
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
-            ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
+            ViewBag.Permission = AEDV.ForScreen(sdsd, "Packing");
             ViewBag.CurrentFilter = searchString;
             ViewBag.PageSize = pageSize;
             ViewBag.Page = page ?? 1;
             ViewBag.BlendType = blendType;
             ViewBag.BlendTypes = BlendTypes;
+            var userUnits = await GetUnitsForUserAsync();
+            ViewBag.UnitList = userUnits;
+            var unitFilter = Uri.EscapeDataString(UnitScope.ListFilter(unit, userUnits));
+
+            // Chunked list: a full page view always starts at the first chunk; further chunks
+            // arrive as AJAX calls (see below) and return just the table rows.
+            var isChunkRequest = Request.IsAjaxRequest();
+            var pageNo = isChunkRequest ? Math.Max(page ?? 1, 1) : 1;
+            ViewBag.Page = pageNo;
+            ViewBag.RowOffset = (pageNo - 1) * pageSize;
 
             var response = await Services.GetAsync<PageModel<BLEND_PACKING_DATA>>(
-                $"/api/BlendPacking/GetByPage?blendType={blendType}&unit={CurrentUnit}&search={searchString}&page={page}&pageSize={pageSize}");
+                $"/api/BlendPacking/GetByPage?blendType={blendType}&unit={unitFilter}&search={searchString}&page={pageNo}&pageSize={pageSize}");
 
             var list = response?.Data?.value?.results ?? new List<BLEND_PACKING_DATA>();
             ViewBag.RowCount = response?.Data?.value?.rowCount ?? 0;
+
+            if (isChunkRequest)
+            {
+                // A failed chunk must not leave a toast queued for the next full page load; an
+                // empty response tells the list's scroll loader to stop.
+                return PartialView("_ListRows", (response?.IsSuccessStatusCode ?? false) ? list : new List<BLEND_PACKING_DATA>());
+            }
 
             if (!response?.IsSuccessStatusCode ?? false)
             {
@@ -65,11 +94,32 @@ namespace Finance.Controllers.TEA
         }
 
         // GET: Packing/InsertOrUpdate
-        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "")
+        // `unit` is only ever populated when this was opened from the list page's Unit
+        // picker -- Unit + Blend Type were already chosen there, so the header repeats
+        // them read-only instead of leaving Unit unset (same pattern as
+        // MasterBlendEntryController/FinalBlendEntryController.InsertOrUpdate).
+        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "")
         {
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            var permission = AEDV.ForScreen(sdsd, "Packing");
+            ViewBag.Permission = permission;
+
             ViewBag.BlendTypes = BlendTypes;
+            ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
+
+            bool isNewEntry = string.IsNullOrEmpty(docno);
+
+            // The list page's New/Unit picker already hides New when the user has no Add
+            // right, but this URL is reachable directly -- block it here too (item 1 of the
+            // AEDV spec: enforce rights server-side, not just by hiding buttons).
+            if (isNewEntry && !(permission?.Add ?? false))
+            {
+                TempData["toastrError"] = "You do not have permission to add a new entry.";
+                return RedirectToAction("Index", new { blendType });
+            }
 
             string fy = Session["SelectedfinancialYear"]?.ToString();
+            DateTime? fyStartDate = null;
             if (!string.IsNullOrEmpty(fy) && fy.Contains("-"))
             {
                 var parts = fy.Split('-');
@@ -77,10 +127,19 @@ namespace Finance.Controllers.TEA
                 string endDigits = new string(parts[1].Where(char.IsDigit).ToArray());
                 if (startDigits.Length >= 4 && endDigits.Length >= 4)
                 {
-                    ViewBag.FyStart = new DateTime(int.Parse(startDigits.Substring(startDigits.Length - 4)), 4, 1).ToString("yyyy-MM-dd");
+                    fyStartDate = new DateTime(int.Parse(startDigits.Substring(startDigits.Length - 4)), 4, 1);
+                    ViewBag.FyStart = fyStartDate.Value.ToString("yyyy-MM-dd");
                     ViewBag.FyEnd = new DateTime(int.Parse(endDigits.Substring(endDigits.Length - 4)), 3, 31).ToString("yyyy-MM-dd");
                 }
             }
+
+            // Doc Date picker's lower bound -- the later of the financial-year start and the
+            // AEDV back-date allowance (Aday for a new entry, Eday while editing). Save() is
+            // the actual enforcement point; this just steers the date picker so most users
+            // never hit the server-side rejection.
+            var backDateFloor = (permission ?? new AEDV()).MinDocDate(isNewEntry);
+            var effectiveMin = fyStartDate.HasValue && fyStartDate.Value > backDateFloor ? fyStartDate.Value : backDateFloor;
+            ViewBag.MinDocDate = effectiveMin.ToString("yyyy-MM-dd");
 
             if (string.IsNullOrEmpty(docno))
             {
@@ -89,7 +148,9 @@ namespace Finance.Controllers.TEA
                 {
                     LOCA = CurrentLoca,
                     GLOCA = CurrentLoca,
-                    UNIT = UnitForBlendType(effectiveBlendType),
+                    // Honor the Unit explicitly chosen on the list page over the
+                    // BlendTypeUnit stopgap guess -- see UnitForBlendType's comment.
+                    UNIT = !string.IsNullOrEmpty(unit) ? unit : UnitForBlendType(effectiveBlendType),
                     BLEND_TYPE = effectiveBlendType,
                     DOCDT = DateTime.Today,
                     Details = new List<T_BLEND_PACKING>()
@@ -110,6 +171,15 @@ namespace Finance.Controllers.TEA
             var json = JsonConvert.SerializeObject(response.Data);
             var wrapper = JsonConvert.DeserializeObject<GetByDocNoResult>(json);
 
+            // Block opening Edit outright when the user has no Edit right, or the record's
+            // own Doc Date has fallen outside the Eday back-date window.
+            var editErr = AEDV.CheckAddEdit(permission, false, wrapper.head?.DOCDT ?? DateTime.Today);
+            if (editErr != null)
+            {
+                TempData["toastrError"] = editErr;
+                return RedirectToAction("Index", new { blendType });
+            }
+
             var editModel = wrapper.head ?? new BLEND_PACKING_DATA();
             editModel.BLEND_TYPE = blendType;
             editModel.Details = wrapper.details ?? new List<T_BLEND_PACKING>();
@@ -127,6 +197,22 @@ namespace Finance.Controllers.TEA
         [HttpPost]
         public async Task<JsonResult> Save(BLEND_PACKING_DATA model)
         {
+            // Server-side AEDV Add/Edit + back-date enforcement -- the date picker's `min`
+            // (see InsertOrUpdate) only steers well-behaved clients; this is the actual gate.
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            var permission = AEDV.ForScreen(sdsd, "Packing");
+            bool isNew = model?.IsNew ?? string.IsNullOrEmpty(model?.DOCNO);
+            var permErr = AEDV.CheckAddEdit(permission, isNew, model?.DOCDT ?? DateTime.Today);
+            if (permErr != null)
+                return Json(new { success = false, message = permErr });
+
+            // A NEW packing doc is stamped with the Unit picked on the list (posted from the
+            // entry screen), which must be one the user is linked to -- see
+            // MasterBlendEntryController.Save.
+            if (isNew && !string.IsNullOrWhiteSpace(model?.UNIT)
+                && !UnitScope.IsAllowed(model.UNIT, await GetUnitsForUserAsync()))
+                return Json(new { success = false, message = $"You do not have permission for Unit {model.UNIT}." });
+
             if (model != null)
             {
                 model.LOCA = string.IsNullOrEmpty(model.LOCA) ? CurrentLoca : model.LOCA;
@@ -147,6 +233,14 @@ namespace Finance.Controllers.TEA
         [HttpPost]
         public async Task<ActionResult> Delete(string docno, string docdt, string blendType)
         {
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            var permission = AEDV.ForScreen(sdsd, "Packing");
+            if (!(permission?.Delete ?? false))
+            {
+                TempData["toastrError"] = "You do not have permission to delete this entry.";
+                return RedirectToAction("Index", new { blendType });
+            }
+
             var response = await Services.PostAsync<dynamic>(
                 $"/api/BlendPacking/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}", new { });
 
@@ -165,54 +259,94 @@ namespace Finance.Controllers.TEA
         private ActionResult JsonExact(object data) =>
             Content(JsonConvert.SerializeObject(data), "application/json");
 
-        [HttpGet]
-        public async Task<ActionResult> GetMark(string search = "")
+        // Reshapes a plain-array lookup response into { data, count } for jquery.inputpicker
+        // (Root UI convention -- see CLAUDE.md's "lookup pickers" rule). These lookups don't
+        // support true server-side paging (the underlying API returns up to `limit` matches,
+        // no rowCount of its own), so `count` is just what came back -- inputpicker always
+        // shows a single page here, same as the plain top-N list this replaced.
+        private ActionResult PickerJson(ResponseApiModel<dynamic> r)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            var arr = (r?.IsSuccessStatusCode == true && r.Data != null)
+                ? (Newtonsoft.Json.Linq.JArray)r.Data
+                : new Newtonsoft.Json.Linq.JArray();
+            return JsonExact(new { data = arr, count = arr.Count });
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetBlendGrade(string search = "")
+        public async Task<ActionResult> GetMark(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetAllocation(string search = "")
+        public async Task<ActionResult> GetBlendGrade(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetSalesCentre(string search = "")
+        public async Task<ActionResult> GetAllocation(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/BlendPacking/GetSalesCentre?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetChestSize(string search = "")
+        public async Task<ActionResult> GetSalesCentre(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/BlendPacking/GetChestSize?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/BlendPacking/GetSalesCentre?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetFinalBlendList(string blendType = "", string search = "")
+        public async Task<ActionResult> GetChestSize(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        {
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/BlendPacking/GetChestSize?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
+        }
+
+        [HttpGet]
+        // Only Final Blends for THIS entry's Unit + Packet Type (Blend Type) that still have
+        // qty left to pack (the API drops fully packed blends). `unit` is the entry screen's
+        // Unit; it must be one the user is linked to, otherwise nothing is offered.
+        public async Task<ActionResult> GetFinalBlendList(string blendType = "", string search = "", string unit = "")
+        {
+            if (string.IsNullOrWhiteSpace(blendType) || !UnitScope.IsAllowed(unit, await GetUnitsForUserAsync()))
+                return JsonExact(new List<object>());
+
+            var r = await Services.GetAsync<dynamic>(
+                $"/api/BlendPacking/GetFinalBlendList?blendType={Uri.EscapeDataString(blendType)}&unit={Uri.EscapeDataString(unit.Trim())}&search={Uri.EscapeDataString(search ?? "")}");
+            return JsonExact(r.Data);
+        }
+
+        // GET: Packing/GetRowDetail (AJAX, Index list's "+" toggle) -- the document's packing
+        // lines. Round-trips the API's response through the typed model (same as InsertOrUpdate's
+        // edit load) so the JS sees the C# property names (MARK, MarkName, ...) rather than the
+        // API's CamelCase-mangled keys.
+        [HttpGet]
+        public async Task<ActionResult> GetRowDetail(string docno = "", string docdt = "", string blendType = "", string unit = "")
         {
             var r = await Services.GetAsync<dynamic>(
-                $"/api/BlendPacking/GetFinalBlendList?blendType={blendType}&unit={CurrentUnit}&search={search}");
-            return JsonExact(r.Data);
+                $"/api/BlendPacking/GetRowLines?docno={Uri.EscapeDataString(docno ?? "")}&docdt={Uri.EscapeDataString(docdt ?? "")}&blendType={Uri.EscapeDataString(blendType ?? "")}&unit={Uri.EscapeDataString(unit ?? "")}");
+            if (!r.IsSuccessStatusCode || r.Data == null)
+                return JsonExact(new { success = false, message = r.Message ?? "Record not found." });
+
+            var wrapper = JsonConvert.DeserializeObject<GetByDocNoResult>(JsonConvert.SerializeObject(r.Data));
+            return JsonExact(new { success = true, details = wrapper?.details ?? new List<T_BLEND_PACKING>() });
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetFinalBlendRowValues(string docno, string docdt, string blendType, string excludeDocNo = "", string excludeDocDt = "")
+        public async Task<ActionResult> GetFinalBlendRowValues(string docno, string docdt, string blendType, string excludeDocNo = "", string excludeDocDt = "", string unit = "")
         {
             var r = await Services.GetAsync<dynamic>(
-                $"/api/BlendPacking/GetFinalBlendRowValues?docno={docno}&docdt={docdt}&blendType={blendType}&excludeDocNo={excludeDocNo}&excludeDocDt={excludeDocDt}");
+                $"/api/BlendPacking/GetFinalBlendRowValues?docno={docno}&docdt={docdt}&blendType={blendType}&excludeDocNo={excludeDocNo}&excludeDocDt={excludeDocDt}&unit={Uri.EscapeDataString(unit ?? "")}");
             return JsonExact(r.Data);
         }
     }

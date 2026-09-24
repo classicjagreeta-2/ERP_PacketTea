@@ -1,4 +1,4 @@
-@model PacketTea.Models.PT.TEA_BLEND_DATA
+﻿@model PacketTea.Models.PT.TEA_BLEND_DATA
 @using Newtonsoft.Json
 @{
     ViewBag.Title = "Final Blend Entry";
@@ -6,7 +6,7 @@
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     bool isEdit = ViewBag.IsEdit ?? false;
     // True only when this window was opened from the list page's "New" inline row --
-    // Unit + Packet Type were already chosen there (same as Master Blend Entry).
+    // Unit + Blend Type were already chosen there.
     bool lockedFromList = ViewBag.LockedFromList ?? false;
     // Opened via the list page's "View" action -- same record fetch as Edit, but the
     // whole form renders read-only (see IS_VIEW near the bottom of this file's script).
@@ -20,21 +20,32 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <!-- Root UI lookup convention (see CLAUDE.md's "lookup pickers" rule) -- same
+         jquery.inputpicker include PacketTeaPurchaseEntry/InsertOrUpdate.cshtml already
+         uses, replacing this screen's earlier bespoke centered-modal picker. -->
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <script src="~/libraries/assetspo/js/custom.js"></script>
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <style>
+        .inputpicker-wrapped-list .inputpicker-active td,
+        .inputpicker-wrapped-list .inputpicker-active th { background: #404e68 !important; color: #fff !important; font-weight: bold; }
+        .inputpicker-wrapped-list { min-width: max-content !important; }
+        .inputpicker-wrapped-list table { width: max-content !important; }
         /* Same additions as Master Blend Entry's InsertOrUpdate -- see that view
            for why these live here instead of purchase-order.css. */
         input[readonly] { background-color: #f3f4f7; color: #555; }
         .disp-pair { display: flex; gap: 0; }
-        /* purchase-order.css hard-codes .accordion-container to a fixed 350px scroll
-           area -- see Master Blend Entry's InsertOrUpdate for the full rationale. Let
-           the standalone Unit/Packet Type/Blend Type strip above Header size to its
-           own (single-row) content instead. */
+        /* purchase-order.css hard-codes .accordion-container to a fixed 350px scroll area -- see
+           Master Blend Entry's InsertOrUpdate. Let the standalone Unit / Blend Type strip above
+           Header size to its own (single-row) content. */
         .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         #gridTable th, #gridTable td { white-space: nowrap; }
         #gridTable td input { min-width: 90px; }
         .grid-pick-btn { width: 20px; height: 21px; padding: 0; margin-left: 2px; vertical-align: middle; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; font-size: 11px; line-height: 1; }
         #gridTable td input.f-invno, #gridTable td input.f-transcode { vertical-align: middle; width: 68px; min-width: 0; }
+        /* Trans Code is a readonly cell that opens a picker overlay (see openTransPicker). */
+        #gridTable td input.f-transcode { cursor: pointer; width: 100px; }
+        .tc-proxy-box .inputpicker-overflow-hidden, .tc-proxy-box .inputpicker-div { overflow: visible !important; height: auto !important; }
         /* Every numeric field, grid and header alike, right-aligned -- same as Master
            Blend Entry's InsertOrUpdate. */
         input[type="number"] { text-align: right; }
@@ -97,30 +108,20 @@
                 </div>
             </div>
 
-            <!-- Unit / Packet Type / Blend Type -- its own section above Header, same as
-                 Master Blend Entry's InsertOrUpdate (see that view's comment for the full
-                 rationale). Packet Type and Blend Type are the same underlying value shown
-                 twice under their two names; Unit is otherwise never user-facing (UNIT is
-                 derived server-side -- see UnitForBlendType's comment). Both lock read-only
-                 once Unit + Packet Type were chosen on the list page (lockedFromList), same
-                 as Blend Type already does in Edit mode. -->
+            <!-- Unit / Blend Type -- its own section above Header, same as Master Blend Entry's
+                 InsertOrUpdate (Packet Type is the same underlying value as Blend Type, so it is not
+                 repeated here -- it is still picked on the list page's "New" row). Unit is otherwise
+                 never user-facing (derived server-side -- see UnitForBlendType), shown for confirmation.
+                 Blend Type locks read-only once Unit + Packet Type were chosen on the list page
+                 (lockedFromList) and in Edit mode. -->
             <div class="accordion-container compact-accordion">
                 <div class="accordion">
-                    <div class="accordion-header active"><span class="txt">Unit / Packet Type / Blend Type</span></div>
+                    <div class="accordion-header active"><span class="txt">Unit / Blend Type</span></div>
                     <div class="accordion-body">
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Unit</label>
                                 <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
-                            </div>
-                            <div class="form-col-20">
-                                <label>Packet Type <span>(*)</span></label>
-                                <select id="PACKET_TYPE_disp" disabled>
-                                    @foreach (var bt in blendTypes)
-                                    {
-                                        <option value="@bt.Key" selected="@(bt.Key == head.BLEND_TYPE)">@bt.Value (@bt.Key)</option>
-                                    }
-                                </select>
                             </div>
                             <div class="form-col-20">
                                 <label>Blend Type <span>(*)</span></label>
@@ -151,7 +152,7 @@
                             <div class="form-col-20">
                                 <label>Doc Date <span>(*)</span></label>
                                 <input type="date" id="DOCDT" value="@head.DOCDT.ToString("yyyy-MM-dd")"
-                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
+                                       min="@ViewBag.MinDocDate" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
                             </div>
                             <div class="form-col-20">
                                 <label>Party</label>
@@ -191,22 +192,37 @@
                             <div class="form-col-20">
                                 <label>Warehouse <span>(*)</span></label>
                                 <input type="text" id="BLEND_WH" data-picker="warehouse" value="@head.BLEND_WH" placeholder="Code" />
-                                <input type="hidden" id="BLEND_WH_disp" value="@head.WarehouseName" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Warehouse Name</label>
+                                <input type="text" id="BLEND_WH_disp" value="@head.WarehouseName" readonly />
                             </div>
                             <div class="form-col-20">
                                 <label>Allocation</label>
                                 <input type="text" id="ALLOC_CODE" data-picker="allocation" value="@head.ALLOC_CODE" placeholder="Code" />
-                                <input type="hidden" id="ALLOC_CODE_disp" value="@head.AllocationName" />
                             </div>
+                            <div class="form-col-20">
+                                <label>Allocation Description</label>
+                                <input type="text" id="ALLOC_CODE_disp" value="@head.AllocationName" readonly />
+                            </div>
+                        </div>
+
+                        <div class="form-row">
                             <div class="form-col-20">
                                 <label>Blend Mark <span>(*)</span></label>
                                 <input type="text" id="BLEND_MARK" data-picker="mark" value="@head.BLEND_MARK" placeholder="Code" />
-                                <input type="hidden" id="BLEND_MARK_disp" value="@head.BlendMarkName" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Mark</label>
+                                <input type="text" id="BLEND_MARK_disp" value="@head.BlendMarkName" readonly disabled />
                             </div>
                             <div class="form-col-20">
                                 <label>Blend Grade <span>(*)</span></label>
                                 <input type="text" id="BLEND_GRADE" data-picker="blendgrade" value="@head.BLEND_GRADE" placeholder="Code" />
-                                <input type="hidden" id="BLEND_GRADE_disp" value="@head.BlendGradeName" />
+                            </div>
+                            <div class="form-col-20">
+                                <label>Grade Name</label>
+                                <input type="text" id="BLEND_GRADE_disp" value="@head.BlendGradeName" readonly disabled />
                             </div>
                             <div class="form-col-20">
                                 <label>No of Chest</label>
@@ -335,15 +351,9 @@
     <!-- Backdrop shared by every picker below -->
     <div class="popup-overlay" id="pickerOverlay"></div>
 
-    <!-- Generic single-select picker (Party/Warehouse/Allocation/Grade/Mark/Transporter) -->
-    <div class="popup-box picker-box" id="genericPicker">
-        <div class="popup-header">
-            <h2 id="pickerTitle">Select</h2>
-            <button type="button" class="close-btn" onclick="closePicker()">X</button>
-        </div>
-        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
-        <div class="picker-body" id="pickerBody"></div>
-    </div>
+    <!-- Party/Warehouse/Allocation/Grade/Mark/Transporter now use jquery.inputpicker
+         (Root UI convention -- see CLAUDE.md's "lookup pickers" rule), which renders its
+         own anchored dropdown next to the field itself -- no shared modal markup needed. -->
 
     <!-- Master Blend picker (spec §3.5) -->
     <div class="popup-box picker-box wide" id="masterPicker">
@@ -391,13 +401,9 @@
     // Same re-parenting fix as MasterBlendEntry's InsertOrUpdate (see that view
     // for the full rationale) -- keeps "fixed, centered" popups centered on the
     // real viewport instead of a transformed ancestor from _Layout's chrome.
-    $('#pickerOverlay, #genericPicker, #masterPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    $('#pickerOverlay, #masterPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
-    // Packet Type is a read-only echo of Blend Type -- keep it in sync on the one path
-    // where Blend Type is still editable (a brand-new entry started directly on this
-    // screen, not via the list page's "New" row). Same as Master Blend Entry.
-    $('#BLEND_TYPE').on('change', function () { $('#PACKET_TYPE_disp').val($(this).val()); });
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_TEA_BLEND_DET));
     var rowSeq = 0;
     rows.forEach(function (r) {
@@ -455,8 +461,7 @@
             tr.append('<td style="text-align:center;"><input type="checkbox" class="f-tag" ' + (r.TAG ? 'checked' : '') + ' /></td>');
             tr.append('<td><input type="text" class="f-dono" value="' + (r.DONO || '') + '" /></td>');
             tr.append('<td><input type="date" class="f-dodt" value="' + (r.DODT ? r.DODT.substring(0, 10) : '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-transcode" value="' + (r.TRANS_CODE || '') + '" />' +
-                '<button type="button" class="grid-pick-btn f-transcode-btn" title="Search transporter">&hellip;</button></td>');
+            tr.append('<td><input type="text" class="f-transcode" value="' + (r.TRANS_CODE || '') + '" readonly placeholder="Select" /></td>');
             tr.append('<td><input type="text" class="f-transname" value="' + (r.TransporterName || '') + '" readonly /></td>');
             $tb.append(tr);
         });
@@ -477,7 +482,12 @@
         var $tr = $(this).closest('tr');
         var r = findRow($tr.data('cid'));
         if (!r) return;
-        r.MARK = $tr.find('.f-mark').val();
+        // The Mark cell displays the mark NAME (MarkName) when one is known, but
+        // T_TEA_BLEND_DET.MARK is the 4-char code -- only overwrite r.MARK when the user
+        // actually typed something different from what was displayed (otherwise any edit to
+        // another cell in the row wrote the full name back into MARK -> ORA-12899 on Save).
+        var markShown = $tr.find('.f-mark').val();
+        if (markShown !== (r.MarkName || r.MARK || '')) { r.MARK = markShown; r.MarkName = ''; }
         // .f-invno is readonly -- INVNO itself never changes from this handler.
         r.PACK_DATE = toIso($tr.find('.f-packdate').val());
         r.GRADE = $tr.find('.f-grade').val();
@@ -524,27 +534,97 @@
         renderTotalsOnly();
     });
 
-    $('#gridBody').on('blur', '.f-transcode', function () {
-        var code = $(this).val();
-        var $tr = $(this).closest('tr');
-        var r = findRow($tr.data('cid'));
-        if (!code) { $tr.find('.f-transname').val(''); if (r) r.TransporterName = ''; return; }
-        $.getJSON('@Url.Action("GetTransporter", "FinalBlendEntry")', { search: code }, function (data) {
-            var m = (data || []).find(function (x) { return (x.CODE || x.code) == code; });
-            var name = m ? (m.NAME || m.name) : '';
-            $tr.find('.f-transname').val(name);
-            if (r) r.TransporterName = name;
-        });
-    });
+    // =========================================================
+    // Trans Code lookup -- same overlay picker as Master Blend Entry (see its
+    // openTransPicker for the rationale). The cell stays a plain, readonly input:
+    // jquery.inputpicker wraps whatever it's attached to in extra divs, which distorted
+    // the row when done inside a <td>. Clicking the cell overlays a temporary picker field
+    // (in <body>, exactly over the cell) that shows the usual anchored dropdown; picking a
+    // row writes the code/name back and removes the overlay. Delete/Backspace clears it.
+    // =========================================================
+    var $tcBox = null;
 
-    $('#gridBody').on('click', '.f-transcode-btn', function () {
-        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
+    function closeTransProxy() {
+        $(document).off('.tcproxy');
+        $(window).off('.tcproxy');
+        $('#gridTable').closest('.table-responsive').off('.tcproxy');
+        if ($tcBox) {
+            try { $tcBox.find('.inputpicker-original').inputpicker('hide'); } catch (e) { }
+            $tcBox.remove();
+            $tcBox = null;
+        }
+    }
+
+    function setRowTransporter($tr, r, code, name) {
+        r.TRANS_CODE = code; r.TransporterName = name;
+        $tr.find('.f-transcode').val(code);
+        $tr.find('.f-transname').val(name);
+    }
+
+    function openTransPicker($tr) {
+        var r = findRow($tr.data('cid'));
         if (!r) return;
-        openPicker('transporter', $tr.find('.f-transcode'), function (row) {
-            r.TRANS_CODE = row.CODE; r.TransporterName = row.NAME;
-            $tr.find('.f-transcode').val(row.CODE);
-            $tr.find('.f-transname').val(row.NAME || '');
+        closeTransProxy();
+
+        var cfg = pickerConfig.transporter;
+        var $cell = $tr.find('input.f-transcode'), off = $cell.offset();
+        var w = Math.max($cell.outerWidth(), 110);
+
+        $tcBox = $('<div class="tc-proxy-box"></div>')
+            .css({ position: 'absolute', left: off.left, top: off.top, width: w, zIndex: 10001, background: '#fff' })
+            .appendTo(document.body);
+        var $p = $('<input type="text" class="tc-proxy" autocomplete="off" placeholder="Search transporter" />')
+            .css({ width: w, border: '1px solid #404e68', padding: '2px 22px 2px 4px', boxSizing: 'border-box' })
+            .appendTo($tcBox);
+
+        $p.inputpicker({
+            url: cfg.url,
+            fields: cfg.fields,
+            fieldText: cfg.fields[0].name,
+            fieldValue: cfg.fields[0].name,
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+            width: 'auto',
+            urlDelay: 0.2
         });
+
+        // The plugin fires a plain 'change' on the original field once a row is picked.
+        $p.on('change', function () {
+            var code = $.trim($(this).val());
+            setTimeout(closeTransProxy, 0);
+            if (!code) { setRowTransporter($tr, r, '', ''); return; }
+            lookupPickerRow(cfg, code, function (row) {
+                if (row) setRowTransporter($tr, r, row.CODE, row.NAME || '');
+            });
+        });
+
+        // Deferred: the click that opened this would otherwise bubble to the plugin's
+        // document-level "outside click" handler and hide the list straight away.
+        setTimeout(function () {
+            $p.next('.inputpicker-overflow-hidden').find('input').focus();
+            showPickerList($p);
+        }, 0);
+
+        $(document).on('mousedown.tcproxy', function (e) {
+            if (!$(e.target).closest('.tc-proxy-box, .inputpicker-wrapped-list').length) closeTransProxy();
+        }).on('keydown.tcproxy', function (e) {
+            if (e.key === 'Escape') closeTransProxy();
+        });
+        $(window).on('resize.tcproxy', closeTransProxy);
+        $('#gridTable').closest('.table-responsive').on('scroll.tcproxy', closeTransProxy);
+    }
+
+    $('#gridBody').on('click', 'input.f-transcode', function () { openTransPicker($(this).closest('tr')); });
+    $('#gridBody').on('keydown', 'input.f-transcode', function (e) {
+        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
+        if (e.key === 'Enter' || e.key === 'F4' || e.key === 'ArrowDown') { e.preventDefault(); openTransPicker($tr); }
+        else if ((e.key === 'Delete' || e.key === 'Backspace') && r) { e.preventDefault(); setRowTransporter($tr, r, '', ''); }
     });
 
     function renderTotalsOnly() {
@@ -578,7 +658,7 @@
     $('#MST_BLEND_NO').on('click focus', openMasterPicker);
 
     function loadMasterList(term) {
-        $.getJSON('@Url.Action("GetMasterBlendList", "FinalBlendEntry")', { blendType: $('#BLEND_TYPE').val(), search: term }, function (data) {
+        $.getJSON('@Url.Action("GetMasterBlendList", "FinalBlendEntry")', { blendType: $('#BLEND_TYPE').val(), unit: $('#UNIT_disp').val(), search: term }, function (data) {
             data = data || [];
             var html = '<table><thead><tr><th>Blend No</th><th>Doc No</th><th>Blend Date</th><th>Blend Qty</th><th>Remaining Qty</th></tr></thead><tbody>';
             data.forEach(function (m, i) {
@@ -597,7 +677,7 @@
         closeMasterPicker();
 
         function apply() {
-            $.get('@Url.Action("GetMasterBlendDetail", "FinalBlendEntry")', { docno: m.DOCNO, docdt: m.DOCDT }, function (r) {
+            $.get('@Url.Action("GetMasterBlendDetail", "FinalBlendEntry")', { docno: m.DOCNO, docdt: m.DOCDT, unit: $('#UNIT_disp').val(), blendType: $('#BLEND_TYPE').val() }, function (r) {
                 if (!r || !r.success || !r.head) { showAlert((r && r.message) || 'Unable to load that Master Blend.'); return; }
                 // Field names here match T_TEA_BLEND/T_TEA_BLEND_DET's actual C#
                 // property names (PascalCase, e.g. BLEND_NO) -- the controller
@@ -667,69 +747,90 @@
     });
 
     // =========================================================
-    // Generic single-select picker (header fields) -- identical to
-    // MasterBlendEntry's InsertOrUpdate.
+    // Header field lookups -- jquery.inputpicker (Root UI convention: an anchored,
+    // paginated picker under the field itself -- see CLAUDE.md's "lookup pickers"
+    // rule). Replaces this screen's earlier bespoke centered-modal picker
+    // (#genericPicker, now removed) -- identical to MasterBlendEntry's InsertOrUpdate.
     // =========================================================
     var pickerConfig = {
-        party: { url: '@Url.Action("GetParty", "FinalBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCODE' },
-        warehouse: { url: '@Url.Action("GetWarehouse", "FinalBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['DESTI', 'Destination']], target: 'BLEND_WH' },
-        allocation: { url: '@Url.Action("GetAllocation", "FinalBlendEntry")', cols: [['CODE', 'Code'], ['DESCN', 'Description']], target: 'ALLOC_CODE' },
-        blendgrade: { url: '@Url.Action("GetBlendGrade", "FinalBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'BLEND_GRADE' },
-        mark: { url: '@Url.Action("GetMark", "FinalBlendEntry")', cols: [['MCD', 'Code'], ['MDESC', 'Garden/Mark']], target: 'BLEND_MARK' },
-        transporter: { url: '@Url.Action("GetTransporter", "FinalBlendEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'TPT' }
+        party: { url: '@Url.Action("GetParty", "FinalBlendEntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'PCODE' },
+        warehouse: { url: '@Url.Action("GetWarehouse", "FinalBlendEntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'DESTI', text: 'Destination' }], target: 'BLEND_WH' },
+        allocation: { url: '@Url.Action("GetAllocation", "FinalBlendEntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'DESCN', text: 'Description' }], target: 'ALLOC_CODE' },
+        blendgrade: { url: '@Url.Action("GetBlendGrade", "FinalBlendEntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'BLEND_GRADE' },
+        mark: { url: '@Url.Action("GetMark", "FinalBlendEntry")', fields: [{ name: 'MCD', text: 'Code' }, { name: 'MDESC', text: 'Garden/Mark' }], target: 'BLEND_MARK' },
+        transporter: { url: '@Url.Action("GetTransporter", "FinalBlendEntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'TPT' }
     };
-    var activePicker = null;
-    var pickerXhr = null;
-    var pickerReqSeq = 0;
 
     $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
 
-    function openPicker(key, $input, onSelect) {
-        activePicker = { key: key, input: $input, onSelect: onSelect };
-        $('#pickerTitle').text('Select ' + key);
-        $('#pickerSearch').val('');
-        $('#pickerBody').empty().removeData('rows');
-        $('#pickerOverlay, #genericPicker').fadeIn(120);
-        loadPickerData('');
-        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
+    // This copy of jquery.inputpicker never fires an 'inputpicker.select' event -- picking a
+    // row just sets the original input's value and fires a plain 'change'. So the name/
+    // description beside each code field (Party Name, Warehouse Name, Allocation
+    // Description, Mark/Grade name) is filled from that 'change' by resolving the code
+    // through the same lookup URL. Emptying the code empties the name.
+    // Open the dropdown AND refresh its rows. The plugin loads url-backed data asynchronously and
+    // only re-renders the list on a keystroke, so showing it right after init (before the first
+    // response lands) displayed "No results" -- the keyup makes it fetch and render the rows.
+    function showPickerList($orig) {
+        $orig.inputpicker('show');
+        $orig.next('.inputpicker-overflow-hidden').find('input').trigger($.Event('keyup', { keyCode: 0 }));
     }
-    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
 
-    function loadPickerData(term) {
-        var cfg = pickerConfig[activePicker.key];
-        var myReq = ++pickerReqSeq;
-        if (pickerXhr) { pickerXhr.abort(); }
-        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
-            if (myReq !== pickerReqSeq) return;
-            data = data || [];
-            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
-            data.forEach(function (row, i) {
-                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
-                    var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
-                    return '<td>' + (v == null ? '' : v) + '</td>';
-                }).join('') + '</tr>';
+    function lookupPickerRow(cfg, code, cb) {
+        var f = cfg.fields[0].name, want = String(code).toUpperCase();
+        $.getJSON(cfg.url, { q: code, limit: 50, p: 1 }, function (res) {
+            var hit = null;
+            $.each((res && res.data) || [], function (_, r) {
+                if (String(r[f]).toUpperCase() === want) { hit = r; return false; }
             });
-            html += '</tbody></table>';
-            $('#pickerBody').html(html);
-            $('#pickerBody').data('rows', data);
-        });
+            cb(hit);
+        }).fail(function () { cb(null); });
     }
 
-    $('#pickerBody').on('click', 'tr[data-i]', function () {
-        var data = $('#pickerBody').data('rows');
-        var row = data[$(this).data('i')];
-        var cfg = pickerConfig[activePicker.key];
-
-        if (activePicker.onSelect) {
-            activePicker.onSelect(row);
-        } else if (cfg.target) {
-            var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
-            var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
-            $('#' + cfg.target).val(code);
-            $('#' + cfg.target + '_disp').val(name || '');
-        }
-        closePicker();
+    $('[data-picker]').on('change', function () {
+        var $el = $(this), cfg = pickerConfig[$el.data('picker')], code = $.trim($el.val());
+        if (!code) { $('#' + this.id + '_disp').val(''); return; }
+        if (!cfg || !cfg.target || cfg.target !== this.id) return;
+        lookupPickerRow(cfg, code, function (row) {
+            $('#' + cfg.target + '_disp').val(row ? (row[cfg.fields[1].name] || '') : '');
+        });
     });
+
+    // Header-field lookups only -- the grid's Trans Code has its own overlay picker
+    // (openTransPicker). The chosen row's name is filled by the [data-picker] 'change'
+    // handler above.
+    function openPicker(key, $input) {
+        var cfg = pickerConfig[key];
+
+        // This plugin never sets $.data('inputpicker'), so the "already initialised" test is
+        // the class it puts on the original input -- otherwise every click re-wraps the field.
+        // Showing is deferred a tick: called from a click, the click's own bubbling up to the
+        // plugin's document-level "outside click" handler would otherwise hide it straight away.
+        if ($input.hasClass('inputpicker-original')) {
+            setTimeout(function () { showPickerList($input); }, 0);
+            return;
+        }
+
+        $('.inputpicker-wrapped-list').remove();
+        $input.inputpicker({
+            url: cfg.url,
+            fields: cfg.fields,
+            fieldText: cfg.fields[0].name,
+            fieldValue: cfg.fields[0].name,
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+            width: 'auto',
+            urlDelay: 0.2
+        });
+
+        setTimeout(function () { showPickerList($input); }, 0);
+    }
 
     // =========================================================
     // Generate DO No (same rule as Master Blend Entry, spec §3.6)
@@ -764,7 +865,7 @@
         var now = new Date();
         var todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         if (docDtVal > todayStr) { showAlert('Doc Date cannot be a future date'); return; }
-        if ((fyMin && docDtVal < fyMin) || (fyMax && docDtVal > fyMax)) { showAlert('Doc Date must fall within the current financial year'); return; }
+        if ((fyMin && docDtVal < fyMin) || (fyMax && docDtVal > fyMax)) { showAlert('Doc Date is outside the allowed range (financial year / back-date policy)'); return; }
         if (!$('#R_DOCNO').val()) { showAlert('Master Blend No cannot be blank'); return; }
         if (!$('#BLEND_WH').val()) { showAlert('Warehouse cannot be blank'); return; }
         if (!$('#BLEND_GRADE').val()) { showAlert('Blend Grade cannot be blank'); return; }
@@ -778,6 +879,10 @@
         var valid = rows.filter(function (r) { return r.INVNO; });
         if (!valid.length) { showAlert('Without Invoice Detail, Record Can Not be Saved.'); return; }
         if (valid.some(function (r) { return num(r.QTY) <= 0; })) { showAlert('Enter Quantity Invoice Detail !'); return; }
+        // T_TEA_BLEND_DET.MARK is a 4-char code column -- catch a hand-typed name/long value
+        // here instead of surfacing a raw ORA-12899 from the database.
+        var badMark = valid.filter(function (r) { return (r.MARK || '').length > 4; })[0];
+        if (badMark) { showAlert('Mark/Garden "' + badMark.MARK + '" (Inv No ' + badMark.INVNO + ') is not a valid Mark code (max 4 characters).'); return; }
 
         var seen = {};
         for (var i = 0; i < valid.length; i++) {
@@ -795,6 +900,9 @@
                     DOCNO: $('#DOCNO').val(),
                     DOCDT: $('#DOCDT').val(),
                     BLEND_TYPE: $('#BLEND_TYPE').val(),
+                    // The Unit picked on the list (new) / the record's own Unit (edit) -- stored
+                    // as-is; the server checks a new sheet's Unit against the user's units.
+                    UNIT: $('#UNIT_disp').val(),
                     R_DOCNO: $('#R_DOCNO').val(),
                     R_DOCDT: $('#R_DOCDT').val(),
                     ALLOC_CODE: $('#ALLOC_CODE').val(),
@@ -815,7 +923,8 @@
                     NOTES: $('#NOTES').val(),
                     SP_NOTES: $('#SP_NOTES').val()
                 },
-                T_TEA_BLEND_DET: valid
+                T_TEA_BLEND_DET: valid,
+                IsNew: !IS_EDIT
             };
 
             $.ajax({

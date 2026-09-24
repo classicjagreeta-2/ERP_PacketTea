@@ -302,62 +302,34 @@ namespace PacketTea
             private bool _edit;
             private bool _delete;
             private bool _view;
+
+            // Null-safe right check (Aedv is null when the menu API sends no AEDV string
+            // for this entry) -- every Add/Edit/Delete/View getter below routes through
+            // this instead of calling Aedv.Contains(...) directly, each against its own
+            // backing field (previously all four shared _add, so reading e.g. .Add right
+            // after .Edit returned Edit's result).
+            public bool Can(char right) => (Aedv ?? "").IndexOf(right) >= 0;
+
             public bool Add
             {
-                get
-                {
-                    var aa = this.Aedv.Contains("A");
-                    _add = aa;
-                    return this._add;
-                }
-                set
-                {
-                    this._add = value;
-                }
+                get { _add = Can('A'); return _add; }
+                set { _add = value; }
             }
             public bool Edit
             {
-                get
-                {
-                    var aa = this.Aedv.Contains("E");
-                    _add = aa;
-                    return this._add;
-                }
-                set
-                {
-                    this._add = value;
-                }
+                get { _edit = Can('E'); return _edit; }
+                set { _edit = value; }
             }
             public bool Delete
             {
-                get
-                {
-                    var aa = this.Aedv.Contains("D");
-                    _add = aa;
-                    return this._add;
-                }
-                set
-                {
-                    this._add = value;
-                }
+                get { _delete = Can('D'); return _delete; }
+                set { _delete = value; }
             }
             public bool View
             {
-                get
-                {
-                    var aa = this.Aedv.Contains("V");
-                    _add = aa;
-                    return this._add;
-                }
-                set
-                {
-                    this._add = value;
-                }
+                get { _view = Can('V'); return _view; }
+                set { _view = value; }
             }
-
-            // Null-safe right check -- the Add/Edit/Delete/View getters above throw when
-            // the menu API sends no AEDV string for this entry.
-            public bool Can(char right) => (Aedv ?? "").IndexOf(right) >= 0;
 
             // Back-date policy: a new document may be dated at most Aday days back, and an
             // existing one may only be edited while its own date is within Eday days of today.
@@ -389,6 +361,54 @@ namespace PacketTea
                 permission == null
                     ? (isNew ? "You do not have permission to add a new entry." : "You do not have permission to edit this entry.")
                     : permission.CheckAddEdit(isNew, docDate);
+
+            // Rights for a screen: its own row (Controller == screen) and the shared
+            // "PacketTeaPurchaseEntry" row this app's blend screens have always read, combined
+            // -- a letter held on either row counts, and the more generous back-date window
+            // wins. Lets a screen work whether or not the menu setup has provisioned a row of its
+            // own for it. Null only when the user has neither row.
+            public static AEDV ForScreen(List<AEDV> all, string controller, string sharedBucket = "PacketTeaPurchaseEntry")
+            {
+                var own = all?.FirstOrDefault(l => l.Controller == controller);
+                var shared = all?.FirstOrDefault(l => l.Controller == sharedBucket);
+                if (own == null) return shared;
+                if (shared == null || ReferenceEquals(own, shared)) return own;
+
+                var letters = new string("AEDV".Where(c => own.Can(c) || shared.Can(c)).ToArray());
+                return new AEDV
+                {
+                    Autoid = own.Autoid, Id = own.Id, Name = own.Name, IndeXORA = own.IndeXORA,
+                    Pid = own.Pid, Ordercode = own.Ordercode, Perdotnetmenu = own.Perdotnetmenu,
+                    Atvdotnetmenu = own.Atvdotnetmenu, Controller = own.Controller,
+                    Aedv = letters,
+                    Aday = Math.Max(own.Aday, shared.Aday),
+                    Eday = Math.Max(own.Eday, shared.Eday),
+                    Dday = Math.Max(own.Dday, shared.Dday)
+                };
+            }
+        }
+    }
+
+    // Unit scoping for the Blend screens (Master / Final / Packing) -- see CLAUDE.md's
+    // "Unit-wise permission rule". `allowed` is the user's USER_SCHEMA_LINK units as returned
+    // by the API's GetUnitsForUser (each controller's GetUnitsForUserAsync()).
+    public static class UnitScope
+    {
+        // Matches no real unit code -- sent to the API when the user has no units at all, so
+        // the list comes back empty rather than (with a blank `unit`) unfiltered.
+        public const string NoUnits = "~";
+
+        public static bool IsAllowed(string unit, IEnumerable<PacketTea.Models.PT.UnitOption> allowed) =>
+            !string.IsNullOrWhiteSpace(unit) && allowed != null
+            && allowed.Any(u => string.Equals((u.CODE ?? "").Trim(), unit.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        // Value for the API's `unit` parameter on a LIST: the one unit asked for (if the user
+        // may see it), otherwise every unit the user is linked to as a comma-separated list.
+        public static string ListFilter(string requested, List<PacketTea.Models.PT.UnitOption> allowed)
+        {
+            if (IsAllowed(requested, allowed)) return requested.Trim();
+            if (allowed == null || allowed.Count == 0) return NoUnits;
+            return string.Join(",", allowed.Select(u => (u.CODE ?? "").Trim()).Where(c => c.Length > 0));
         }
     }
 }

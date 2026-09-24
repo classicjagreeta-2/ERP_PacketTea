@@ -1,0 +1,100 @@
+@* Table rows for the Final Blend Entry list. Rendered by Index.cshtml for the first chunk and
+   returned on its own (Request.IsAjaxRequest) for every further chunk the list's infinite
+   scroll asks for -- see Scripts/list-infinite-scroll.js and FinalBlendEntryController.Index.
+   ViewBag.RowOffset keeps the "+" expand ids unique across chunks. *@
+@model List<PacketTea.Models.PT.T_TEA_BLEND>
+@{
+    var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
+    Func<string, string> btLabel = code => (code != null && blendTypes != null && blendTypes.ContainsKey(code)) ? blendTypes[code] : code;
+    // AEDV column -- per-row Edit/View/Delete shortcuts, each rendered only when the
+    // user holds that right. UX only: FinalBlendEntryController re-checks every right.
+    var perm = ViewBag.Permission as PacketTea.Helpers.AEDV;
+    var canEdit = perm?.Edit ?? false;
+    var canView = perm?.View ?? false;
+    var canDelete = perm?.Delete ?? false;
+    var rowIndex = (int?)ViewBag.RowOffset ?? 0;
+}
+@if (Model != null)
+{
+    foreach (var row in Model)
+    {
+        rowIndex++;
+        var detailId = "rowDetail" + rowIndex;
+        <tr class="data-row">
+            <td>
+                <input type="checkbox" class="row-check"
+                       value="@row.DOCNO"
+                       data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")"
+                       data-blendtype="@row.BLEND_TYPE" />
+            </td>
+            <td style="text-align:center;">
+                <button type="button" class="row-expand-btn" data-target="@detailId" title="Show more details">+</button>
+            </td>
+            <td>@row.UNIT</td>
+            <td>@btLabel(row.BLEND_TYPE)</td>
+            <td>@row.DOCNO</td>
+            <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
+            <td>
+                <a href="@Url.Action("InsertOrUpdate", "FinalBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
+            </td>
+            <td>@(row.BLEND_DATE.HasValue ? row.BLEND_DATE.Value.ToString("dd/MM/yyyy") : "")</td>
+            <td>@row.MasterBlendNo</td>
+            <td>@(string.IsNullOrEmpty(row.MasterBlendDate) ? "" : DateTime.Parse(row.MasterBlendDate).ToString("dd/MM/yyyy"))</td>
+            <td>@row.WarehouseName</td>
+            <td>@row.BlendMarkName</td>
+            <td>@row.BlendGradeName</td>
+            <td>@row.AllocationName</td>
+            <td>@row.PartyName</td>
+            <td class="text-right">@row.BLEND_CHEST</td>
+            <td class="text-right">@row.BLEND_CHEST_WT</td>
+            <td>@(row.CLOSED == "Y" ? "Yes" : "No")</td>
+            <td class="aedv-cell">
+                @if (canEdit)
+                {
+                    <a href="javascript:void(0)" class="row-aedv row-edit" title="Edit"
+                       data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE"><i class="fa fa-pencil"></i></a>
+                }
+                @if (canView)
+                {
+                    <a href="javascript:void(0)" class="row-aedv row-view" title="View"
+                       data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE"><i class="fa fa-eye"></i></a>
+                }
+                @if (canDelete)
+                {
+                    <a href="javascript:void(0)" class="row-aedv row-delete" title="Delete"
+                       data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE"><i class="fa fa-trash-o"></i></a>
+                }
+            </td>
+        </tr>
+        <tr class="row-detail" id="@detailId" style="display:none;"
+            data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
+            <td colspan="19" style="background:#f8f9fc;padding:10px 12px;">
+                <!-- Just the item-lines sub-grid (Master Blend No is already its own column on the main row). -->
+                <div style="overflow-x:auto;">
+                    <table class="detail-sub-table">
+                        <thead>
+                            <tr>
+                                <th style="width:34px;">Sl</th>
+                                <th>Mark/Garden</th>
+                                <th>Inv No</th>
+                                <th>Pack Date</th>
+                                <th>Grade</th>
+                                <th style="text-align:right;">Bag</th>
+                                <th style="text-align:right;">Qty</th>
+                                <th style="text-align:right;">Sam. Qty</th>
+                                <th style="text-align:right;">Rate</th>
+                                <th style="text-align:right;">Amount</th>
+                                <th>Warehouse</th>
+                                <th>DO No</th>
+                                <th>Transporter</th>
+                            </tr>
+                        </thead>
+                        <tbody class="detail-items-body">
+                            <tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    }
+}

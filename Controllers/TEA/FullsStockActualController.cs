@@ -20,6 +20,9 @@ namespace Finance.Controllers.TEA
     // writes the VB6 EXPORTTOEXCEL sheet with ClosedXML.
     public class FullsStockActualController : Controller
     {
+        // Screen heading and the heading printed on every output (Graphics / HTML / Text / Excel).
+        internal const string ReportTitle = "Stock Report - (Batch wise)";
+
         public ActionResult Index()
         {
             return View();
@@ -100,7 +103,7 @@ namespace Finance.Controllers.TEA
 
             var (report, error) = await LoadAsync(asOn, units, order);
             if (error != null)
-                return Content("<div style='font-family:Arial;margin:40px'><b>Fulls Stock Actual</b><br/><br/>" +
+                return Content("<div style='font-family:Arial;margin:40px'><b>" + ReportTitle + "</b><br/><br/>" +
                                HttpUtility.HtmlEncode(error) + "</div>", "text/html");
             try
             {
@@ -108,8 +111,8 @@ namespace Finance.Controllers.TEA
                 {
                     ["HEADER1"] = report.Company,
                     ["HEADER2"] = report.Address,
-                    ["TITLE"] = "FULLS STOCK (Actual) CLOSING REPORT AS ON " + report.AsOn,
-                    ["UNIT_TEXT"] = "Unit: " + report.Unit,
+                    ["TITLE"] = ReportTitle,
+                    ["UNIT_TEXT"] = "As On: " + report.AsOn + "   Unit: " + report.Unit,
                     ["RUN_INFO"] = "User: " + (SessionHelper.GetUser()?.getUserName ?? "") + "   Run: " + DateTime.Now.ToString("dd-MMM-yyyy HH:mm"),
                 });
                 Response.AppendHeader("Content-Disposition", "inline; filename=FullsStockActual.pdf");
@@ -230,7 +233,7 @@ namespace Finance.Controllers.TEA
             body.Add(TxtRow(" ** - ", "DOD Date over"));
             body.Add(TxtRow("*** - ", "BBD Date over"));
             body.Add("");
-            body.Add("Report: Fulls Stock Actual   user: " + user + "   Time: " + DateTime.Now.ToString("HH:mm") + "   Date: " + DateTime.Now.ToString("dd-MMM-yyyy"));
+            body.Add("Report: " + ReportTitle + "   user: " + user + "   Time: " + DateTime.Now.ToString("HH:mm") + "   Date: " + DateTime.Now.ToString("dd-MMM-yyyy"));
 
             const int headLines = 7;
             var perPage = TxtPageLines - headLines;
@@ -241,7 +244,7 @@ namespace Finance.Controllers.TEA
                 if (p > 0) sb.Append('\f');
                 sb.AppendLine(r.Company);
                 sb.AppendLine(r.Address);
-                sb.AppendLine(("FULLS STOCK (Actual) CLOSING REPORT AS ON " + r.AsOn + "   Unit: " + r.Unit).PadRight(122) + "Page:" + (p + 1).ToString().PadLeft(3));
+                sb.AppendLine((ReportTitle + "   As On: " + r.AsOn + "   Unit: " + r.Unit).PadRight(122) + "Page:" + (p + 1).ToString().PadLeft(3));
                 sb.AppendLine(new string('-', 132));
                 sb.AppendLine(TxtRow("ITEM", "", "", "", "", "QUANTITY", "GROSS", "NET", "DATE OF", "BEST"));
                 sb.AppendLine(TxtRow("CODE", "Item Name", "MRP", "MFG DT", "BATCH NO", "PKTS/BAG", "WEIGHT", "WEIGHT", "DESPATCH", "BEFORE", "Age"));
@@ -265,7 +268,7 @@ namespace Finance.Controllers.TEA
         private static XLWorkbook BuildWorkbook(FullsStockReport r)
         {
             var wb = new XLWorkbook();
-            var ws = wb.Worksheets.Add("Fulls Stock");
+            var ws = wb.Worksheets.Add("Stock Report");
             ws.Style.Font.FontName = "Calibri";
 
             ws.Cell(1, 1).Value = r.Company;
@@ -273,7 +276,7 @@ namespace Finance.Controllers.TEA
             ws.Cell(1, 1).Style.Font.FontSize = 18;
             var asOn = DateTime.TryParseExact(r.AsOn, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out var d)
                 ? d.ToString("dd-MMM-yyyy") : r.AsOn;
-            ws.Cell(2, 1).Value = "Fulls Stock (Actual) Report As On " + asOn;
+            ws.Cell(2, 1).Value = ReportTitle + " As On " + asOn;
             ws.Cell(2, 1).Style.Font.Bold = true;
             ws.Cell(2, 1).Style.Font.FontSize = 14;
             ws.Cell(3, 1).Value = r.Unit + " Units";

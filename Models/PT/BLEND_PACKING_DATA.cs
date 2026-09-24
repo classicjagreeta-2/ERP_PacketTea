@@ -23,6 +23,11 @@ namespace PacketTea.Models.PT
 
         public List<T_BLEND_PACKING> Details { get; set; } = new List<T_BLEND_PACKING>();
 
+        // Set by the client from the same #isEdit hidden field the rest of the page already
+        // uses -- lets the controller's AEDV back-date check (Aday vs Eday) tell an Add from
+        // an Edit (this header carries no ID of its own to infer it from).
+        public bool? IsNew { get; set; }
+
         // Display-only fields returned by the API's GetByDocNo/GetByPage
         public string MasterBlendNo { get; set; }
         public string MasterBlendDate { get; set; }

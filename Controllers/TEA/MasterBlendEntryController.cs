@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using PacketTea;
 using PacketTea.Models;
 using PacketTea.Models.PT;
 using PacketTea.Utility;
@@ -84,32 +85,65 @@ namespace Finance.Controllers.TEA
         }
 
         // GET: MasterBlendEntry
-        public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15)
+        // The list is scoped to the Units the user is linked to in USER_SCHEMA_LINK (and to the
+        // one `unit` / `blendType` asked for, when given) -- never to "everything", which is what
+        // the blank CurrentUnit used to send.
+        public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15, string unit = "")
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
-            // "MasterBlendEntry" isn't a provisioned permission key yet (this is a new
-            // screen); every other TEA controller in this app shares the
-            // "PacketTeaPurchaseEntry" permission bucket, so match that convention
-            // rather than always resolving to a missing entry and disabling New.
-            ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
+            // Own "MasterBlendEntry" row plus the shared "PacketTeaPurchaseEntry" bucket the
+            // other TEA controllers use -- see AEDV.ForScreen.
+            ViewBag.Permission = AEDV.ForScreen(sdsd, "MasterBlendEntry");
             ViewBag.CurrentFilter = searchString;
             ViewBag.PageSize = pageSize;
             ViewBag.Page = page ?? 1;
             ViewBag.BlendType = blendType;
-            ViewBag.BlendTypes = await GetAllowedBlendTypesAsync();
-            ViewBag.UnitList = await GetUnitsForUserAsync();
+            // The two lookups are independent -- run them side by side instead of back to back.
+            var allowedTask = GetAllowedBlendTypesAsync();
+            var unitsTask = GetUnitsForUserAsync();
+            await Task.WhenAll(allowedTask, unitsTask);
+            var allowedTypes = allowedTask.Result;
+            ViewBag.BlendTypes = allowedTypes;
+            var userUnits = unitsTask.Result;
+            ViewBag.UnitList = userUnits;
+            var unitFilter = Uri.EscapeDataString(UnitScope.ListFilter(unit, userUnits));
 
+            // Packet Type scoping mirrors Unit scoping: every Blend Type the user has rights to,
+            // NOT the single `blendType` in the URL (a stray ?blendType=PT used to hide every
+            // other type's sheets). They go to GetByPage as ONE comma-separated list, so the API
+            // filters, sorts and pages once (this used to fire one call per type, each asking for
+            // up to 5000 rows, then merge and page here). A user with no M_UNIT_USER_RIGHT rows
+            // gets no type restriction (blank list) rather than an empty list -- the Unit scope
+            // above still applies.
+            // Chunked list: a full page view always starts at the first chunk; further chunks
+            // arrive as AJAX calls (see below) and return just the table rows.
+            var isChunkRequest = Request.IsAjaxRequest();
+            var pageNo = isChunkRequest ? Math.Max(page ?? 1, 1) : 1;
+            ViewBag.Page = pageNo;
+            ViewBag.RowOffset = (pageNo - 1) * pageSize;
+            var search = Uri.EscapeDataString(searchString ?? "");
+            var typeFilter = Uri.EscapeDataString(string.Join(",", allowedTypes.Keys));
+
+            string error = null;
             var response = await Services.GetAsync<PageModel<T_TEA_BLEND>>(
-                $"/api/TeaBlend/GetByPage?blendType={blendType}&unit={CurrentUnit}&search={searchString}&page={page}&pageSize={pageSize}");
-
+                $"/api/TeaBlend/GetByPage?blendType={typeFilter}&unit={unitFilter}&search={search}&page={pageNo}&pageSize={pageSize}");
             var list = response?.Data?.value?.results ?? new List<T_TEA_BLEND>();
-            ViewBag.RowCount = response?.Data?.value?.rowCount ?? 0;
+            var rowCount = response?.Data?.value?.rowCount ?? 0;
+            if (!(response?.IsSuccessStatusCode ?? false))
+                error = !string.IsNullOrEmpty(response?.Message) ? response.Message : $"API returned {response?.StatusCode}";
+            ViewBag.RowCount = rowCount;
 
-            if (!response?.IsSuccessStatusCode ?? false)
+            if (isChunkRequest)
             {
-                TempData["toastrError"] = !string.IsNullOrEmpty(response?.Message)
-                    ? response.Message
-                    : $"Unable to load Master Blend list (API returned {response?.StatusCode}). " +
+                // A failed chunk must not leave a toast queued for the next full page load; an
+                // empty response tells the list's scroll loader to stop.
+                if (error != null) list = new List<T_TEA_BLEND>();
+                return PartialView("_ListRows", list);
+            }
+
+            if (error != null)
+            {
+                TempData["toastrError"] = $"Unable to load Master Blend list ({error}). " +
                       "Check ClassicERPCoreAPI is running the latest build and the T_TEA_BLEND tables exist.";
             }
 
@@ -124,13 +158,29 @@ namespace Finance.Controllers.TEA
         // Edit, but the whole form renders read-only (see InsertOrUpdate.cshtml's IS_VIEW).
         public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "", bool view = false)
         {
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            var permission = AEDV.ForScreen(sdsd, "MasterBlendEntry");
+            ViewBag.Permission = permission;
+
             ViewBag.BlendTypes = BlendTypes;
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
             ViewBag.IsView = view;
 
+            bool isNewEntry = string.IsNullOrEmpty(docno);
+
+            // The list page's New/Unit-Type picker already hides New when the user has no
+            // Add right, but this URL is reachable directly -- block it here too (item 1 of
+            // the AEDV spec: enforce rights server-side, not just by hiding buttons).
+            if (isNewEntry && !view && !(permission?.Add ?? false))
+            {
+                TempData["toastrError"] = "You do not have permission to add a new entry.";
+                return RedirectToAction("Index", new { blendType });
+            }
+
             // Financial-year bounds for the Doc Date picker + the "yy-yy" short
             // years the VB form baked into the DO No prefix (loca/type/yy-yy/nnnn).
             string fy = Session["SelectedfinancialYear"]?.ToString();
+            DateTime? fyStartDate = null;
             if (!string.IsNullOrEmpty(fy) && fy.Contains("-"))
             {
                 var parts = fy.Split('-');
@@ -138,12 +188,21 @@ namespace Finance.Controllers.TEA
                 string endDigits = new string(parts[1].Where(char.IsDigit).ToArray());
                 if (startDigits.Length >= 4 && endDigits.Length >= 4)
                 {
+                    fyStartDate = new DateTime(int.Parse(startDigits.Substring(startDigits.Length - 4)), 4, 1);
                     ViewBag.FyShortFrom = startDigits.Substring(startDigits.Length - 2);
                     ViewBag.FyShortTo = endDigits.Substring(endDigits.Length - 2);
-                    ViewBag.FyStart = new DateTime(int.Parse(startDigits.Substring(startDigits.Length - 4)), 4, 1).ToString("yyyy-MM-dd");
+                    ViewBag.FyStart = fyStartDate.Value.ToString("yyyy-MM-dd");
                     ViewBag.FyEnd = new DateTime(int.Parse(endDigits.Substring(endDigits.Length - 4)), 3, 31).ToString("yyyy-MM-dd");
                 }
             }
+
+            // Doc Date picker's lower bound -- the later of the financial-year start and the
+            // AEDV back-date allowance (Aday for a new entry, Eday while editing). Save() is
+            // the actual enforcement point; this just steers the date picker so most users
+            // never hit the server-side rejection.
+            var backDateFloor = (permission ?? new AEDV()).MinDocDate(isNewEntry);
+            var effectiveMin = fyStartDate.HasValue && fyStartDate.Value > backDateFloor ? fyStartDate.Value : backDateFloor;
+            ViewBag.MinDocDate = effectiveMin.ToString("yyyy-MM-dd");
 
             if (string.IsNullOrEmpty(docno))
             {
@@ -182,6 +241,19 @@ namespace Finance.Controllers.TEA
             var json = JsonConvert.SerializeObject(response.Data);
             var wrapper = JsonConvert.DeserializeObject<GetByDocNoResult>(json);
 
+            // Block opening Edit outright when the user has no Edit right, or the record's
+            // own Doc Date has fallen outside the Eday back-date window -- View bypasses this
+            // (spec: View is read-only regardless of the Edit/back-date policy).
+            if (!view)
+            {
+                var editErr = AEDV.CheckAddEdit(permission, false, wrapper.head?.DOCDT ?? DateTime.Today);
+                if (editErr != null)
+                {
+                    TempData["toastrError"] = editErr;
+                    return RedirectToAction("Index", new { blendType });
+                }
+            }
+
             var editModel = new TEA_BLEND_DATA
             {
                 T_TEA_BLEND = wrapper.head,
@@ -201,6 +273,22 @@ namespace Finance.Controllers.TEA
         [HttpPost]
         public async Task<JsonResult> Save(TEA_BLEND_DATA model)
         {
+            // Server-side AEDV Add/Edit + back-date enforcement -- the date picker's `min`
+            // (see InsertOrUpdate) only steers well-behaved clients; this is the actual gate.
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            var permission = AEDV.ForScreen(sdsd, "MasterBlendEntry");
+            bool isNew = model?.IsNew ?? !(model?.T_TEA_BLEND?.ID > 0);
+            var permErr = AEDV.CheckAddEdit(permission, isNew, model?.T_TEA_BLEND?.DOCDT ?? DateTime.Today);
+            if (permErr != null)
+                return Json(new { success = false, message = permErr });
+
+            // A NEW sheet is stamped with the Unit picked on the list (posted from the entry
+            // screen), which must be one the user is linked to; only when none was posted does
+            // it fall back to the Blend-Type -> Unit table below. Edits keep the record's own Unit.
+            if (isNew && !string.IsNullOrWhiteSpace(model?.T_TEA_BLEND?.UNIT)
+                && !UnitScope.IsAllowed(model.T_TEA_BLEND.UNIT, await GetUnitsForUserAsync()))
+                return Json(new { success = false, message = $"You do not have permission for Unit {model.T_TEA_BLEND.UNIT}." });
+
             if (model?.T_TEA_BLEND != null)
             {
                 model.T_TEA_BLEND.LOCA = string.IsNullOrEmpty(model.T_TEA_BLEND.LOCA) ? CurrentLoca : model.T_TEA_BLEND.LOCA;
@@ -223,6 +311,14 @@ namespace Finance.Controllers.TEA
         [HttpPost]
         public async Task<ActionResult> Delete(string docno, string docdt, string blendType)
         {
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            var permission = AEDV.ForScreen(sdsd, "MasterBlendEntry");
+            if (!(permission?.Delete ?? false))
+            {
+                TempData["toastrError"] = "You do not have permission to delete this entry.";
+                return RedirectToAction("Index", new { blendType });
+            }
+
             var response = await Services.PostAsync<dynamic>(
                 $"/api/TeaBlend/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}", new { });
 
@@ -238,36 +334,18 @@ namespace Finance.Controllers.TEA
         [HttpGet]
         public async Task<ActionResult> GetRowDetail(string docno = "", string docdt = "", string blendType = "")
         {
+            // The "+" sub-grid only shows the item lines (Mark, Inv No, Grade, Qty, ...), so ask
+            // the API's lean GetRowLines for just those -- ONE call. It used to call GetRowDetail
+            // (header extras nobody displays any more) and then GetByDocNo (the whole edit-screen
+            // payload, plus its edit guards) one after the other. Serialized through Newtonsoft
+            // rather than MVC5's Json() -- see the NOTE above JsonExact.
             var r = await Services.GetAsync<dynamic>(
-                $"/api/TeaBlend/GetRowDetail?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}");
+                $"/api/TeaBlend/GetRowLines?docno={Uri.EscapeDataString(docno ?? "")}&docdt={Uri.EscapeDataString(docdt ?? "")}&blendType={Uri.EscapeDataString(blendType ?? "")}&unit={CurrentUnit}");
             if (!r.IsSuccessStatusCode || r.Data == null)
                 return JsonExact(new { success = false, message = r.Message ?? "Record not found." });
 
-            // r.Data is a JObject (Services.GetAsync<dynamic> deserializes with
-            // Newtonsoft) -- merge the success flag into it and send it straight
-            // through JsonExact rather than round-tripping via MVC5's Json(),
-            // for the same reason the lookup passthroughs below do (see the
-            // NOTE above JsonExact).
-            var obj = (Newtonsoft.Json.Linq.JObject)r.Data;
-            obj["success"] = true;
-
-            // GetRowDetail only carries the header fields that don't fit the main
-            // grid -- it deliberately doesn't reuse GetByDocNo (see the note above
-            // this action). The "+" expand also wants the item lines (Mark, Inv No,
-            // Grade, Qty, ...) as a sub-grid, so fetch those the same way
-            // InsertOrUpdate's edit mode does and merge them in under "details".
-            // This only runs for the one row being expanded, not the whole list.
-            var detResp = await Services.GetAsync<dynamic>(
-                $"/api/TeaBlend/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}");
-            List<T_TEA_BLEND_DET> details = null;
-            if (detResp.IsSuccessStatusCode && detResp.Data != null)
-            {
-                var detJson = JsonConvert.SerializeObject(detResp.Data);
-                details = JsonConvert.DeserializeObject<GetByDocNoResult>(detJson)?.details;
-            }
-            obj["details"] = Newtonsoft.Json.Linq.JArray.FromObject(details ?? new List<T_TEA_BLEND_DET>());
-
-            return JsonExact(obj);
+            var details = JsonConvert.DeserializeObject<GetByDocNoResult>(JsonConvert.SerializeObject(r.Data))?.details;
+            return JsonExact(new { success = true, details = details ?? new List<T_TEA_BLEND_DET>() });
         }
 
         // =====================================================================
@@ -291,60 +369,81 @@ namespace Finance.Controllers.TEA
         private ActionResult JsonExact(object data) =>
             Content(JsonConvert.SerializeObject(data), "application/json");
 
-        [HttpGet]
-        public async Task<ActionResult> GetParty(string search = "")
+        // Reshapes a plain-array lookup response into { data, count } for jquery.inputpicker
+        // (Root UI convention -- see CLAUDE.md's "lookup pickers" rule). These lookups don't
+        // support true server-side paging (the underlying API returns up to `limit` matches,
+        // no rowCount of its own), so `count` is just what came back -- inputpicker always
+        // shows a single page here, same as the plain top-N list this replaced.
+        private ActionResult PickerJson(ResponseApiModel<dynamic> r)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetParty?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            var arr = (r?.IsSuccessStatusCode == true && r.Data != null)
+                ? (Newtonsoft.Json.Linq.JArray)r.Data
+                : new Newtonsoft.Json.Linq.JArray();
+            return JsonExact(new { data = arr, count = arr.Count });
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetWarehouse(string search = "")
+        public async Task<ActionResult> GetParty(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetWarehouse?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetParty?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetAllocation(string search = "")
+        public async Task<ActionResult> GetWarehouse(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetWarehouse?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetBlendGrade(string search = "")
+        public async Task<ActionResult> GetAllocation(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetMark(string search = "")
+        public async Task<ActionResult> GetBlendGrade(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetGarden(string search = "")
+        public async Task<ActionResult> GetMark(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetGarden?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetCategory(string search = "")
+        public async Task<ActionResult> GetGarden(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetCategory?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetGarden?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetTransporter(string search = "")
+        public async Task<ActionResult> GetCategory(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetTransporter?search={search}&pageSize=50");
-            return JsonExact(r.Data);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetCategory?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> GetTransporter(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        {
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetTransporter?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            return PickerJson(r);
         }
 
         [HttpGet]

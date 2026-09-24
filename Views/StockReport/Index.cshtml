@@ -158,11 +158,15 @@
             $($(this).data("target")).datepicker("show");
         });
 
-        // Unit: "All" or a checked list of manufacturing units (VB6 checkbox list).
+        // Unit: "All" (every unit the user is linked to in USER_SCHEMA_LINK) or a checked list
+        // of those units -- same list as Stock Report - (Batch wise). The server only returns
+        // the user's own units; when there is just one it is selected up front.
         var unitData = null;
         $.getJSON('@Url.Action("GetUnits", "FullsStockActual")', function (list) {
             if (list && list.error) { unitData = []; alertBox(list.error); return; }
             unitData = $.map(list || [], function (u) { return { CODE: u.CODE, NAME: u.NAME }; });
+            if (unitData.length === 0) { alertBox("No unit is linked to your login. Ask for unit access to be granted."); return; }
+            if (unitData.length === 1) $("#Unit").val(unitData[0].CODE);
         }).fail(function () { unitData = []; alertBox("Unable to load the unit list."); });
 
         $(document).on("click", ".unit-code", function () {

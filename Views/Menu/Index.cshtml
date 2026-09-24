@@ -1,6 +1,4 @@
-﻿
-@{
-
+﻿@{
 }
 
 <!DOCTYPE html>
@@ -8,20 +6,36 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width" />
-    <title>Index</title>
+    <title>Power BI Report</title>
+
     <style>
-        #backgroudimage {
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #powerbi-container {
             width: 100%;
             height: 100vh;
-            background-image: url('@Url.Content("~/Content/assets/images/UAT.png")');
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
         }
+
+            #powerbi-container iframe {
+                width: 100%;
+                height: 100%;
+                border: none;
+            }
     </style>
 </head>
+
 <body>
-    <div id="backgroudimage"> 
+
+    <div id="powerbi-container">
+        <iframe src="https://app.powerbi.com/view?r=eyJrIjoiZjQ3ODUwYjUtNjI3MC00MjZhLWJiZDgtMTVmZDlkN2Q1Y2MxIiwidCI6ImVjMzk0MjIwLWYyZGQtNGExYy04MmRiLTA3ZDc4NDczYmEyYiJ9"
+                allowfullscreen="true">
+        </iframe>
     </div>
+
 </body>
 </html>

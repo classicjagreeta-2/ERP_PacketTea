@@ -1,4 +1,4 @@
-@using PacketTea.Utility
+﻿@using PacketTea.Utility
 @model List<PacketTea.Models.PT.T_TEA_BLEND>
 
 @{
@@ -6,6 +6,8 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
+
+    Func<string, string> btLabel = code => (code != null && blendTypes != null && blendTypes.ContainsKey(code)) ? blendTypes[code] : code;
 }
 
 <!doctype html>
@@ -43,6 +45,11 @@
         #searchInput { border: 1px solid var(--mbe-border); border-radius: 6px; }
 
         .table-responsive { padding: 0 20px; }
+        /* Chunked list (same behaviour as ERP_Inventory's Purchase Order list): fixed-height
+           scroll box with a sticky header; the next chunk of rows loads when the box is
+           scrolled to the bottom -- see Scripts/list-infinite-scroll.js. */
+        #tableScroll { max-height: calc(100vh - 380px); min-height: 240px; overflow: auto; }
+        #tableScroll table.main-table thead th { position: sticky; top: 0; z-index: 3; }
         /* Match Purchase Order's own list font exactly (purchase-order.css's shared
            html,body rule sets Arial/12px, but this page's own font-size:13px below used
            to win on equal specificity -- pin both explicitly instead of relying on that
@@ -80,22 +87,26 @@
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
                 <li>
-                    <a href="javascript:void(0)" id="btnNew">
+                    <a href="javascript:void(0)" id="btnNew"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
                         <i class="fa fa-plus"></i> New
                     </a>
                 </li>
                 <li>
-                    <a href="javascript:void(0)" id="editBtn">
+                    <a href="javascript:void(0)" id="editBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
                         <i class="fa fa-pencil"></i> Edit
                     </a>
                 </li>
                 <li>
-                    <a href="javascript:void(0)" id="viewBtn">
+                    <a href="javascript:void(0)" id="viewBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.View ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
                         <i class="fa fa-eye"></i> View
                     </a>
                 </li>
                 <li>
-                    <a href="javascript:void(0)" id="deleteBtn">
+                    <a href="javascript:void(0)" id="deleteBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Delete ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
                         <i class="fa fa-trash-o"></i> Delete
                     </a>
                 </li>
@@ -114,105 +125,33 @@
             </div>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive" id="tableScroll">
             <table class="border main-table" id="blendTable">
                 <thead>
                     <tr>
                         <th style="width:26px;"></th>
                         <th style="width:26px;"></th>
+                        <th>Unit</th>
+                        <th>Blend Type</th>
                         <th>Doc No</th>
                         <th>Date</th>
-                        <th>Party</th>
                         <th>Blend No</th>
-                        <th>Blend Details</th>
+                        <th>Blend Date</th>
                         <th>Warehouse</th>
-                        <th>Allocation</th>
                         <th>Blend Mark</th>
                         <th>Blend Grade</th>
+                        <th>Allocation</th>
+                        <th>Party</th>
                         <th>No of Chest</th>
-                        <th>Net WT/Chest</th>
-                        <th>Gross WT/Chest</th>
+                        <th>Net Wt/Chest</th>
                         <th>Closed</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @if (Model != null && Model.Count > 0)
+                <tbody id="listBody">
+                    @Html.Partial("_ListRows", Model)
+                    @if (Model == null || Model.Count == 0)
                     {
-                        var rowIndex = 0;
-                        foreach (var row in Model)
-                        {
-                            rowIndex++;
-                            var detailId = "rowDetail" + rowIndex;
-                            <tr>
-                                <td>
-                                    <input type="checkbox" class="row-check"
-                                           value="@row.DOCNO"
-                                           data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")"
-                                           data-blendtype="@row.BLEND_TYPE" />
-                                </td>
-                                <td style="text-align:center;">
-                                    <button type="button" class="row-expand-btn" data-target="@detailId" title="Show more details">+</button>
-                                </td>
-                                <td>@row.DOCNO</td>
-                                <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>
-                                <td>@row.PartyName</td>
-                                <td>
-                                    <a href="@Url.Action("InsertOrUpdate", "MasterBlendEntry", new { docno = row.DOCNO, docdt = row.DOCDT.ToString("yyyy-MM-dd"), blendType = row.BLEND_TYPE })">@row.BLEND_NO</a>
-                                </td>
-                                <td>@row.BLEND_DESCN</td>
-                                <td>@row.WarehouseName</td>
-                                <td>@row.AllocationName</td>
-                                <td>@row.BlendMarkName</td>
-                                <td>@row.BlendGradeName</td>
-                                <td class="text-right">@row.BLEND_CHEST</td>
-                                <td class="text-right">@row.BLEND_CHEST_WT</td>
-                                <td class="text-right">@row.BLEND_CHEST_GROSSWT</td>
-                                <td>@(row.CLOSED == "Y" ? "Yes" : "No")</td>
-                            </tr>
-                            <!-- Header fields that don't fit the main grid -- shown on demand via the
-                                 "+" toggle instead of adding another half-dozen always-visible columns.
-                                 Pre-filled from the page's own data so the panel isn't empty on first
-                                 open, then re-fetched via GetRowDetail every time it's opened so it
-                                 reflects the latest saved value instead of what was on the page when
-                                 it was first loaded. -->
-                            <tr class="row-detail" id="@detailId" style="display:none;"
-                                data-docno="@row.DOCNO" data-docdt="@row.DOCDT.ToString("yyyy-MM-dd")" data-blendtype="@row.BLEND_TYPE">
-                                <td colspan="15" style="background:#f8f9fc;padding:10px 12px;">
-                                    <!-- Just the item-lines sub-grid -- matches Attendance Entry's own
-                                         "+" expand (straight to the detail table, no label/value summary
-                                         line above it) instead of also showing Export Ref No/Transporter/
-                                         Ship Mark/Notes/Special Instructions first. -->
-                                    <div style="overflow-x:auto;">
-                                        <table class="detail-sub-table">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width:34px;">Sl</th>
-                                                    <th>Mark/Garden</th>
-                                                    <th>Inv No</th>
-                                                    <th>Pack Date</th>
-                                                    <th>Grade</th>
-                                                    <th style="text-align:right;">Bag</th>
-                                                    <th style="text-align:right;">Qty</th>
-                                                    <th style="text-align:right;">Sam. Qty</th>
-                                                    <th style="text-align:right;">Rate</th>
-                                                    <th style="text-align:right;">Amount</th>
-                                                    <th>Warehouse</th>
-                                                    <th>DO No</th>
-                                                    <th>Transporter</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="detail-items-body">
-                                                <tr><td colspan="13" style="text-align:center;color:var(--mbe-muted);">Loading...</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr><td colspan="15" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="16" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -220,19 +159,12 @@
         @{
             int pageSize = (int)ViewBag.PageSize;
             int rowCount = (int)ViewBag.RowCount;
-            int currentPage = (int)ViewBag.Page;
-            int pageCount = pageSize > 0 ? (int)Math.Ceiling(rowCount / (double)pageSize) : 1;
         }
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;flex-wrap:wrap;gap:8px;">
-            <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-                <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
-                <span style="color:var(--mbe-muted);font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
-                <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
-            </div>
-        </div>
+        <div id="listLoading" style="display:none;text-align:center;padding:8px 0 0;color:var(--mbe-muted);font-size:12.5px;">Loading...</div>
+        <div class="dataTables_info">Showing <span id="shownCount">@(Model?.Count ?? 0)</span> of @rowCount</div>
     </div>
 
+    <script src="~/Scripts/list-infinite-scroll.js"></script>
     <script>
         // TEMPORARY diagnostic -- shows which Oracle schema (x-database header, see
         // Services.cs) this session's API calls actually connect as, so it can be checked
@@ -251,16 +183,19 @@
             // now only picked in the "New" inline row (item 2), so the list itself shows every
             // blend type the user has rights to (still scoped to CurrentUnit -- see
             // MasterBlendEntryController.Index) instead of one type at a time. Changing the
-            // search text always jumps back to page 1; paging itself calls reload(n) with the
-            // target page instead.
-            function reload(page) {
+            // search text reloads the list from the first chunk.
+            function reload() {
                 window.location.href = '@Url.Action("Index", "MasterBlendEntry")'
-                    + '?searchString=' + encodeURIComponent($('#searchInput').val())
-                    + '&page=' + (page || 1);
+                    + '?searchString=' + encodeURIComponent($('#searchInput').val());
             }
 
-            $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
-            $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
+            // Chunked loading: the first chunk is rendered with the page, further chunks are
+            // appended as the list is scrolled to the bottom (Scripts/list-infinite-scroll.js).
+            initInfiniteList({
+                scroll: '#tableScroll', body: '#listBody', loading: '#listLoading', count: '#shownCount',
+                url: '@Url.Action("Index", "MasterBlendEntry")',
+                search: $('#searchInput').val(), pageSize: @pageSize, total: @rowCount, startPage: 1
+            });
 
             // "+" toggle -- reveals the header fields that don't fit the main grid (Export Ref
             // No, Transporter, Ship Mark, Notes, Special Instructions) for that row. Every open
@@ -336,7 +271,9 @@
                     Object.keys(PACKET_TYPES).map(function (k) { return '<option value="' + k + '">' + PACKET_TYPES[k] + ' (' + k + ')</option>'; }).join('');
                 return '<tr id="newUnitRow" class="new-entry-row">' +
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Master Blend Entry"></i></td>' +
-                    '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
+                    // Unit picker spans 3 columns (Unit / Blend Type / Doc No) so the
+                    // "CODE - Name" text isn't clipped; the table's own columns are untouched.
+                    '<td colspan="3"><select id="newRowUnit">' + unitOpts + '</select></td>' +
                     '<td colspan="2"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
                     '<td colspan="9"></td>' +
                     '</tr>';
@@ -349,7 +286,7 @@
 
             $('#btnNew').on('click', function () {
                 if ($('#newUnitRow').length) return;
-                $('#blendTable tbody').prepend(buildNewRow());
+                $('#listBody').prepend(buildNewRow());
                 refreshGoNewState();
             });
 
@@ -375,35 +312,45 @@
                 return $c;
             }
 
+            // Used by the toolbar buttons (act on the ticked row).
+            function goEdit(docno, docdt, blendType) {
+                window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
+                    + '?docno=' + encodeURIComponent(docno)
+                    + '&docdt=' + encodeURIComponent(docdt)
+                    + '&blendType=' + encodeURIComponent(blendType);
+            }
+
+            function goView(docno, docdt, blendType) {
+                window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
+                    + '?docno=' + encodeURIComponent(docno)
+                    + '&docdt=' + encodeURIComponent(docdt)
+                    + '&blendType=' + encodeURIComponent(blendType)
+                    + '&view=true';
+            }
+
+            function doDelete(docno, docdt, blendType) {
+                if (!confirm('Are you sure you want to delete Blend No against Doc No ' + docno + ' ?')) return;
+
+                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "MasterBlendEntry")' })
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: docno }))
+                    .append($('<input>', { type: 'hidden', name: 'docdt', value: docdt }))
+                    .append($('<input>', { type: 'hidden', name: 'blendType', value: blendType }))
+                    .appendTo('body').submit();
+            }
+
             $('#editBtn').on('click', function () {
                 var $c = getSingleChecked('edit');
-                if (!$c) return;
-                window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
-                    + '?docno=' + encodeURIComponent($c.val())
-                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
-                    + '&blendType=' + encodeURIComponent($c.data('blendtype'));
+                if ($c) goEdit($c.val(), $c.data('docdt'), $c.data('blendtype'));
             });
 
             $('#viewBtn').on('click', function () {
                 var $c = getSingleChecked('view');
-                if (!$c) return;
-                window.location.href = '@Url.Action("InsertOrUpdate", "MasterBlendEntry")'
-                    + '?docno=' + encodeURIComponent($c.val())
-                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
-                    + '&blendType=' + encodeURIComponent($c.data('blendtype'))
-                    + '&view=true';
+                if ($c) goView($c.val(), $c.data('docdt'), $c.data('blendtype'));
             });
 
             $('#deleteBtn').on('click', function () {
                 var $c = getSingleChecked('delete');
-                if (!$c) return;
-                if (!confirm('Are you sure you want to delete Blend No against Doc No ' + $c.val() + ' ?')) return;
-
-                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "MasterBlendEntry")' })
-                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
-                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
-                    .append($('<input>', { type: 'hidden', name: 'blendType', value: $c.data('blendtype') }))
-                    .appendTo('body').submit();
+                if ($c) doDelete($c.val(), $c.data('docdt'), $c.data('blendtype'));
             });
         });
     </script>

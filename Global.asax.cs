@@ -13,10 +13,30 @@ namespace HRMS
     {
         protected void Application_Start()
         {
+            // ClosedXML is compiled against DocumentFormat.OpenXml 3.1.1 but bin ships 3.5.1. The
+            // Web.config bindingRedirect covers that, but deployed servers have run with a stale
+            // Web.config (HTTP 500 on Excel export), so bind any requested version to the bin copy here.
+            AppDomain.CurrentDomain.AssemblyResolve += ResolveOpenXml;
+
             AreaRegistration.RegisterAllAreas();
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
+        }
+
+        private static System.Reflection.Assembly ResolveOpenXml(object sender, ResolveEventArgs args)
+        {
+            var name = new System.Reflection.AssemblyName(args.Name).Name;
+            if (name != "DocumentFormat.OpenXml" && name != "DocumentFormat.OpenXml.Framework")
+                return null;
+
+            var loaded = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.GetName().Name == name);
+            if (loaded != null)
+                return loaded;
+
+            var path = System.IO.Path.Combine(HttpRuntime.BinDirectory, name + ".dll");
+            return System.IO.File.Exists(path) ? System.Reflection.Assembly.LoadFrom(path) : null;
         }
 
         protected void Application_BeginRequest(object sender, EventArgs e)
@@ -34,13 +54,25 @@ namespace HRMS
      }
  }
 
+        // Controllers of reports implemented in this app (menu items mapped to them in VBMENU_DONE
+        // carry MId=REPRT). Add a new ported report's controller name here.
+        private static readonly string[] NativeReportControllers = { "fullsstockactual", "stockreport" };
+
+        private static bool IsNativeReport(string lowerPath)
+        {
+            var seg = (lowerPath ?? "").Trim('/').Split('/');
+            return seg.Length > 0 && Array.IndexOf(NativeReportControllers, seg[0]) >= 0;
+        }
+
         protected void Application_AcquireRequestState(object sender, EventArgs e)
         {
             var context = HttpContext.Current;
             string user = HttpContext.Current.Request.QueryString["MId"];
             string currentPath = context.Request.Url.AbsolutePath.ToLower();
 
-            if (user == "REPRT")
+            // "REPRT" is the menu group of the Enquiries-and-reports items still served by the
+            // legacy report host (ReportsRedirect). Reports ported into this app open here instead.
+            if (user == "REPRT" && !IsNativeReport(currentPath))
             {
                 string applicationPath = context.Request.ApplicationPath;
                 string redirectUrl;

@@ -19,6 +19,9 @@ namespace Finance.Controllers.TEA
     // Excel button pair. The API (StockReport/GetReport, Sales schema) builds the rows.
     public class StockReportController : Controller
     {
+        // Screen heading and the heading printed on every output (Graphics / HTML / Text / Excel).
+        private const string ReportTitle = "Stock Report";
+
         public ActionResult Index()
         {
             return View();
@@ -74,7 +77,7 @@ namespace Finance.Controllers.TEA
 
             var (report, error) = await LoadAsync(fromDate, toDate, units, qtyWt, order);
             if (error != null)
-                return Content("<div style='font-family:Arial;margin:40px'><b>Stock Report</b><br/><br/>" +
+                return Content("<div style='font-family:Arial;margin:40px'><b>" + ReportTitle + "</b><br/><br/>" +
                                HttpUtility.HtmlEncode(error) + "</div>", "text/html");
             try
             {
@@ -82,8 +85,8 @@ namespace Finance.Controllers.TEA
                 {
                     ["HEADER1"] = report.Company,
                     ["HEADER2"] = report.Address,
-                    ["TITLE"] = "Stock Report for the period " + report.FromDate + " To " + report.ToDate,
-                    ["UNIT_TEXT"] = "[Unit: " + report.Units + "]",
+                    ["TITLE"] = ReportTitle,
+                    ["UNIT_TEXT"] = "For the period " + report.FromDate + " To " + report.ToDate + "   [Unit: " + report.Units + "]",
                     ["RUN_INFO"] = "Rundate " + DateTime.Now.ToString("dd-MMM-yyyy HH:mm") + "   User " + (SessionHelper.GetUser()?.getUserName ?? ""),
                     ["SKIPPED"] = report.Skipped != null && report.Skipped.Count > 0
                         ? "Not included (table not found in this schema): " + string.Join(", ", report.Skipped) : "",
@@ -186,7 +189,7 @@ namespace Finance.Controllers.TEA
             if (r.Skipped != null && r.Skipped.Count > 0)
                 body.Add("Not included (table not found in this schema): " + string.Join(", ", r.Skipped));
             body.Add("");
-            body.Add("Report: Stock Report   user: " + user + "   Time: " + DateTime.Now.ToString("HH:mm") + "   Date: " + DateTime.Now.ToString("dd-MMM-yyyy"));
+            body.Add("Report: " + ReportTitle + "   user: " + user + "   Time: " + DateTime.Now.ToString("HH:mm") + "   Date: " + DateTime.Now.ToString("dd-MMM-yyyy"));
 
             const int headLines = 7;
             var perPage = TxtPageLines - headLines;
@@ -197,7 +200,7 @@ namespace Finance.Controllers.TEA
                 if (p > 0) sb.Append('\f');
                 sb.AppendLine(r.Company);
                 sb.AppendLine(r.Address);
-                var title = "STOCK REPORT FOR THE PERIOD " + r.FromDate + " TO " + r.ToDate + "   [Unit: " + r.Units + "]";
+                var title = ReportTitle + "   For the period " + r.FromDate + " To " + r.ToDate + "   [Unit: " + r.Units + "]";
                 sb.AppendLine(title.PadRight(width - 8) + "Page:" + (p + 1).ToString().PadLeft(3));
                 sb.AppendLine(rule);
                 sb.AppendLine(TxtRow("Item", "Item", "", h1));
@@ -223,7 +226,7 @@ namespace Finance.Controllers.TEA
             ws.Cell(1, 1).Style.Font.FontSize = 15;
             ws.Cell(2, 1).Value = r.Address;
             ws.Cell(2, 1).Style.Font.FontSize = 12;
-            ws.Cell(3, 1).Value = "Stock Report From " + r.FromDate + " TO " + r.ToDate + "   [Unit: " + r.Units + "]";
+            ws.Cell(3, 1).Value = ReportTitle + " From " + r.FromDate + " TO " + r.ToDate + "   [Unit: " + r.Units + "]";
 
             string[] top = { "Item", "Item", "", "Opening", "", "", "Market", "", "", "", "Total", "Closing", "Gain/" };
             string[] bottom = { "Code", "Description", "Type", "Balance", "Production", "Purchase", "Return", "Total",
