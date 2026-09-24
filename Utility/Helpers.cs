@@ -389,6 +389,24 @@ namespace PacketTea
         }
     }
 
+    // Dates the API sends as text ("dd/MM/yyyy"). Never DateTime.Parse them: that uses the
+    // SERVER's culture, so "24/09/2026" throws FormatException on an en-US host (worked on
+    // the dev PC's en-IN, broke the Packing list when deployed).
+    public static class DateText
+    {
+        static readonly string[] Formats = { "dd/MM/yyyy", "dd/MM/yyyy HH:mm:ss", "yyyy-MM-dd", "yyyy-MM-ddTHH:mm:ss", "yyyy-MM-ddTHH:mm:ss.FFFFFFF" };
+
+        // dd/MM/yyyy for display; blank for empty, the original text if it isn't a recognisable date.
+        public static string Display(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return "";
+            return DateTime.TryParseExact(s.Trim(), Formats, System.Globalization.CultureInfo.InvariantCulture,
+                       System.Globalization.DateTimeStyles.None, out var d)
+                ? d.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture)
+                : s;
+        }
+    }
+
     // Unit scoping for the Blend screens (Master / Final / Packing) -- see CLAUDE.md's
     // "Unit-wise permission rule". `allowed` is the user's USER_SCHEMA_LINK units as returned
     // by the API's GetUnitsForUser (each controller's GetUnitsForUserAsync()).

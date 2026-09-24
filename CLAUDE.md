@@ -50,6 +50,12 @@ Established pattern, now used identically by all three controllers —
   ran the edit guards and read whole master tables. Keep new expand rows on that pattern.
 - The "New" inline row's **Unit dropdown** (not the Unit column) is made wider by
   letting its cell span 3 columns (`colspan="3"`); Packet Type spans 2.
+- **Packet Type dropdown** (list page "New" row) is the same on all three lists: only the
+  types the user has rights to (`M_UNIT_USER_RIGHT`), via the shared static
+  `MasterBlendEntryController.GetAllowedBlendTypesAsync()` (`GET /api/TeaBlend/GetAllowedBlendTypes`).
+  Each list also sends that whole set as a comma-separated `blendType` to its `GetByPage`
+  (`TeaBlend` / `FinalBlend` / `BlendPacking` all parse it with `TeaBlendController.ParseUnits`),
+  not the single `?blendType=` from the URL. Falls back to all six types if the API call fails.
 - Final Blend's Master Blend picker (`GetMasterBlendList` /
   `GetMasterBlendDetail`) and Packing's Final Blend picker (`GetFinalBlendList`
   / `GetFinalBlendRowValues`) take the entry screen's `unit` (`#UNIT_disp`) +
@@ -139,24 +145,28 @@ diff):
 ## List-page columns (Master / Final Blend Entry, Packing Entry)
 
 Every list starts with **Unit** and **Blend Type** (Packing: **Packing Type**)
-and ends with an **AEDV** column (`td.aedv-cell`): per-row Edit / View /
-Delete icons, each rendered only when `ViewBag.Permission` holds that right
-(Packing has no View mode, so it gets Edit + Delete only). The icons share
-the same `goEdit` / `goView` / `doDelete` JS helpers as the toolbar buttons —
-UX only, the controller-side checks above remain the real gate. Unit/Type
-come straight off each row (`UNIT`, `BLEND_TYPE`); Packing rows pass their own
-`BLEND_TYPE` (not the toolbar filter's) to Edit/Delete.
+and (Final only) ends with an **AEDV** column (`td.aedv-cell`): per-row Edit /
+View / Delete icons, each rendered only when `ViewBag.Permission` holds that
+right. The icons share the same `goEdit` / `goView` / `doDelete` JS helpers as
+the toolbar buttons — UX only, the controller-side checks above remain the
+real gate. Unit/Type come straight off each row (`UNIT`, `BLEND_TYPE`);
+Packing rows pass their own `BLEND_TYPE` (not the toolbar filter's) to
+Edit/Delete.
 
 - Master: Unit, Blend Type, Doc No, Date, Blend No, Blend Date, Warehouse,
   Blend Mark, Blend Grade, Allocation, Party, No of Chest, Net Wt/Chest,
   Closed (reordered 2026-09-24; Blend Details and Gross WT/Chest dropped,
   Blend Date added from `BLEND_DATE`). (**No AEDV column on Master Blend's list** -- removed
-  at the user's request 2026-09-24; use the toolbar buttons. Final / Packing keep it.)
+  at the user's request 2026-09-24; use the toolbar buttons. **Packing's list has none either**
+  -- removed 2026-09-24, same reason. Only Final keeps it.)
 - Final: Unit, Blend Type, Doc No, Date, Final Blend No, Date, Master Blend
   No, Date, Warehouse, Blend Mark, Blend Grade, Allocation, Party, No of Chest,
   Net Wt/Chest, Closed, AEDV.
 - Packing: Unit, Packing Type, Doc No, Date, Blend No, Date, Location,
-  Packing Qty., Short/Excess, Party, AEDV.
+  Packing Qty., Short/Excess, Party. **Blend No is a link** into Edit mode (like Master's Blend No),
+  rendered only when the user holds the Edit right (plain text otherwise). Rows carry their `UNIT`
+  (`data-unit`, link `unit=`) into Edit / Delete, since a Doc No repeats across units;
+  `InsertOrUpdate` / `Delete` check that Unit against `GetUnitsForUser`.
 
 All three lists share the same layout: a checkbox column and a "+" expand
 column in front (the "+" row lazily loads the document's lines via the
@@ -169,6 +179,30 @@ is **no Packet Type field** -- it is the same value as Blend Type (changed 2026-
 
 When a list's column count changes, update the `colspan`s on the "No records"
 row, the "+" expand row and the "New" inline row to match.
+
+## List-page toolbar (standard, added 2026-09-24)
+
+Every list screen — **Master Blend Entry, Final Blend Entry, Packing Entry**, and any
+new list — uses the same toolbar as `D:\GIT\ERP_Inventory`'s Purchase Order list, one
+`<div class="action-btns"><ul>` row above the page title, in this exact order:
+
+**Back · New · Edit · Delete · View · Lines**, then a right-aligned **LIST** badge
+(`<li style="margin-left:auto">`, dark rounded label, like Inventory's).
+
+- Icons: Back `fa-arrow-left`, New `fa-plus`, Edit `fa-pencil`, Delete `fa-trash-o`,
+  View `fa-eye`, Lines `fa-list` (bullet-list icon).
+- **Back** goes to `Menu/Index`. **New / Edit / Delete / View** are gated with the AEDV
+  inline style from the AEDV section above (`.Add` / `.Edit` / `.Delete` / `.View`);
+  Edit / Delete / View / Lines act on the ticked row (`goEdit` / `doDelete` / `goView`
+  helpers). **Lines** opens the ticked row's line details (the same content the "+"
+  expand row shows, via `GetRowLines`) — it needs a ticked row, like Edit/View.
+- Button order is the same on all three screens — don't reorder per screen, and don't
+  drop a button on one screen. UX only: the controller-side AEDV checks remain the real gate.
+- Implemented 2026-09-24 on all three lists: `#linesBtn` ticks-row → opens that row's "+"
+  expand panel and scrolls it into view; the LIST badge is `<span class="list-badge">`.
+  **Packing now has a View mode** like Master/Final: `PackingController.InsertOrUpdate`
+  takes `view` (needs the View right, bypasses the Edit / back-date check, sets
+  `ViewBag.IsView`), and `Packing/InsertOrUpdate.cshtml` disables the form (`IS_VIEW`).
 
 ## List pagination = chunked infinite scroll (added 2026-09-24)
 
@@ -266,7 +300,36 @@ Grade/Mark/Transporter (Master + Final) and Mark/Grade/Chest
 Size/Allocation/Sales Centre (Packing) all now use `jquery.inputpicker`.
 Row-level lookups (Mark/Grade/Chest Size/Allocation cells in Packing's grid,
 Trans Code in Master/Final Blend's grid) anchor the picker to that row's own
-text input instead of a shared modal.
+text input instead of a shared modal. In Packing's grid (2026-09-24) the code box
+itself is the dropdown (click/focus opens it -- no "…" button) with the picked name
+shown beside it (Mark widest), and Alloc / Item / MRP are hidden (`.col-hide`, kept
+in the DOM so they still Save). Packing's **Final Blend** picker (header Blend No + each
+row's Blend) is now an inputpicker dropdown too (2026-09-24, at the user's request): MVC
+`PackingController.GetFinalBlendList` is a picker endpoint (`q`/`limit`/`p` → `{ data, count }`)
+that also takes `blendType` + `unit` (sent via the picker's `urlParam`) and re-checks the unit
+against `GetUnitsForUser`. This plugin copy never fires `inputpicker.select` — it writes the
+picked value to the input and fires `change` — so `openPicker` reads the picked row back from
+`$input.inputpicker('data')` on `change` (`pickedRow`); don't rely on the select event alone.
+
+**Every Root UI dropdown is searchable by ALL its columns (added 2026-09-24).** Typing in
+an inputpicker (`filterOpen: true`) sends `q` to the picker endpoint, so the filtering
+happens there: the endpoint (MVC controller and the API `Get*` action behind it) must
+match `q` (case-insensitive, "contains") against **every column the dropdown shows**
+— e.g. Code *and* Name, or Blend No *and* Date *and* Party *and* Mark — not just the
+first/code column. Every picker's `fields` list is the set of searchable columns, so
+when a column is added to `fields`, add it to the server-side `q` match too. Applies to
+all Root UI dropdowns on every screen, including the list page's "New" row Unit /
+Packet Type pickers and the per-row grid pickers (Mark/Grade/Chest Size/etc.).
+Where the list is small and fully client-side (e.g. Unit / Blend Type), filter across all
+columns in the browser instead. Don't ship a picker that only searches its code column.
+- The list pages' "New" row **Unit / Packet Type** are inputpickers with local data (Code +
+  Name, both searchable), not native `<select>`s — `Scripts/list-new-row-pickers.js`
+  `initNewRowPickers({ units, types })`, called right after the New row is inserted (it also
+  pre-selects a single permitted Unit). `#newRowUnit` / `#newRowPacketType` are text inputs;
+  `.val()` is only set once a row is really picked.
+- API (2026-09-24): `TeaBlend/GetWarehouse` now also matches Destination; Packing's
+  `BlendPacking/GetFinalBlendList` matches Blend No, Doc No (SQL, case-insensitive) and —
+  for a numeric search — Blend Qty / Packed / Remaining / Rate (on the computed rows).
 
 **Deliberately NOT converted** — these are composite/bulk selection
 screens, not simple code/name lookups, and don't fit `jquery.inputpicker`'s
@@ -275,9 +338,9 @@ single-row-picks-one-value model:
   `GetAvailableStock`) — bulk multi-row selection with its own Garden/Mark/
   Category filters.
 - Final Blend Entry's "Master Blend" picker (`#masterPicker` /
-  `GetMasterBlendList`) and Packing's "Final Blend" picker (`#blendPicker` /
-  `GetFinalBlendList`) — picking a blend to raise/pack against, with its own
-  multi-column, non-code/name layout.
+  `GetMasterBlendList`) — picking a master to raise a final against, with its own
+  multi-column, non-code/name layout. (Packing's "Final Blend" picker was in this
+  list but has since been converted — see above.)
 
 When adding a new simple lookup field anywhere in this app, use
 `jquery.inputpicker` from the start — don't build another bespoke modal

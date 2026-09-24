@@ -81,7 +81,11 @@
         .popup-box .picker-body tr:hover td { background: #eef3ff; }
         .popup-box .picker-search { margin-bottom: 8px; }
         .stock-filters { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-        .stock-filters input { width: 150px; }
+        .stock-filters input { width: 200px; }
+        /* jquery.inputpicker's wrapper divs carry inline overflow:auto -- clip them so the input +
+           arrow don't spawn stray scrollbars (same fix as the list pages' "New" row). */
+        .stock-filters .inputpicker-overflow-hidden, .stock-filters .inputpicker-div { overflow: hidden !important; height: auto !important; max-width: 100%; }
+        .stock-filters .inputpicker-div input { display: block; }
         .action-btns li a.is-disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
         /* In-page alert/confirm -- see showAlert()/showConfirm() below. */
         .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
@@ -379,9 +383,11 @@
             <button type="button" class="close-btn" onclick="closeStockPicker()">X</button>
         </div>
         <div class="stock-filters">
-            <input type="text" id="stockGardenFilter" placeholder="Garden code" />
-            <input type="text" id="stockMarkFilter" placeholder="Mark code" />
-            <input type="text" id="stockCategoryFilter" placeholder="Category code" />
+            <!-- Dropdowns (jquery.inputpicker, initialised when the popup opens -- see
+                 initStockFilters). Mark lists only the picked Garden's marks. -->
+            <input type="text" id="stockGardenFilter" placeholder="Select Garden" autocomplete="off" />
+            <input type="text" id="stockMarkFilter" placeholder="Select Mark" autocomplete="off" />
+            <input type="text" id="stockCategoryFilter" placeholder="Select Category" autocomplete="off" />
             <button type="button" id="btnStockFilter" class="btn-blue" style="width:auto;padding:5px 14px;">Refresh</button>
             <button type="button" id="btnStockSelectAll" class="btn-white" style="width:auto;padding:5px 14px;">Select All</button>
             <button type="button" id="btnStockDeselectAll" class="btn-white" style="width:auto;padding:5px 14px;">De-Select All</button>
@@ -605,6 +611,7 @@
     // =========================================================
     function openStockPicker() {
         $('#pickerOverlay, #stockPicker').fadeIn(120);
+        initStockFilters();
         loadStock();
     }
 
@@ -817,29 +824,98 @@
     // reopen this exact same popup, matching datagrid1_ButtonClick/datagrid1_KeyDown.
     // =========================================================
     $('#btnSelectStock').on('click', openStockPicker);
-    function closeStockPicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
+    function closeStockPicker() { $('.inputpicker-wrapped-list').hide(); $('#pickerOverlay, .popup-box').fadeOut(120); }
     $('#btnStockFilter').on('click', loadStock);
 
-    // Item 5: these three filters are now Select Data's only search surface (Inv No's
-    // own free-typed lookup is gone -- see the grid's f-invno cell), so they filter live
-    // as you type (debounced), not only when "Refresh" is clicked. The API side already
-    // matches these case-insensitively and as a partial/contains match, not just an
-    // exact code (see GetAvailableStock).
-    var stockFilterTimer;
-    $('#stockGardenFilter, #stockMarkFilter, #stockCategoryFilter').on('input', function () {
-        clearTimeout(stockFilterTimer);
-        stockFilterTimer = setTimeout(loadStock, 350);
-    });
+    // Garden / Mark / Category are dropdowns (jquery.inputpicker). Picking (or clearing) any of
+    // them reloads the grid below, filtered by all three; the API matches each as an exact code
+    // (see GetAvailableStock). Mark is dependent: it only lists the picked Garden's marks
+    // (GetMark's `garden` param), and picking a Garden again empties Mark so it's chosen afresh.
+    // Initialised on first open -- the popup is display:none until then, and the plugin sizes
+    // itself from the field's rendered width.
+    var stockMarkParams = { garden: '' };
 
+    function stockFilterInput($orig) { return $orig.next('.inputpicker-overflow-hidden').find('input'); }
+
+    // Empty a dropdown without firing 'change' (the caller reloads the grid itself).
+    function clearStockFilter($orig) {
+        $orig.val('');
+        stockFilterInput($orig).val('').data('value', '');
+    }
+
+    function initStockFilter($orig, url, fields, urlParam, refreshOnOpen) {
+        if ($orig.hasClass('inputpicker-original')) return;
+        var opts = {
+            url: url,
+            fields: fields,
+            fieldText: fields[0].name,
+            fieldValue: fields[0].name,
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+            width: 'auto',
+            urlDelay: 0.2,
+            selectMode: 'empty'     // typed text that isn't picked from the list is discarded
+        };
+        if (urlParam) opts.urlParam = urlParam;
+        $orig.inputpicker(opts);
+        // Wiping the visible text is how a filter is removed: the plugin keeps the last picked
+        // value on the hidden original in that case, so clear it (and reload) ourselves.
+        stockFilterInput($orig).on('input', function () {
+            if (!$(this).val() && $orig.val()) { $orig.val(''); $(this).data('value', ''); $orig.trigger('change'); }
+        });
+        // The plugin lists whatever it loaded at init until a keystroke makes it fetch again, so
+        // the dependent Mark list would keep showing the marks of the previously picked Garden.
+        // A keyup on open (same trick as showPickerList) re-queries with the current urlParam.
+        if (refreshOnOpen) {
+            stockFilterInput($orig).on('focus click', function () {
+                var $v = $(this);
+                setTimeout(function () { $v.trigger($.Event('keyup', { keyCode: 0 })); }, 0);
+            });
+        }
+    }
+
+    function initStockFilters() {
+        initStockFilter($('#stockGardenFilter'), '@Url.Action("GetGarden", "MasterBlendEntry")',
+            [{ name: 'CODE', text: 'Code' }, { name: 'DESCN', text: 'Garden' }]);
+        initStockFilter($('#stockMarkFilter'), '@Url.Action("GetMark", "MasterBlendEntry")',
+            [{ name: 'MCD', text: 'Code' }, { name: 'MDESC', text: 'Garden/Mark' }], stockMarkParams, true);
+        initStockFilter($('#stockCategoryFilter'), '@Url.Action("GetCategory", "MasterBlendEntry")',
+            [{ name: 'CAT', text: 'Code' }, { name: 'DESCN', text: 'Category' }]);
+    }
+
+    $('#stockGardenFilter').on('change', function () {
+        stockMarkParams.garden = $.trim($(this).val());
+        clearStockFilter($('#stockMarkFilter'));
+        loadStock();
+    });
+    $('#stockMarkFilter, #stockCategoryFilter').on('change', loadStock);
+
+    var stockReq = 0;   // only the latest request may fill the grid (a slow, older one must not overwrite it)
     function loadStock() {
-        var blendType = $('#BLEND_TYPE').val();
+        var blendType = $('#BLEND_TYPE').val(), reqId = ++stockReq;
+        $('.inputpicker-wrapped-list').hide();
+        $('#stockBody').data('rows', []).html('<div style="padding:10px;color:#666;">Loading...</div>');
         $.getJSON('@Url.Action("GetAvailableStock", "MasterBlendEntry")', {
             blendType: blendType,
             garden: $('#stockGardenFilter').val(),
             mark: $('#stockMarkFilter').val(),
             category: $('#stockCategoryFilter').val()
-        }, function (data) {
+        }).fail(function () {
+            if (reqId !== stockReq) return;
+            $('#stockBody').html('<div style="padding:10px;color:#b00;">Could not load the available invoices. Please click Refresh to try again.</div>');
+        }).done(function (data) {
+            if (reqId !== stockReq) return;
             data = data || [];
+            if (!data.length) {
+                $('#stockBody').data('rows', []).html('<div style="padding:10px;color:#666;">No available stock found for the selected Garden / Mark / Category.</div>');
+                return;
+            }
             var html = '<table><thead><tr><th></th><th>Inv No</th><th>Garden/Mark</th><th>Grade</th><th>Pack Date</th><th>Bag</th><th>Available Qty</th><th style="text-align:right;">Rate</th></tr></thead><tbody>';
             data.forEach(function (r, i) {
                 html += '<tr data-i="' + i + '"><td><input type="checkbox" class="stockChk" /></td><td>' + (r.invno || '') + '</td><td>' + (r.markDescn || '') + '</td>' +
@@ -935,10 +1011,12 @@
         var badMark = valid.filter(function (r) { return (r.MARK || '').length > 4; })[0];
         if (badMark) { showAlert('Mark/Garden "' + badMark.MARK + '" (Inv No ' + badMark.INVNO + ') is not a valid Mark code (max 4 characters).'); return; }
 
-        // Spec §5 dupe key: Invoice + Grade + Mark only (no Pack Date).
+        // Dupe key: Invoice + Grade + Mark + Pack Date -- the same key stock is grouped by
+        // (GetAvailableStock) and the Select Data picker's own duplicate check. Lots of one
+        // invoice/grade/mark packed on different dates are distinct stock lines.
         var seen = {};
         for (var i = 0; i < valid.length; i++) {
-            var k = valid[i].INVNO + '|' + valid[i].GRADE + '|' + valid[i].MARK;
+            var k = valid[i].INVNO + '|' + valid[i].GRADE + '|' + valid[i].MARK + '|' + (valid[i].PACK_DATE || '').substring(0, 10);
             if (seen[k]) { showAlert('Duplicate Entry'); return; }
             seen[k] = true;
         }

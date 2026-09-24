@@ -595,6 +595,15 @@
         return data;
     }
 
+    // A failed request (server error, session expired -> HTML instead of JSON, timeout) never
+    // reaches the success callback, which is the only place the input's "loading" state was
+    // cleared -- the field stayed disabled with a spinner forever. Release it on failure.
+    function _releaseOnFail(input) {
+        return function () {
+            input.removeClass('loading loading-msie-patch').prop('disabled', false);
+        };
+    }
+
     // Load remote json data
     function _execJSON(input, param, func) {
         var url = _set(input, 'url');
@@ -648,7 +657,7 @@
                 $.get(url, param, function (ret) {
                     _cache(input, param_serialised, ret);
                     func(ret);
-                }, "json");
+                }, "json").fail(_releaseOnFail(input));
             }
             else{
                 func(cacheData);
@@ -657,7 +666,7 @@
         }
         else{
             dd('Not use cache');
-            $.get(url, param, func, "json");
+            $.get(url, param, func, "json").fail(_releaseOnFail(input));
         }
 
     }

@@ -65,8 +65,9 @@ namespace Finance.Controllers.TEA
         // form" spec. Falls back to the full BlendTypes list on any API failure (schema
         // not reachable, etc.) rather than locking every user out of the screen; an empty
         // -but-successful- response (user genuinely has zero rights rows) does filter down
-        // to nothing, which is the point of the restriction.
-        private async Task<Dictionary<string, string>> GetAllowedBlendTypesAsync()
+        // to nothing, which is the point of the restriction. Shared (static) so Final Blend
+        // Entry and Packing Entry offer exactly the same Packet Types.
+        internal static async Task<Dictionary<string, string>> GetAllowedBlendTypesAsync()
         {
             var response = await Services.GetAsync<List<string>>("/api/TeaBlend/GetAllowedBlendTypes");
             if (!response.IsSuccessStatusCode || response.Data == null)
@@ -415,10 +416,11 @@ namespace Finance.Controllers.TEA
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetMark(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        public async Task<ActionResult> GetMark(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1, string garden = "")
         {
             if (string.IsNullOrEmpty(q)) q = value;
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            // `garden` (optional) narrows the marks to that garden -- "Select Data"'s dependent Mark dropdown.
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={q}&pageSize={(limit > 0 ? limit : 50)}&garden={Uri.EscapeDataString(garden ?? "")}");
             return PickerJson(r);
         }
 
@@ -450,7 +452,7 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> GetAvailableStock(string blendType, string garden = "", string mark = "", string category = "")
         {
             var r = await Services.GetAsync<dynamic>(
-                $"/api/TeaBlend/GetAvailableStock?blendType={blendType}&garden={garden}&mark={mark}&category={category}");
+                $"/api/TeaBlend/GetAvailableStock?blendType={blendType}&garden={Uri.EscapeDataString(garden ?? "")}&mark={Uri.EscapeDataString(mark ?? "")}&category={Uri.EscapeDataString(category ?? "")}");
             return JsonExact(r.Data);
         }
 

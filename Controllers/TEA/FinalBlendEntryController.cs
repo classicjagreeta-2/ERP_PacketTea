@@ -67,10 +67,19 @@ namespace Finance.Controllers.TEA
             ViewBag.PageSize = pageSize;
             ViewBag.Page = page ?? 1;
             ViewBag.BlendType = blendType;
-            ViewBag.BlendTypes = BlendTypes;
-            var userUnits = await GetUnitsForUserAsync();
+            // Packet Types the user has rights to (M_UNIT_USER_RIGHT) -- same as Master Blend
+            // Entry; the two lookups are independent, so run them side by side.
+            var allowedTask = MasterBlendEntryController.GetAllowedBlendTypesAsync();
+            var unitsTask = GetUnitsForUserAsync();
+            await Task.WhenAll(allowedTask, unitsTask);
+            var allowedTypes = allowedTask.Result;
+            ViewBag.BlendTypes = allowedTypes;
+            var userUnits = unitsTask.Result;
             ViewBag.UnitList = userUnits;
             var unitFilter = Uri.EscapeDataString(UnitScope.ListFilter(unit, userUnits));
+            // The list covers every permitted Packet Type as ONE comma-separated list, not the
+            // single `blendType` in the URL (see MasterBlendEntryController.Index).
+            var typeFilter = Uri.EscapeDataString(string.Join(",", allowedTypes.Keys));
 
             // Chunked list: a full page view always starts at the first chunk; further chunks
             // arrive as AJAX calls (see below) and return just the table rows.
@@ -80,7 +89,7 @@ namespace Finance.Controllers.TEA
             ViewBag.RowOffset = (pageNo - 1) * pageSize;
 
             var response = await Services.GetAsync<PageModel<T_TEA_BLEND>>(
-                $"/api/FinalBlend/GetByPage?blendType={blendType}&unit={unitFilter}&search={searchString}&page={pageNo}&pageSize={pageSize}");
+                $"/api/FinalBlend/GetByPage?blendType={typeFilter}&unit={unitFilter}&search={searchString}&page={pageNo}&pageSize={pageSize}");
 
             var list = response?.Data?.value?.results ?? new List<T_TEA_BLEND>();
             ViewBag.RowCount = response?.Data?.value?.rowCount ?? 0;

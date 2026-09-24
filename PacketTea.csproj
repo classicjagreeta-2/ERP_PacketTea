@@ -5487,6 +5487,7 @@
     <Content Include="Views\Packing\Index.cshtml" />
     <Content Include="Views\Packing\_ListRows.cshtml" />
     <Content Include="Scripts\list-infinite-scroll.js" />
+    <Content Include="Scripts\list-new-row-pickers.js" />
     <Content Include="Views\Packing\InsertOrUpdate.cshtml" />
     <Content Include="Views\BlendEntry\Index.cshtml" />
     <Content Include="Views\BlendEntry\InsertOrUpdate.cshtml" />

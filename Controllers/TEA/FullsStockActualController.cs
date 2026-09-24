@@ -148,7 +148,7 @@ namespace Finance.Controllers.TEA
             {
                 using (var wb = BuildWorkbook(report))
                 {
-                    var name = "FullsStockActual-" + (report.AsOn ?? "").Replace("/", "") + ".xlsx";
+                    var name = "Stock Report Batch wise.xlsx";
                     var r = ClassicExcel.SaveAndOpen(wb, name, Request);
                     return Json(new { success = true, opened = r.Opened, fileName = r.FileName, token = r.Token }, JsonRequestBehavior.AllowGet);
                 }

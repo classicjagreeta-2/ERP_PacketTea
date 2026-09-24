@@ -5,6 +5,8 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     bool isEdit = ViewBag.IsEdit ?? false;
+    // Opened via the list's "View" button -- read-only (see IS_VIEW at the bottom of the script).
+    bool isView = ViewBag.IsView ?? false;
     bool lockedFromList = ViewBag.LockedFromList ?? false;
     var head = Model;
 }
@@ -34,15 +36,23 @@
         .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         #gridTable th, #gridTable td { white-space: nowrap; }
         #gridTable td input { min-width: 80px; }
-        .grid-pick-btn { width: 20px; height: 21px; padding: 0; margin-left: 2px; vertical-align: middle; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; font-size: 11px; line-height: 1; }
-        .popup-box.picker-box { width: 420px; display: none; }
-        .popup-box.picker-box.wide { width: 760px; max-width: 92vw; }
-        .popup-box .picker-body { max-height: 40vh; overflow-y: auto; margin-top: 8px; }
-        .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; }
-        .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
-        .popup-box .picker-body tr:hover td { background: #eef3ff; }
-        .popup-box .picker-search { margin-bottom: 8px; }
+        /* Lookup cells: the code box itself opens the inputpicker dropdown; the picked name
+           shows beside it. Mark gets the widest cell (garden names are long). */
+        #gridTable th.col-sl, #gridTable td.col-sl { min-width: 60px; width: 60px; text-align: center; }
+        #gridTable th.col-blend, #gridTable td.col-blend { min-width: 160px; }
+        #gridTable td.col-blend input { width: 140px; }
+        #gridTable td.col-mark { min-width: 320px; }
+        #gridTable td.col-grade { min-width: 260px; }
+        #gridTable td.col-size { min-width: 210px; }
+        #gridTable td.col-mark input, #gridTable td.col-grade input, #gridTable td.col-size input { width: 90px; }
+        #gridTable .lk-name { display: inline-block; max-width: 210px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; margin-left: 6px; color: #555; }
+        #gridTable td.col-mark .lk-name { max-width: 220px; }
+        /* The plugin wraps a picked cell's input in a div with inline "overflow:auto; height:100%"; inside a
+           table cell that can sprout scrollbars, so keep the wrapper exactly the size of its input. */
+        #gridTable .inputpicker-div { overflow: hidden !important; height: auto !important; }
+        #gridTable .inputpicker-overflow-hidden { overflow: hidden; }
+        /* Hidden columns (Alloc / Item / MRP): still rendered so their values round-trip on Save. */
+        #gridTable .col-hide { display: none; }
         .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
         .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
         .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -66,7 +76,7 @@
                         <li><a href="@Url.Action("Index", "Packing")"><i class="fa fa-times"></i> Cancel</a></li>
                         <li style="margin-left:auto">
                             <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
-                                Status : <span id="statusText">@(isEdit ? "Edit" : "Add")</span>
+                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
                             </label>
                         </li>
                     </ul>
@@ -128,12 +138,12 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Blend No <span>(*)</span></label>
-                                <input type="text" id="MasterBlendNo" value="@head.MasterBlendNo" placeholder="Click to pick" readonly style="cursor:pointer;" />
+                                <input type="text" id="MasterBlendNo" data-picker="blend" value="@head.MasterBlendNo" placeholder="Blend No" />
                                 <div id="balanceHint"></div>
                             </div>
                             <div class="form-col-20">
                                 <label>Blend Date</label>
-                                <input type="text" id="MasterBlendDate" value="@(string.IsNullOrEmpty(head.BlendDocDate) ? "" : DateTime.Parse(head.BlendDocDate).ToString("dd/MM/yyyy"))" readonly />
+                                <input type="text" id="MasterBlendDate" value="@PacketTea.DateText.Display(head.BlendDocDate)" readonly />
                             </div>
                         </div>
 
@@ -185,10 +195,10 @@
                                 <thead>
                                     <tr>
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
-                                        <th style="width:30px;">Sl</th>
-                                        <th style="width:40px;">Blend</th>
-                                        <th>Mark <span style="color:red;">(*)</span></th>
-                                        <th>Grade <span style="color:red;">(*)</span></th>
+                                        <th class="col-sl">Sl</th>
+                                        <th class="col-blend">Blend</th>
+                                        <th class="col-mark">Mark <span style="color:red;">(*)</span></th>
+                                        <th class="col-grade">Grade <span style="color:red;">(*)</span></th>
                                         <th>Category</th>
                                         <th>Inv No <span style="color:red;">(*)</span></th>
                                         <th style="width:110px;">Pack Date</th>
@@ -202,12 +212,12 @@
                                         <th style="width:85px;text-align:right;">Qty</th>
                                         <th>Batch No</th>
                                         <th style="width:110px;">Mfg Date</th>
-                                        <th>Size</th>
+                                        <th class="col-size">Size</th>
                                         <th style="width:75px;text-align:right;">Rate</th>
                                         <th style="width:90px;text-align:right;">Amount</th>
-                                        <th>Alloc</th>
-                                        <th>Item</th>
-                                        <th style="width:60px;">MRP</th>
+                                        <th class="col-hide">Alloc</th>
+                                        <th class="col-hide">Item</th>
+                                        <th class="col-hide" style="width:60px;">MRP</th>
                                     </tr>
                                 </thead>
                                 <tbody id="gridBody"></tbody>
@@ -215,11 +225,10 @@
                                     <tr class="total">
                                         <td colspan="9" style="text-align:right;">Total</td>
                                         <td id="ftBag" style="text-align:right;"></td>
-                                        <td colspan="4"></td>
+                                        <td colspan="5"></td>
                                         <td id="ftQty" style="text-align:right;"></td>
                                         <td colspan="4"></td>
                                         <td id="ftAmt" style="text-align:right;"></td>
-                                        <td colspan="3"></td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -231,23 +240,10 @@
         </div>
     </div>
 
-    <div class="popup-overlay" id="pickerOverlay"></div>
-
-    <!-- Mark/Grade/Chest Size/Allocation/Sales Centre now use jquery.inputpicker
-         (Root UI convention -- see CLAUDE.md's "lookup pickers" rule), which renders its
-         own anchored dropdown next to the field itself -- no shared modal markup needed. -->
-
-    <!-- Final Blend picker -- used both by the header "Blend No" field and by
-         each row's own "Blend" pick button (see BlendPackingController's class
-         comment on why every row gets a WORKING picker here). -->
-    <div class="popup-box picker-box wide" id="blendPicker">
-        <div class="popup-header">
-            <h2>Select Final Blend</h2>
-            <button type="button" class="close-btn" onclick="closeBlendPicker()">X</button>
-        </div>
-        <input type="text" id="blendPickerSearch" class="picker-search" placeholder="Search Blend No / Doc No..." />
-        <div class="picker-body" id="blendPickerBody"></div>
-    </div>
+    <!-- Mark/Grade/Chest Size/Allocation/Sales Centre AND the Final Blend (header Blend No + each
+         row's Blend) use jquery.inputpicker (Root UI convention -- see CLAUDE.md's "lookup
+         pickers" rule), which renders its own anchored dropdown next to the field itself -- no
+         shared modal markup needed. -->
 
     <div class="popup-overlay" id="appAlertOverlay"></div>
     <div class="popup-box alert-box" id="appAlertBox">
@@ -276,7 +272,7 @@
         $('#appAlertOverlay, #appAlertBox').fadeIn(120);
     }
 
-    $('#pickerOverlay, #blendPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    $('#appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
     var rows = @Html.Raw(JsonConvert.SerializeObject(Model.Details));
@@ -290,6 +286,11 @@
         return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
     }
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
+    // HTML-escape a value going into a built attribute/text (names such as "M&M TEA" or a
+    // stray quote would otherwise break the row markup).
+    function esc(v) {
+        return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
 
     function renderGrid() {
@@ -303,12 +304,16 @@
             totAmt += num(r.AMOUNT);
             var tr = $('<tr data-cid="' + r._cid + '"></tr>');
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
-            tr.append('<td>' + r.SL_NO + '</td>');
-            tr.append('<td><button type="button" class="grid-pick-btn f-blend-btn" title="Pick a Final Blend for this row">&hellip;</button></td>');
-            tr.append('<td><input type="text" class="f-mark" value="' + (r.MARK || '') + '" placeholder="Code" />' +
-                '<button type="button" class="grid-pick-btn f-mark-btn" title="Search mark">&hellip;</button></td>');
-            tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" placeholder="Code" />' +
-                '<button type="button" class="grid-pick-btn f-grade-btn" title="Search grade">&hellip;</button></td>');
+            tr.append('<td class="col-sl">' + r.SL_NO + '</td>');
+            // Blend: the box itself is the Final Blend dropdown (Blend No shown; a saved line that
+            // only carries the blend's Doc No shows that until another blend is picked).
+            tr.append('<td class="col-blend"><input type="text" class="f-blend" value="' + esc(r.BlendNo || r.BLEND_DOCNO) + '" placeholder="Blend No" /></td>');
+            // Lookup cells: the code box is itself the inputpicker dropdown (no "..." button);
+            // the picked name is shown beside it.
+            tr.append('<td class="col-mark"><input type="text" class="f-mark" value="' + esc(r.MARK) + '" placeholder="Code" />' +
+                '<span class="lk-name f-mark-name" title="' + esc(r.MarkName) + '">' + esc(r.MarkName) + '</span></td>');
+            tr.append('<td class="col-grade"><input type="text" class="f-grade" value="' + esc(r.GRADE) + '" placeholder="Code" />' +
+                '<span class="lk-name f-grade-name" title="' + esc(r.GradeName) + '">' + esc(r.GradeName) + '</span></td>');
             tr.append('<td><input type="text" class="f-cat" value="' + (r.CAT || '') + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" maxlength="10" /></td>');
             tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" /></td>');
@@ -322,14 +327,14 @@
             tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
             tr.append('<td><input type="text" class="f-batchno" value="' + (r.BATCHNO || '') + '" /></td>');
             tr.append('<td><input type="date" class="f-mfgfrom" value="' + (r.MFG_FROM ? r.MFG_FROM.substring(0, 10) : '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-szcode" value="' + (r.SZ_CODE || '') + '" placeholder="Code" />' +
-                '<button type="button" class="grid-pick-btn f-sz-btn" title="Search chest size">&hellip;</button></td>');
+            tr.append('<td class="col-size"><input type="text" class="f-szcode" value="' + esc(r.SZ_CODE) + '" placeholder="Code" />' +
+                '<span class="lk-name f-sz-name" title="' + esc(r.SzDesc) + '">' + esc(r.SzDesc) + '</span></td>');
             tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + (r.RATE || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + (r.AMOUNT || 0) + '" readonly /></td>');
-            tr.append('<td><input type="text" class="f-alloc" value="' + (r.ALLOCATION || '') + '" placeholder="Code" />' +
-                '<button type="button" class="grid-pick-btn f-alloc-btn" title="Search allocation">&hellip;</button></td>');
-            tr.append('<td><input type="text" class="f-itcd" value="' + (r.ITCD || '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-mrp" value="' + (r.MRP || '') + '" /></td>');
+            // Alloc / Item / MRP are hidden columns -- kept in the DOM so their values still Save.
+            tr.append('<td class="col-hide"><input type="text" class="f-alloc" value="' + esc(r.ALLOCATION) + '" /></td>');
+            tr.append('<td class="col-hide"><input type="text" class="f-itcd" value="' + esc(r.ITCD) + '" /></td>');
+            tr.append('<td class="col-hide"><input type="text" class="f-mrp" value="' + esc(r.MRP) + '" /></td>');
             $tb.append(tr);
         });
         $('#ftBag').text(round2(totBag));
@@ -420,25 +425,63 @@
     // lookups (Mark/Grade/Chest Size/Allocation) anchor to that row's own text input
     // (rowField) since inputpicker needs a real <input>, not the "..." button itself.
     // =========================================================
+    // Extra query params sent with every Final Blend dropdown request. inputpicker merges this
+    // object into each request as-is, so refreshing the values here is enough (Blend Type can
+    // still change on a screen that wasn't opened locked from the list).
+    var blendParams = { blendType: '', unit: '' };
+    function syncBlendParams() {
+        blendParams.blendType = $('#BLEND_TYPE').val() || '';
+        blendParams.unit = $('#UNIT_disp').val() || '';
+    }
+    $('#BLEND_TYPE').on('change', syncBlendParams);
+
     var pickerConfig = {
         mark: { url: '@Url.Action("GetMark", "Packing")', fields: [{ name: 'MCD', text: 'Code' }, { name: 'MDESC', text: 'Garden/Mark' }], rowField: '.f-mark' },
         grade: { url: '@Url.Action("GetBlendGrade", "Packing")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], rowField: '.f-grade' },
         chestsize: { url: '@Url.Action("GetChestSize", "Packing")', fields: [{ name: 'SZ_CODE', text: 'Code' }, { name: 'SZ_DESC', text: 'Description' }], rowField: '.f-szcode' },
         allocation: { url: '@Url.Action("GetAllocation", "Packing")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'DESCN', text: 'Description' }], rowField: '.f-alloc' },
-        salescentre: { url: '@Url.Action("GetSalesCentre", "Packing")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'SaleCentre' }
+        salescentre: { url: '@Url.Action("GetSalesCentre", "Packing")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'SaleCentre' },
+        // Final Blend (header Blend No + each row's Blend). Blends already fully packed are not
+        // offered by the API. 'creatable' keeps a saved line's existing value in the box even
+        // when that blend is no longer in the (remaining > 0) list, instead of swapping in the
+        // first row; only an actual pick applies anything (see onPick / rowLookups).
+        blend: {
+            url: '@Url.Action("GetFinalBlendList", "Packing")',
+            fields: [{ name: 'BLEND_NO', text: 'Blend No' }, { name: 'DOCNO', text: 'Doc No' }, { name: 'BLEND_QTY', text: 'Blend Qty' },
+                     { name: 'PACKED_QTY', text: 'Packed' }, { name: 'REMAINING_QTY', text: 'Remaining' }, { name: 'RATE', text: 'Rate' }],
+            urlParam: blendParams, pageLimit: 20, selectMode: 'creatable',
+            onPick: function (b) { applyHeaderBlend(b); }
+        }
     };
 
     $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
-    $('#gridBody').on('click', '.f-mark-btn', function () { rowPicker(this, 'mark', function (r, row) { r.MARK = row.MCD; $(this).closest('tr').find('.f-mark').val(row.MCD); }); });
-    $('#gridBody').on('click', '.f-grade-btn', function () { rowPicker(this, 'grade', function (r, row) { r.GRADE = row.CODE; $(this).closest('tr').find('.f-grade').val(row.CODE); }); });
-    $('#gridBody').on('click', '.f-sz-btn', function () { rowPicker(this, 'chestsize', function (r, row) { r.SZ_CODE = row.SZ_CODE; $(this).closest('tr').find('.f-szcode').val(row.SZ_CODE); }); });
-    $('#gridBody').on('click', '.f-alloc-btn', function () { rowPicker(this, 'allocation', function (r, row) { r.ALLOCATION = row.CODE; $(this).closest('tr').find('.f-alloc').val(row.CODE); }); });
+    // Row lookups: the row's own box is the dropdown -- clicking/focusing it (or typing in it)
+    // opens the inputpicker anchored right under it, no separate "..." button.
+    var rowLookups = [
+        { sel: '.f-blend',  key: 'blend',     apply: function (r, row) { r.BlendNo = row.BLEND_NO || ''; applyBlendToRow(row.DOCNO, row.DOCDT, r._cid); } },
+        { sel: '.f-mark',   key: 'mark',      apply: function (r, row, $tr) { r.MARK = row.MCD; r.MarkName = row.MDESC || ''; $tr.find('.f-mark').val(row.MCD); $tr.find('.f-mark-name').text(r.MarkName).attr('title', r.MarkName); } },
+        { sel: '.f-grade',  key: 'grade',     apply: function (r, row, $tr) { r.GRADE = row.CODE; r.GradeName = row.NAME || ''; $tr.find('.f-grade').val(row.CODE); $tr.find('.f-grade-name').text(r.GradeName).attr('title', r.GradeName); } },
+        { sel: '.f-szcode', key: 'chestsize', apply: function (r, row, $tr) { r.SZ_CODE = row.SZ_CODE; r.SzDesc = row.SZ_DESC || ''; $tr.find('.f-szcode').val(row.SZ_CODE); $tr.find('.f-sz-name').text(r.SzDesc).attr('title', r.SzDesc); } }
+    ];
+    rowLookups.forEach(function (lk) {
+        // inputpicker clones the input it is attached to (classes included, e.g. "f-blend") and
+        // shows the clone; the clone must NOT match here, or clicking it would attach a second
+        // picker inside the first and stack up wrappers/scrollbars in the cell.
+        $('#gridBody').on('click focus', lk.sel + ':not(.inputpicker-input)', function () {
+            var $in = $(this), $tr = $in.closest('tr'), r = findRow($tr.data('cid'));
+            if (!r) return;
+            openPicker(lk.key, $in, function (row) { lk.apply(r, row, $tr); });
+        });
+    });
 
-    function rowPicker(btn, key, apply) {
-        var cfg = pickerConfig[key];
-        var $tr = $(btn).closest('tr'), r = findRow($tr.data('cid'));
-        if (!r) return;
-        openPicker(key, $tr.find(cfg.rowField), function (row) { apply.call(btn, r, row); });
+    // The row the user picked, looked up in the data the dropdown last loaded. This copy of the
+    // plugin writes the picked value into the original input and fires "change" on it; it does
+    // not hand the row to a select handler, so read it back by the picked value.
+    function pickedRow($input, cfg) {
+        var key = cfg.fields[0].name, v = String($input.val() == null ? '' : $input.val()), data = [];
+        try { data = $input.inputpicker('data') || []; } catch (e) { data = []; }
+        for (var i = 0; i < data.length; i++) { if (String(data[i][key]) === v) return data[i]; }
+        return null;
     }
 
     function openPicker(key, $input, onSelect) {
@@ -450,7 +493,8 @@
             return;
         }
 
-        $input.inputpicker({
+        if (cfg.urlParam) syncBlendParams();
+        var opts = {
             url: cfg.url,
             fields: cfg.fields,
             fieldText: cfg.fields[0].name,
@@ -461,81 +505,54 @@
             pagination: true,
             pageField: 'p',
             pageLimitField: 'limit',
-            pageLimit: 10,
+            pageLimit: cfg.pageLimit || 10,
             pageCountField: 'count',
             width: 'auto',
-            urlDelay: 1
-        });
+            urlDelay: 150      // small debounce: one request per pause in typing, not per keystroke
+        };
+        if (cfg.urlParam) opts.urlParam = cfg.urlParam;
+        if (cfg.selectMode) opts.selectMode = cfg.selectMode;
+        $input.inputpicker(opts);
 
-        $input.off('inputpicker.select').on('inputpicker.select', function (e, row) {
+        function deliver(row) {
             if (!row) return;
             if (onSelect) {
                 onSelect(row);
+            } else if (cfg.onPick) {
+                cfg.onPick(row);
             } else if (cfg.target) {
                 $('#' + cfg.target).val(row[cfg.fields[0].name]);
                 $('#' + cfg.target + '_disp').val(row[cfg.fields[1].name] || '');
             }
-            $(this).inputpicker('hide');
             renderTotalsOnly();
-        });
-    }
-
-    // =========================================================
-    // Final Blend picker (header "Blend No" AND each row's own "Blend"
-    // button -- see the view-top comment and BlendPackingController's class
-    // comment on why every row gets a working picker here).
-    // =========================================================
-    var blendPickerTarget = 'header'; // 'header' or a row _cid
-    function openBlendPicker(target) {
-        blendPickerTarget = target;
-        $('#pickerOverlay, #blendPicker').fadeIn(120);
-        $('#blendPickerSearch').val('');
-        loadBlendList('');
-        $('#blendPickerSearch').off('input').on('input', function () { loadBlendList($(this).val()); });
-    }
-    function closeBlendPicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
-
-    $('#MasterBlendNo').on('click focus', function () { openBlendPicker('header'); });
-    $('#gridBody').on('click', '.f-blend-btn', function () { openBlendPicker($(this).closest('tr').data('cid')); });
-
-    function loadBlendList(term) {
-        $.getJSON('@Url.Action("GetFinalBlendList", "Packing")', { blendType: $('#BLEND_TYPE').val(), unit: $('#UNIT_disp').val(), search: term }, function (data) {
-            data = data || [];
-            var html = '<table><thead><tr><th>Blend No</th><th>Doc No</th><th>Blend Qty</th><th>Packed Qty</th><th>Remaining</th><th>Rate</th></tr></thead><tbody>';
-            data.forEach(function (b, i) {
-                html += '<tr data-i="' + i + '"><td>' + (b.BLEND_NO || '') + '</td><td>' + (b.DOCNO || '') + '</td>' +
-                    '<td>' + b.BLEND_QTY + '</td><td>' + b.PACKED_QTY + '</td><td>' + b.REMAINING_QTY + '</td><td>' + b.RATE + '</td></tr>';
-            });
-            html += '</tbody></table>';
-            $('#blendPickerBody').html(html);
-            $('#blendPickerBody').data('rows', data);
-        });
-    }
-
-    $('#blendPickerBody').on('click', 'tr[data-i]', function () {
-        var data = $('#blendPickerBody').data('rows') || [];
-        var b = data[$(this).data('i')];
-        var target = blendPickerTarget;
-        closeBlendPicker();
-
-        if (target === 'header') {
-            $('#BlendDocNo').val(b.DOCNO);
-            $('#BlendDocDt').val(b.DOCDT);
-            $('#MasterBlendNo').val(b.BLEND_NO || '');
-            $('#MasterBlendDate').val(fmtDate(b.BLEND_DATE));
-            $('#PartyName').val(b.PartyName || '');
-            $('#ShipMark').val(b.SHIP_MARK || '');
-            $('#balanceHint').text('Balance Qty To Be Packed: ' + b.REMAINING_QTY);
-            // Auto-populate ONE summary row, same as VB's TxtBlendNo_Validate --
-            // only when adding fresh with an empty grid, so re-picking the
-            // header blend on an in-progress document never clobbers rows.
-            if (!IS_EDIT && rows.length === 0) {
-                applyBlendToRow(b.DOCNO, b.DOCDT, null);
-            }
-        } else {
-            applyBlendToRow(b.DOCNO, b.DOCDT, target);
         }
-    });
+        // Both hooks call the same idempotent handler, so whichever this plugin build fires works.
+        $input.off('inputpicker.select').on('inputpicker.select', function (e, row) {
+            deliver(row);
+            $(this).inputpicker('hide');
+        });
+        $input.off('change.ipk').on('change.ipk', function () { deliver(pickedRow($input, cfg)); });
+    }
+
+    // =========================================================
+    // Final Blend dropdown (header "Blend No" AND each row's own "Blend").
+    // A pick on the header fills the header; a pick on a row fills that row (see rowLookups).
+    // =========================================================
+    function applyHeaderBlend(b) {
+        $('#BlendDocNo').val(b.DOCNO);
+        $('#BlendDocDt').val(b.DOCDT);
+        $('#MasterBlendNo').val(b.BLEND_NO || '');
+        $('#MasterBlendDate').val(fmtDate(b.BLEND_DATE));
+        $('#PartyName').val(b.PartyName || '');
+        $('#ShipMark').val(b.SHIP_MARK || '');
+        $('#balanceHint').text('Balance Qty To Be Packed: ' + b.REMAINING_QTY);
+        // Auto-populate ONE summary row, same as VB's TxtBlendNo_Validate --
+        // only when adding fresh with an empty grid, so re-picking the
+        // header blend on an in-progress document never clobbers rows.
+        if (!IS_EDIT && rows.length === 0) {
+            applyBlendToRow(b.DOCNO, b.DOCDT, null);
+        }
+    }
 
     function applyBlendToRow(blendDocNo, blendDocDt, cid) {
         $.get('@Url.Action("GetFinalBlendRowValues", "Packing")', {
@@ -548,6 +565,7 @@
                 r = { _cid: ++rowSeq };
                 rows.push(r);
             }
+            r.BlendNo = v.blendNo || '';
             r.BLEND_DOCNO = v.blendDocNo;
             r.BLEND_DOCDT = v.blendDocDt;
             r.MARK = v.mark; r.MarkName = v.markName;
@@ -619,6 +637,15 @@
     });
 
     renderGrid();
+
+    // View mode (list page "View" button): runs after the first renderGrid() has built every grid
+    // row, then disables the header fields, the whole grid and the Save / row buttons.
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
+    if (IS_VIEW) {
+        $('.accordion-container :input').prop('disabled', true);
+        $('#btnSave').prop('disabled', true).css({ opacity: .4, cursor: 'not-allowed' });
+        $('#btnAddRow, #btnRemoveRows').css({ opacity: .4, 'pointer-events': 'none' });
+    }
 </script>
 </body>
 </html>

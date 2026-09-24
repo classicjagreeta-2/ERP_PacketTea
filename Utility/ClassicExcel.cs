@@ -65,20 +65,30 @@ namespace PacketTea.Utility
 
             var toDelete = deletePattern != null ? Directory.EnumerateFiles(Folder, deletePattern)
                          : File.Exists(path) ? new[] { path } : new string[0];
+            // An earlier report that is still open in Excel cannot be deleted; it is left
+            // alone and the new file is saved beside it under a numbered name.
             foreach (var old in toDelete)
             {
-                try
+                try { File.Delete(old); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+
+            if (File.Exists(path))
+            {
+                var stem = Path.GetFileNameWithoutExtension(safeName);
+                var ext = Path.GetExtension(safeName);
+                for (var n = 2; File.Exists(path) && n < 100; n++)
                 {
-                    File.Delete(old);
+                    safeName = stem + " (" + n + ")" + ext;
+                    path = Path.Combine(Folder, safeName);
+                    if (File.Exists(path))
+                    {
+                        try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+                    }
                 }
-                catch (IOException)
-                {
-                    throw new IOException("An earlier report file is still open - please close " + old + " and try again.");
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    throw new IOException("Cannot delete " + old + " - check that it is not read-only or open, then try again.");
-                }
+                if (File.Exists(path))
+                    throw new IOException("Too many earlier report files are still open - please close some in " + Folder + " and try again.");
             }
 
             File.WriteAllBytes(path, bytes);

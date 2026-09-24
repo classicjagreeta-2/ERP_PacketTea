@@ -886,7 +886,7 @@
 
         var seen = {};
         for (var i = 0; i < valid.length; i++) {
-            var k = valid[i].INVNO + '|' + valid[i].GRADE + '|' + valid[i].MARK;
+            var k = valid[i].INVNO + '|' + valid[i].GRADE + '|' + valid[i].MARK + '|' + (valid[i].PACK_DATE || '').substring(0, 10);
             if (seen[k]) { showAlert('Duplicate Entry'); return; }
             seen[k] = true;
         }

@@ -58,10 +58,19 @@ namespace Finance.Controllers.TEA
             ViewBag.PageSize = pageSize;
             ViewBag.Page = page ?? 1;
             ViewBag.BlendType = blendType;
-            ViewBag.BlendTypes = BlendTypes;
-            var userUnits = await GetUnitsForUserAsync();
+            // Packing Types the user has rights to (M_UNIT_USER_RIGHT) -- same as Master Blend
+            // Entry; the two lookups are independent, so run them side by side.
+            var allowedTask = MasterBlendEntryController.GetAllowedBlendTypesAsync();
+            var unitsTask = GetUnitsForUserAsync();
+            await Task.WhenAll(allowedTask, unitsTask);
+            var allowedTypes = allowedTask.Result;
+            ViewBag.BlendTypes = allowedTypes;
+            var userUnits = unitsTask.Result;
             ViewBag.UnitList = userUnits;
             var unitFilter = Uri.EscapeDataString(UnitScope.ListFilter(unit, userUnits));
+            // The list covers every permitted type as ONE comma-separated list, not the single
+            // `blendType` in the URL (see MasterBlendEntryController.Index).
+            var typeFilter = Uri.EscapeDataString(string.Join(",", allowedTypes.Keys));
 
             // Chunked list: a full page view always starts at the first chunk; further chunks
             // arrive as AJAX calls (see below) and return just the table rows.
@@ -71,7 +80,7 @@ namespace Finance.Controllers.TEA
             ViewBag.RowOffset = (pageNo - 1) * pageSize;
 
             var response = await Services.GetAsync<PageModel<BLEND_PACKING_DATA>>(
-                $"/api/BlendPacking/GetByPage?blendType={blendType}&unit={unitFilter}&search={searchString}&page={pageNo}&pageSize={pageSize}");
+                $"/api/BlendPacking/GetByPage?blendType={typeFilter}&unit={unitFilter}&search={searchString}&page={pageNo}&pageSize={pageSize}");
 
             var list = response?.Data?.value?.results ?? new List<BLEND_PACKING_DATA>();
             ViewBag.RowCount = response?.Data?.value?.rowCount ?? 0;
@@ -98,11 +107,21 @@ namespace Finance.Controllers.TEA
         // picker -- Unit + Blend Type were already chosen there, so the header repeats
         // them read-only instead of leaving Unit unset (same pattern as
         // MasterBlendEntryController/FinalBlendEntryController.InsertOrUpdate).
-        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "")
+        public async Task<ActionResult> InsertOrUpdate(string docno = "", string docdt = "", string blendType = "", string unit = "", bool view = false)
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             var permission = AEDV.ForScreen(sdsd, "Packing");
             ViewBag.Permission = permission;
+
+            // `view` is set by the list's View button -- same fetch as Edit, but the form renders
+            // read-only. It only applies to an existing record and needs the View right.
+            view = view && !string.IsNullOrEmpty(docno);
+            if (view && !(permission?.View ?? false))
+            {
+                TempData["toastrError"] = "You do not have permission to view this entry.";
+                return RedirectToAction("Index", new { blendType });
+            }
+            ViewBag.IsView = view;
 
             ViewBag.BlendTypes = BlendTypes;
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
@@ -159,8 +178,16 @@ namespace Finance.Controllers.TEA
                 return View(model);
             }
 
+            // The list's Blend No link / Edit button passes the row's Unit (a Doc No repeats across
+            // units). It must be one the user is linked to -- checked alongside the load.
+            var unitsTask = string.IsNullOrEmpty(unit) ? null : GetUnitsForUserAsync();
             var response = await Services.GetAsync<dynamic>(
-                $"/api/BlendPacking/GetByDocNo?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}");
+                $"/api/BlendPacking/GetByDocNo?docno={Uri.EscapeDataString(docno)}&docdt={Uri.EscapeDataString(docdt ?? "")}&blendType={Uri.EscapeDataString(blendType ?? "")}&unit={Uri.EscapeDataString(!string.IsNullOrEmpty(unit) ? unit : CurrentUnit)}");
+            if (unitsTask != null && !UnitScope.IsAllowed(unit, await unitsTask))
+            {
+                TempData["toastrError"] = $"You do not have permission for Unit {unit}.";
+                return RedirectToAction("Index", new { blendType });
+            }
 
             if (!response.IsSuccessStatusCode || response.Data == null)
             {
@@ -172,12 +199,16 @@ namespace Finance.Controllers.TEA
             var wrapper = JsonConvert.DeserializeObject<GetByDocNoResult>(json);
 
             // Block opening Edit outright when the user has no Edit right, or the record's
-            // own Doc Date has fallen outside the Eday back-date window.
-            var editErr = AEDV.CheckAddEdit(permission, false, wrapper.head?.DOCDT ?? DateTime.Today);
-            if (editErr != null)
+            // own Doc Date has fallen outside the Eday back-date window -- View bypasses this
+            // (read-only regardless of the Edit/back-date policy).
+            if (!view)
             {
-                TempData["toastrError"] = editErr;
-                return RedirectToAction("Index", new { blendType });
+                var editErr = AEDV.CheckAddEdit(permission, false, wrapper.head?.DOCDT ?? DateTime.Today);
+                if (editErr != null)
+                {
+                    TempData["toastrError"] = editErr;
+                    return RedirectToAction("Index", new { blendType });
+                }
             }
 
             var editModel = wrapper.head ?? new BLEND_PACKING_DATA();
@@ -231,7 +262,7 @@ namespace Finance.Controllers.TEA
 
         // POST: Packing/Delete
         [HttpPost]
-        public async Task<ActionResult> Delete(string docno, string docdt, string blendType)
+        public async Task<ActionResult> Delete(string docno, string docdt, string blendType, string unit = "")
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             var permission = AEDV.ForScreen(sdsd, "Packing");
@@ -241,8 +272,15 @@ namespace Finance.Controllers.TEA
                 return RedirectToAction("Index", new { blendType });
             }
 
+            // The row's Unit (Doc No repeats across units) must be one the user is linked to.
+            if (!string.IsNullOrEmpty(unit) && !UnitScope.IsAllowed(unit, await GetUnitsForUserAsync()))
+            {
+                TempData["toastrError"] = $"You do not have permission for Unit {unit}.";
+                return RedirectToAction("Index", new { blendType });
+            }
+
             var response = await Services.PostAsync<dynamic>(
-                $"/api/BlendPacking/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}", new { });
+                $"/api/BlendPacking/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={Uri.EscapeDataString(!string.IsNullOrEmpty(unit) ? unit : CurrentUnit)}", new { });
 
             TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");
@@ -313,17 +351,27 @@ namespace Finance.Controllers.TEA
         }
 
         [HttpGet]
+        // inputpicker endpoint for the Blend No field (header + each grid row) -- same
+        // (q, limit, ..., p) contract and { data, count } response as GetMark & co.
         // Only Final Blends for THIS entry's Unit + Packet Type (Blend Type) that still have
         // qty left to pack (the API drops fully packed blends). `unit` is the entry screen's
         // Unit; it must be one the user is linked to, otherwise nothing is offered.
-        public async Task<ActionResult> GetFinalBlendList(string blendType = "", string search = "", string unit = "")
+        // The permission lookup and the list call run side by side (one round trip saved);
+        // the list is simply discarded when the unit turns out not to be permitted.
+        public async Task<ActionResult> GetFinalBlendList(string q = "", int limit = 0, string fieldValue = "", string fieldText = "",
+                                                          string value = "", int p = 1, string blendType = "", string unit = "")
         {
-            if (string.IsNullOrWhiteSpace(blendType) || !UnitScope.IsAllowed(unit, await GetUnitsForUserAsync()))
-                return JsonExact(new List<object>());
+            if (string.IsNullOrWhiteSpace(blendType) || string.IsNullOrWhiteSpace(unit))
+                return PickerJson(null);
 
-            var r = await Services.GetAsync<dynamic>(
-                $"/api/BlendPacking/GetFinalBlendList?blendType={Uri.EscapeDataString(blendType)}&unit={Uri.EscapeDataString(unit.Trim())}&search={Uri.EscapeDataString(search ?? "")}");
-            return JsonExact(r.Data);
+            var unitsTask = GetUnitsForUserAsync();
+            var listTask = Services.GetAsync<dynamic>(
+                $"/api/BlendPacking/GetFinalBlendList?blendType={Uri.EscapeDataString(blendType)}&unit={Uri.EscapeDataString(unit.Trim())}" +
+                $"&search={Uri.EscapeDataString(q ?? "")}&top={(limit > 0 ? limit : 30)}");
+            await Task.WhenAll(unitsTask, listTask);
+
+            if (!UnitScope.IsAllowed(unit, unitsTask.Result)) return PickerJson(null);
+            return PickerJson(listTask.Result);
         }
 
         // GET: Packing/GetRowDetail (AJAX, Index list's "+" toggle) -- the document's packing

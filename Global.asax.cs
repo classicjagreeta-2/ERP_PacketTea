@@ -58,9 +58,17 @@ namespace HRMS
         // carry MId=REPRT). Add a new ported report's controller name here.
         private static readonly string[] NativeReportControllers = { "fullsstockactual", "stockreport" };
 
-        private static bool IsNativeReport(string lowerPath)
+        // `lowerPath` is the request's AbsolutePath, which on the server carries the IIS virtual
+        // application prefix ("/pt/fullsstockactual/index"); locally the app sits at the site root
+        // ("/fullsstockactual/index"). Strip the application path first, or the controller is never
+        // the first segment on the server and every native report is bounced to ReportsRedirect (404).
+        private static bool IsNativeReport(string lowerPath, string applicationPath)
         {
-            var seg = (lowerPath ?? "").Trim('/').Split('/');
+            var path = lowerPath ?? "";
+            var app = (applicationPath ?? "").TrimEnd('/').ToLowerInvariant();
+            if (app.Length > 0 && (path == app || path.StartsWith(app + "/")))
+                path = path.Substring(app.Length);
+            var seg = path.Trim('/').Split('/');
             return seg.Length > 0 && Array.IndexOf(NativeReportControllers, seg[0]) >= 0;
         }
 
@@ -72,9 +80,9 @@ namespace HRMS
 
             // "REPRT" is the menu group of the Enquiries-and-reports items still served by the
             // legacy report host (ReportsRedirect). Reports ported into this app open here instead.
-            if (user == "REPRT" && !IsNativeReport(currentPath))
+            string applicationPath = context.Request.ApplicationPath;
+            if (user == "REPRT" && !IsNativeReport(currentPath, applicationPath))
             {
-                string applicationPath = context.Request.ApplicationPath;
                 string redirectUrl;
                 if (string.IsNullOrEmpty(applicationPath) || applicationPath == "/")
                 {

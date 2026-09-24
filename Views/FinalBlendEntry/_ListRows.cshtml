@@ -39,7 +39,7 @@
             </td>
             <td>@(row.BLEND_DATE.HasValue ? row.BLEND_DATE.Value.ToString("dd/MM/yyyy") : "")</td>
             <td>@row.MasterBlendNo</td>
-            <td>@(string.IsNullOrEmpty(row.MasterBlendDate) ? "" : DateTime.Parse(row.MasterBlendDate).ToString("dd/MM/yyyy"))</td>
+            <td>@PacketTea.DateText.Display(row.MasterBlendDate)</td>
             <td>@row.WarehouseName</td>
             <td>@row.BlendMarkName</td>
             <td>@row.BlendGradeName</td>

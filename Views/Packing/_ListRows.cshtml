@@ -7,12 +7,10 @@
     var blendTypes = (Dictionary<string, string>)ViewBag.BlendTypes;
     var currentBlendType = (string)ViewBag.BlendType;
     Func<string, string> btLabel = code => (code != null && blendTypes != null && blendTypes.ContainsKey(code)) ? blendTypes[code] : code;
-    // AEDV column -- per-row Edit/Delete shortcuts (Packing Entry has no View mode), each
-    // rendered only when the user holds that right. UX only: PackingController re-checks.
-    var perm = ViewBag.Permission as PacketTea.Helpers.AEDV;
-    var canEdit = perm?.Edit ?? false;
-    var canDelete = perm?.Delete ?? false;
     var rowIndex = (int?)ViewBag.RowOffset ?? 0;
+    // Blend No is a link into Edit mode only for users holding the Edit right (AEDV) -- UX only:
+    // PackingController.InsertOrUpdate re-checks the right and the back-date window server-side.
+    var canEdit = (ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false;
 }
 @if (Model != null)
 {
@@ -28,7 +26,8 @@
                 <input type="checkbox" class="row-check"
                        value="@row.DOCNO"
                        data-docdt="@(row.DOCDT?.ToString("yyyy-MM-dd"))"
-                       data-blendtype="@rowBlendType" />
+                       data-blendtype="@rowBlendType"
+                       data-unit="@row.UNIT" />
             </td>
             <td style="text-align:center;">
                 <button type="button" class="row-expand-btn" data-target="@detailId" title="Show more details">+</button>
@@ -37,28 +36,25 @@
             <td>@btLabel(rowBlendType)</td>
             <td>@row.DOCNO</td>
             <td>@(row.DOCDT?.ToString("dd/MM/yyyy"))</td>
-            <td>@row.BlendDocNo</td>
-            <td>@(string.IsNullOrEmpty(row.BlendDocDate) ? "" : DateTime.Parse(row.BlendDocDate).ToString("dd/MM/yyyy"))</td>
+            <td>
+                @if (canEdit)
+                {
+                    <a href="@Url.Action("InsertOrUpdate", "Packing", new { docno = row.DOCNO, docdt = row.DOCDT?.ToString("yyyy-MM-dd"), blendType = rowBlendType, unit = row.UNIT })">@row.BlendDocNo</a>
+                }
+                else
+                {
+                    @row.BlendDocNo
+                }
+            </td>
+            <td>@PacketTea.DateText.Display(row.BlendDocDate)</td>
             <td>@row.SaleCentreName</td>
             <td class="text-right">@row.TotalQty</td>
             <td class="text-right">@row.ShortExcess</td>
             <td>@row.PartyName</td>
-            <td class="aedv-cell">
-                @if (canEdit)
-                {
-                    <a href="javascript:void(0)" class="row-aedv row-edit" title="Edit"
-                       data-docno="@row.DOCNO" data-docdt="@(row.DOCDT?.ToString("yyyy-MM-dd"))" data-blendtype="@rowBlendType"><i class="fa fa-pencil"></i></a>
-                }
-                @if (canDelete)
-                {
-                    <a href="javascript:void(0)" class="row-aedv row-delete" title="Delete"
-                       data-docno="@row.DOCNO" data-docdt="@(row.DOCDT?.ToString("yyyy-MM-dd"))" data-blendtype="@rowBlendType"><i class="fa fa-trash-o"></i></a>
-                }
-            </td>
         </tr>
         <tr class="row-detail" id="@detailId" style="display:none;"
             data-docno="@row.DOCNO" data-docdt="@(row.DOCDT?.ToString("yyyy-MM-dd"))" data-blendtype="@rowBlendType" data-unit="@row.UNIT">
-            <td colspan="13" style="background:#f8f9fc;padding:10px 12px;">
+            <td colspan="12" style="background:#f8f9fc;padding:10px 12px;">
                 <!-- Just the packing lines sub-grid -- same "+" expand as Final/Master
                      Blend Entry (straight to the detail table, no summary line above it). -->
                 <div style="overflow-x:auto;">

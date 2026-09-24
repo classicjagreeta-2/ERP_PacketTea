@@ -8,12 +8,6 @@
     var currentBlendType = (string)ViewBag.BlendType;
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
 
-    // AEDV column -- per-row Edit/Delete shortcuts (Packing Entry has no View mode, same
-    // as its toolbar), each rendered only when the user holds that right. UX only:
-    // PackingController re-checks every right server-side.
-    var perm = ViewBag.Permission as PacketTea.Helpers.AEDV;
-    var canEdit = perm?.Edit ?? false;
-    var canDelete = perm?.Delete ?? false;
     Func<string, string> btLabel = code => (code != null && blendTypes != null && blendTypes.ContainsKey(code)) ? blendTypes[code] : code;
 }
 
@@ -23,6 +17,7 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <style>
         /* Same look as Master/Final Blend Entry's list -- see MasterBlendEntry's
            Index.cshtml for the rationale behind these overrides. */
@@ -44,6 +39,7 @@
         }
         .action-btns ul li a:hover, .action-btns ul li button:hover:not(:disabled) { background: var(--mbe-bg); color: var(--mbe-text); }
         .action-btns ul li button:disabled { opacity: .4; cursor: not-allowed; }
+        .list-badge { display: inline-block; background: var(--mbe-navy); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .05em; padding: 5px 10px; border-radius: 4px; }
 
         .title-heading { padding: 18px 20px 14px; font-size: 20px; font-weight: 700; color: var(--mbe-text); }
 
@@ -73,15 +69,17 @@
            Packing Type here first, then the pencil icon (enabled only once both are
            picked) opens the root Packing Entry window with both locked in. */
         tr.new-entry-row td { background: #eef3ff; vertical-align: middle; }
-        tr.new-entry-row select { border: 1px solid var(--mbe-border); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; }
+        tr.new-entry-row select, tr.new-entry-row input.new-row-pick { border: 1px solid var(--mbe-border); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; box-sizing: border-box; }
+        /* jquery.inputpicker wraps each input in a div with inline overflow:auto; inside the
+           narrow cell the input + arrow overflow it and native scrollbars (the stray arrows)
+           blow the row up. Clip it instead. */
+        tr.new-entry-row .inputpicker-overflow-hidden, tr.new-entry-row .inputpicker-div { overflow: hidden !important; height: auto !important; max-width: 100%; }
+        /* Unit / Packet Type fields must not collapse to the squeezed cell width: fixed floor for the
+           field and for its dropdown panel (the panel hangs off <body>, so target it by id). */
+        tr.new-entry-row input.new-row-pick { min-width: 240px; }
+        #inputpicker-wrapped-list { min-width: 300px; }
         tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
         tr.new-entry-row .go-new.is-ready { cursor: pointer; color: var(--mbe-accent); }
-
-        /* AEDV column -- per-row Edit/Delete icons. */
-        td.aedv-cell { white-space: nowrap; text-align: center; }
-        td.aedv-cell a.row-aedv { display: inline-block; padding: 2px 6px; font-size: 14px; color: var(--mbe-accent); text-decoration: none; }
-        td.aedv-cell a.row-aedv.row-delete { color: #c0392b; }
-        td.aedv-cell a.row-aedv:hover { background: var(--mbe-bg); border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -108,8 +106,19 @@
                         <i class="fa fa-trash-o"></i> Delete
                     </a>
                 </li>
+                <li>
+                    <a href="javascript:void(0)" id="viewBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.View ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-eye"></i> View
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="linesBtn" title="Show the ticked row's lines">
+                        <i class="fa fa-list"></i> Lines
+                    </a>
+                </li>
                 <li style="margin-left:auto">
-                    <label style="margin:0;color:var(--mbe-muted);font-size:12px;font-weight:700;letter-spacing:.05em;">LIST</label>
+                    <span class="list-badge">LIST</span>
                 </li>
             </ul>
         </div>
@@ -139,14 +148,13 @@
                         <th>Packing Qty.</th>
                         <th>Short/Excess</th>
                         <th>Party</th>
-                        <th>AEDV</th>
                     </tr>
                 </thead>
                 <tbody id="listBody">
                     @Html.Partial("_ListRows", Model)
                     @if (Model == null || Model.Count == 0)
                     {
-                        <tr><td colspan="13" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="12" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -159,6 +167,8 @@
         <div class="dataTables_info">Showing <span id="shownCount">@(Model?.Count ?? 0)</span> of @rowCount</div>
     </div>
 
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
+    <script src="~/Scripts/list-new-row-pickers.js"></script>
     <script src="~/Scripts/list-infinite-scroll.js"></script>
     <script>
         $(function () {
@@ -238,17 +248,15 @@
             var PACKET_TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(blendTypes));
 
             function buildNewRow() {
-                var unitOpts = '<option value="">Select Unit</option>' +
-                    UNIT_LIST.map(function (u) { return '<option value="' + u.CODE + '">' + u.CODE + ' - ' + (u.NAME || '') + '</option>'; }).join('');
-                var typeOpts = '<option value="">Select Packing Type</option>' +
-                    Object.keys(PACKET_TYPES).map(function (k) { return '<option value="' + k + '">' + PACKET_TYPES[k] + ' (' + k + ')</option>'; }).join('');
+                // Unit + Packing Type are inputpicker dropdowns (searchable by Code and Name) --
+                // initialised right after the row is inserted, see initNewRowPickers().
                 return '<tr id="newUnitRow" class="new-entry-row">' +
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Packing Entry"></i></td>' +
                     // Unit picker spans 3 columns (Unit / Blend Type / Doc No) so the "CODE - Name" text isn't clipped;
                     // the table's own columns are untouched.
-                    '<td colspan="3"><select id="newRowUnit">' + unitOpts + '</select></td>' +
-                    '<td colspan="2"><select id="newRowPacketType">' + typeOpts + '</select></td>' +
-                    '<td colspan="6"></td>' +
+                    '<td colspan="3"><input type="text" id="newRowUnit" class="new-row-pick" placeholder="Select Unit" autocomplete="off" /></td>' +
+                    '<td colspan="2"><input type="text" id="newRowPacketType" class="new-row-pick" placeholder="Select Packing Type" autocomplete="off" /></td>' +
+                    '<td colspan="5"></td>' +
                     '</tr>';
             }
 
@@ -260,7 +268,7 @@
             $('#btnNew').on('click', function () {
                 if ($('#newUnitRow').length) return;
                 $('#listBody').prepend(buildNewRow());
-                if (UNIT_LIST.length === 1) $('#newRowUnit').val(UNIT_LIST[0].CODE);
+                initNewRowPickers({ units: UNIT_LIST, types: PACKET_TYPES });   // also pre-selects a single Unit
                 refreshGoNewState();
             });
 
@@ -284,38 +292,61 @@
                 return $c;
             }
 
-            // Shared by the toolbar buttons (act on the ticked row) and the AEDV column's
-            // per-row icons (act on their own row).
-            function goEdit(docno, docdt, blendType) {
+            // Toolbar buttons act on the ticked row.
+            // The row's Unit travels with Edit/Delete: a Doc No repeats across units, so the
+            // document is identified by Doc No + Date + Type + Unit.
+            function goEdit(docno, docdt, blendType, unit) {
                 window.location.href = '@Url.Action("InsertOrUpdate", "Packing")'
                     + '?docno=' + encodeURIComponent(docno)
                     + '&docdt=' + encodeURIComponent(docdt)
-                    + '&blendType=' + encodeURIComponent(blendType);
+                    + '&blendType=' + encodeURIComponent(blendType)
+                    + '&unit=' + encodeURIComponent(unit || '');
             }
 
-            function doDelete(docno, docdt, blendType) {
+            function goView(docno, docdt, blendType, unit) {
+                window.location.href = '@Url.Action("InsertOrUpdate", "Packing")'
+                    + '?docno=' + encodeURIComponent(docno)
+                    + '&docdt=' + encodeURIComponent(docdt)
+                    + '&blendType=' + encodeURIComponent(blendType)
+                    + '&unit=' + encodeURIComponent(unit || '')
+                    + '&view=true';
+            }
+
+            function doDelete(docno, docdt, blendType, unit) {
                 if (!confirm('Are you sure you want to delete Packing Doc No ' + docno + ' ?')) return;
 
                 $('<form>', { method: 'POST', action: '@Url.Action("Delete", "Packing")' })
                     .append($('<input>', { type: 'hidden', name: 'docno', value: docno }))
                     .append($('<input>', { type: 'hidden', name: 'docdt', value: docdt }))
                     .append($('<input>', { type: 'hidden', name: 'blendType', value: blendType }))
+                    .append($('<input>', { type: 'hidden', name: 'unit', value: unit || '' }))
                     .appendTo('body').submit();
             }
 
             $('#editBtn').on('click', function () {
                 var $c = getSingleChecked('edit');
-                if ($c) goEdit($c.val(), $c.data('docdt'), $c.data('blendtype'));
+                if ($c) goEdit($c.val(), $c.data('docdt'), $c.data('blendtype'), $c.data('unit'));
             });
 
             $('#deleteBtn').on('click', function () {
                 var $c = getSingleChecked('delete');
-                if ($c) doDelete($c.val(), $c.data('docdt'), $c.data('blendtype'));
+                if ($c) doDelete($c.val(), $c.data('docdt'), $c.data('blendtype'), $c.data('unit'));
             });
 
-            // AEDV column icons (only rendered for rights the user holds).
-            $('#packingTable').on('click', 'a.row-edit', function () { var d = $(this).data(); goEdit(d.docno, d.docdt, d.blendtype); });
-            $('#packingTable').on('click', 'a.row-delete', function () { var d = $(this).data(); doDelete(d.docno, d.docdt, d.blendtype); });
+            $('#viewBtn').on('click', function () {
+                var $c = getSingleChecked('view');
+                if ($c) goView($c.val(), $c.data('docdt'), $c.data('blendtype'), $c.data('unit'));
+            });
+
+            // Lines: open the ticked row's "+" expand panel (packing lines) and scroll it into view.
+            $('#linesBtn').on('click', function () {
+                var $c = getSingleChecked('view its lines');
+                if (!$c) return;
+                var $btn = $c.closest('tr').find('.row-expand-btn');
+                if ($btn.text().trim() === '+') $btn.trigger('click');
+                var $detail = $('#' + $btn.data('target'));
+                if ($detail.length && $detail[0].scrollIntoView) $detail[0].scrollIntoView({ block: 'nearest' });
+            });
         });
     </script>
 </body>
