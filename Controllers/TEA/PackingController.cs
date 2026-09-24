@@ -314,7 +314,7 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> GetMark(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             if (string.IsNullOrEmpty(q)) q = value;
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetMark?search={Uri.EscapeDataString((q ?? "").Trim())}&pageSize={(limit > 0 ? limit : 50)}");
             return PickerJson(r);
         }
 
@@ -322,7 +322,7 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> GetBlendGrade(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             if (string.IsNullOrEmpty(q)) q = value;
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetBlendGrade?search={Uri.EscapeDataString((q ?? "").Trim())}&pageSize={(limit > 0 ? limit : 50)}");
             return PickerJson(r);
         }
 
@@ -330,7 +330,7 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> GetAllocation(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             if (string.IsNullOrEmpty(q)) q = value;
-            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            var r = await Services.GetAsync<dynamic>($"/api/TeaBlend/GetAllocation?search={Uri.EscapeDataString((q ?? "").Trim())}&pageSize={(limit > 0 ? limit : 50)}");
             return PickerJson(r);
         }
 
@@ -338,7 +338,7 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> GetSalesCentre(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             if (string.IsNullOrEmpty(q)) q = value;
-            var r = await Services.GetAsync<dynamic>($"/api/BlendPacking/GetSalesCentre?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            var r = await Services.GetAsync<dynamic>($"/api/BlendPacking/GetSalesCentre?search={Uri.EscapeDataString((q ?? "").Trim())}&pageSize={(limit > 0 ? limit : 50)}");
             return PickerJson(r);
         }
 
@@ -346,7 +346,7 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> GetChestSize(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             if (string.IsNullOrEmpty(q)) q = value;
-            var r = await Services.GetAsync<dynamic>($"/api/BlendPacking/GetChestSize?search={q}&pageSize={(limit > 0 ? limit : 50)}");
+            var r = await Services.GetAsync<dynamic>($"/api/BlendPacking/GetChestSize?search={Uri.EscapeDataString((q ?? "").Trim())}&pageSize={(limit > 0 ? limit : 50)}");
             return PickerJson(r);
         }
 

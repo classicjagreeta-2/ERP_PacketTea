@@ -55,5 +55,10 @@ namespace PacketTea.Models.PT
         public string MasterBlendDate { get; set; }
         public decimal? MasterBlendQty { get; set; }
         public decimal? RemainingQty { get; set; }
+        // Edit-load only (FinalBlend/GetByDocNo): the Master's own qty and what every Final Blend
+        // raised against it has issued (this one included). Display-only -- unlike
+        // MasterBlendQty they never feed the Blend Qty rescale baseline.
+        public decimal? MasterQty { get; set; }
+        public decimal? IssuedQty { get; set; }
     }
 }

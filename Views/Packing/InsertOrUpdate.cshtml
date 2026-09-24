@@ -484,12 +484,25 @@
         return null;
     }
 
+    // Open the dropdown AND refresh its rows. The plugin loads url-backed data asynchronously and
+    // only re-renders the list on a keystroke, so showing it right after init (before the first
+    // response lands) displayed "No results" -- the keyup makes it fetch and render the rows.
+    function showPickerList($orig) {
+        $orig.inputpicker('show');
+        $orig.next('.inputpicker-overflow-hidden').find('input').trigger($.Event('keyup', { keyCode: 0 }));
+    }
+
     function openPicker(key, $input, onSelect) {
         var cfg = pickerConfig[key];
         $('.inputpicker-wrapped-list').remove();
 
-        if ($input.data('inputpicker')) {
-            $input.inputpicker('show');
+        // This plugin never sets $.data('inputpicker'); the class it puts on the original input
+        // is the "already initialised" test (otherwise every click re-wraps the field and drops
+        // whatever the user has typed).
+        // Showing is deferred a tick: called from a click, the click's own bubbling up to the
+        // plugin's document-level "outside click" handler would otherwise hide it straight away.
+        if ($input.hasClass('inputpicker-original')) {
+            setTimeout(function () { showPickerList($input); }, 0);
             return;
         }
 
@@ -508,11 +521,12 @@
             pageLimit: cfg.pageLimit || 10,
             pageCountField: 'count',
             width: 'auto',
-            urlDelay: 150      // small debounce: one request per pause in typing, not per keystroke
+            urlDelay: 0.2      // seconds (the plugin multiplies by 1000): one request per pause in typing, not per keystroke
         };
         if (cfg.urlParam) opts.urlParam = cfg.urlParam;
         if (cfg.selectMode) opts.selectMode = cfg.selectMode;
         $input.inputpicker(opts);
+        setTimeout(function () { showPickerList($input); }, 0);
 
         function deliver(row) {
             if (!row) return;

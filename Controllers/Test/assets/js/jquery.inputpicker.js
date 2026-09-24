@@ -1764,7 +1764,7 @@
      * @param input
      * @private
      */
-    function _loadData(input, data, func) {
+    function _loadData(input, data, func, quiet) {
         var original = _o(input);
 
         if( typeof func == 'undefined' && typeof data == 'undefined'){
@@ -1776,8 +1776,11 @@
             data = null;
         }
 
-        // Add a loading div for
-        input.addClass('loading').prop('disabled', true);
+        // Add a loading div for. A "quiet" load (a search while the user is typing) must NOT
+        // disable the box: a disabled input drops focus and swallows every key typed until the
+        // response lands, which made searches lose characters.
+        input.addClass('loading');
+        if (!quiet) input.prop('disabled', true);
         if(_isMSIE())   input.addClass('loading-msie-patch');
 
         if (_set(input, 'url')){
@@ -1787,7 +1790,15 @@
                 param = data;
             }
 
+            // Quiet loads are numbered so a slow, older response can't overwrite a newer one.
+            var seq = 0;
+            if (quiet) {
+                seq = (_set(input, 'loadSeq') || 0) + 1;
+                _set(input, 'loadSeq', seq);
+            }
+
             _execJSON(input, param, function (ret) {
+                if (quiet && _set(input, 'loadSeq') !== seq) return;   // superseded by a newer search
                 var data;
 
                 if(_pagination(input)){
@@ -2275,7 +2286,6 @@
     }
 
     function _eventKeyUp(e) {
-        debugger;
         var input = $(this);
         var _searchTerm = input.val();
         if (_searchTerm.length > 0 && _searchTerm.length < 1) {
@@ -2318,21 +2328,30 @@
             }
 
 
-            delayHandler = setTimeout(_loadData, delay * 1000, input, function (input) {
-                _dataRender(input);
-                var wrapped_elements = _getWrappedListElements();
-                if ( _isWrappedListVisible(input) && _getWrappedListElements(true).length == 0 &&  wrapped_elements.length){
-                    wrapped_list.first().addClass('inputpicker-active');
-                    original.trigger('change_highlight.inputpicker');
-                }
-                _matchActiveInRender(input);
-                _matchHighlightInRender(input);
-                if(!input.is(":focus")) {
-                    dd('focus', input)
-                    input.focus();
-                }
+            // A new keyword starts again from the first page (it used to keep whatever page
+            // was last browsed, so a fresh search could land on an empty page 2).
+            _set(input, 'pageCurrent', 1);
 
-            } );
+            delayHandler = setTimeout(function () {
+                // Emptied box = "show everything". The controllers fall back to `value` (the last
+                // picked code, still held by the hidden original) when `q` is empty, which
+                // filtered the list down to that one row until a space was typed.
+                var extra = input.val() ? {} : { value: '' };
+                _loadData(input, extra, function (input) {
+                    _dataRender(input);
+                    var wrapped_elements = _getWrappedListElements();
+                    if ( _isWrappedListVisible(input) && _getWrappedListElements(true).length == 0 &&  wrapped_elements.length){
+                        wrapped_list.first().addClass('inputpicker-active');
+                        original.trigger('change_highlight.inputpicker');
+                    }
+                    _matchActiveInRender(input);
+                    _matchHighlightInRender(input);
+                    if(!input.is(":focus")) {
+                        dd('focus', input)
+                        input.focus();
+                    }
+                }, true);
+            }, delay * 1000);
             _set(input, 'delayHandler', delayHandler);
 
 

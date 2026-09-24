@@ -239,7 +239,10 @@
                                 <label>Gross WT/Chest</label>
                                 <input type="number" step="0.01" id="BLEND_CHEST_GROSSWT" value="@head.BLEND_CHEST_GROSSWT" />
                             </div>
-                            <div class="form-col-60">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-col-100">
                                 <label>Blend Details</label>
                                 <textarea id="BLEND_DESCN" style="height:50px;">@head.BLEND_DESCN</textarea>
                             </div>
@@ -478,6 +481,16 @@
 
     function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
 
+    // Under Blend Qty: the picked Master's balance (its qty less every Final Blend raised
+    // against it). Shown right after picking a Master AND when an existing Final Blend is
+    // opened, e.g. Master 500 with this Final's 175 issued -> Balance Qty 325.
+    function showBalanceHint(master, issued, remaining) {
+        if (remaining == null) { $('#remainingQtyHint').text(''); return; }
+        $('#remainingQtyHint').text('Balance Qty ' + round2(remaining) + '  (Master Blend Qty ' + round2(master) + ' - issued ' + round2(issued) + ')');
+    }
+    var savedBalance = @Html.Raw(JsonConvert.SerializeObject(new { master = head.MasterQty, issued = head.IssuedQty, remaining = head.RemainingQty }));
+    if (IS_EDIT) showBalanceHint(savedBalance.master, savedBalance.issued, savedBalance.remaining);
+
     $('#gridBody').on('input change', 'input', function () {
         var $tr = $(this).closest('tr');
         var r = findRow($tr.data('cid'));
@@ -691,7 +704,7 @@
                 $('#MST_BLEND_DATE').val(fmtDate(h.BLEND_DATE));
                 $('#masterCloneQty').val(h.BLEND_QTY || 0);
                 $('#BLEND_QTY').val(h.BLEND_QTY || 0);
-                $('#remainingQtyHint').text('Remaining against this Master Blend at pick time: ' + (h.RemainingQty != null ? h.RemainingQty : ''));
+                showBalanceHint(h.BLEND_QTY, h.RemainingQty != null ? num(h.BLEND_QTY) - num(h.RemainingQty) : 0, h.RemainingQty);
 
                 $('#PCODE').val(h.PCODE || ''); $('#PCODE_disp').val(h.PartyName || '');
                 $('#BLEND_WH').val(h.BLEND_WH || ''); $('#BLEND_WH_disp').val(h.WarehouseName || '');
@@ -719,6 +732,14 @@
                     };
                 });
                 renderGrid();
+
+                // Default to the balance still unissued against this master (e.g. 500 with
+                // 175 already raised -> 325), not its full qty: rescale the cloned lines
+                // through the same Blend Qty change handler so grid and header agree.
+                // masterCloneQty stays at the master's full qty as the rescale baseline.
+                if (h.RemainingQty != null && num(h.RemainingQty) < num(h.BLEND_QTY)) {
+                    $('#BLEND_QTY').val(Math.max(num(h.RemainingQty), 0)).trigger('change');
+                }
             });
         }
 
