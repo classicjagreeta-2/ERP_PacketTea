@@ -35,6 +35,22 @@
             color: black;
             border-radius: 0;
         }
+        /* FORCE TOAST TO CENTER OF SCREEN */
+        #toast-container {
+            position: fixed !important;
+            top: 40px !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: translateX(-50%) !important;
+            width: 350px !important;
+            z-index: 999999 !important;
+        }
+
+            #toast-container > .toast {
+                width: 350px !important;
+                margin: 0 auto 10px auto !important;
+            }
     </style>
 </head>
 
@@ -92,26 +108,36 @@
             <input type="hidden" id="hiddenUNIT" />
             <input type="hidden" id="hiddenLOCA" value="@ViewBag.LOCA" />
         }
-        <div class="table-responsive" id="tableScroll">
-            <table class="border main-table">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" class="checkbox-round" /></th>
-                        <th></th>
-                        <th>Bill No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Bill Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Ship To Code & Description <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Order No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                        <th>Bill To Code & Description <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
-                    </tr>
-                </thead>
-                <tbody id="PktTeaInvContainer">
-                    @*<tr id="newUnitRow" class="new-entry-row"></tr>*@
-                    @Html.Partial("_PT_List", Model)
-                </tbody>
-            </table>
-            <div id="loading" style="display:none; text-align:center; padding:20px;">
-                Loading...
+    <div class="table-responsive" id="tableScroll">
+        <table class="border main-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" class="checkbox-round" /></th>
+                    <th></th>
+                    <th>Bill No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Bill Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Ship To Code & Description <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Order No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                    <th>Bill To Code & Description <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+                </tr>
+            </thead>
+            <tbody id="PktTeaInvContainer">
+                @*<tr id="newUnitRow" class="new-entry-row"></tr>*@
+                @Html.Partial("_PT_List", Model)
+            </tbody>
+        </table>
+        <div id="loading" style="display:none; text-align:center; padding:20px;">
+            Loading...
+        </div>
+        <div id="noMoreData" style="display:none; text-align:center; padding:20px; color:gray;">
+            No more data found
+        </div>
+    </div>
+        <div class="row">
+            <div class="col-xs-12 col-sm-12 col-md-5">
+                <div class="dataTables_info" id="dom-jqry_info" role="status" aria-live="polite">
+                    Showing <span id="shownCount">@Model.LastItemOnPage</span> of @Model.TotalItemCount
+                </div>
             </div>
         </div>
     </div>
@@ -120,6 +146,185 @@
     <script src="~/libraries/assetspo/js/custom.js"></script>
 
     <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
+    <script>
+        @*let isLoading = false;
+        $("#tableScroll").on("scroll", function () {
+            debugger;
+            let element = $(this)[0];
+            if (element.scrollTop + element.clientHeight >= element.scrollHeight - 10) {
+
+                if (!isLoading) {
+                    isLoading = true;
+                    $("#loading").show();
+                    let page = parseInt($("#page").val());
+                 /*   alert(page);*/
+                    $("#page").val(page + 1);
+
+                    $("#loadMoreForm").submit();
+                }
+            }
+        });
+        function onLoadSuccess() {
+
+    let pageSize = parseInt("@Model.PageSize");
+    let page = parseInt($("#page").val());
+
+    let shown = page * pageSize;
+
+    let total = parseInt("@Model.TotalItemCount");
+    if (shown > total) shown = total;
+
+    $("#shownCount").text(shown);
+
+            $("#loading").hide();
+            isLoading = false;
+
+            if (shown >= total) {
+                allLoaded = true;
+                $("#noMoreData").show();
+            }
+}*@
+
+        let isLoading = false;
+        let allLoaded = false;
+
+        $("#tableScroll").on("scroll", function () {
+
+            let element = $(this)[0];
+
+            if (element.scrollTop + element.clientHeight >= element.scrollHeight - 10) {
+
+                if (isLoading || allLoaded) {
+                    return;
+                }
+
+                isLoading = true;
+
+                // Show loading only while AJAX is running
+                $("#loading").show();
+                $("#noMoreData").hide();
+
+                let page = parseInt($("#page").val()) || 1;
+
+                $("#page").val(page + 1);
+
+                $("#loadMoreForm").submit();
+            }
+        });
+function onLoadSuccess() {
+
+    let pageSize = parseInt("@Model.PageSize");
+    let page = parseInt($("#page").val());
+
+    let shown = page * pageSize;
+
+    let total = parseInt("@Model.TotalItemCount");
+
+    if (shown > total) {
+        shown = total;
+    }
+
+    $("#shownCount").text(shown);
+
+    // AJAX finished
+    $("#loading").hide();
+    isLoading = false;
+
+    // All records loaded
+    if (shown >= total) {
+
+        allLoaded = true;
+
+        // Only show this
+        $("#noMoreData").show();
+
+    } else {
+
+        $("#noMoreData").hide();
+    }
+}
+    </script>
+    <script>
+        $(document).ready(function () {
+            debugger;
+            var $searchInput = $('input[name="searchString"]');
+            var searchInput = $('#searchInput');
+            var $tableBody = $('#PktTeaInvContainer');
+            var searchTimeout;
+
+            // Store the original table content (before any search)
+            var originalContent = $tableBody.html();
+
+            // If page loads with existing search term
+            if ($searchInput.val() && $searchInput.val().length > 0) {
+                searchInput.removeClass('fa-search').addClass('fa-times').css('cursor', 'pointer');
+            }
+
+            function performSearch(query) {
+                debugger;
+
+                if (!query || !query.trim()) {
+                    $("#page").val(1);
+                    $searchInput.val('');
+                    $('#loadMoreForm input[name="searchString"]').val('');
+                    isLoading = false;
+                    $("#loadMoreForm").submit();
+                    return;
+                }
+
+                // Just clear, don't show loading message
+                $tableBody.empty();
+
+                // Update both search inputs
+                $("#page").val(1);
+                $searchInput.val(query);
+                $('#loadMoreForm input[name="searchString"]').val(query);
+                isLoading = false;
+                $("#loadMoreForm").submit();
+            }
+
+            // Typing → debounced search
+            $searchInput.on('input', function () {
+                var value = $(this).val().trim();
+
+                // Toggle X icon
+                if (value) {
+                    searchInput.removeClass('fa-search').addClass('fa-times').css('cursor', 'pointer');
+                } else {
+                    searchInput.removeClass('fa-times').addClass('fa-search').css('cursor', 'default');
+                }
+
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function () {
+                    performSearch(value);
+                }, 500);
+            });
+
+            // Click on X → clear everything
+            searchInput.on('click', function () {
+                if ($(this).hasClass('fa-times')) {
+                    $searchInput.val('');
+                    $('#loadMoreForm input[name="searchString"]').val('');
+                    $("#page").val(1);
+                    searchInput.removeClass('fa-times').addClass('fa-search').css('cursor', 'default');
+                    isLoading = false;
+                    $("#loadMoreForm").submit();
+                }
+            });
+
+            // Enter key → immediate search
+            $searchInput.on('keypress', function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    clearTimeout(searchTimeout);
+                    performSearch($(this).val().trim());
+                }
+            });
+        });
+    </script>
+
+
+
     <script>
     $(document).on("click", ".toggle-details", function () {
         debugger;
@@ -470,6 +675,21 @@
    '?unit=' + encodeURIComponent(UNIT) +
    '&loca=' + encodeURIComponent(LOCA || '');
     });
+    </script>
+    <script>
+        $(document).ready(function () {
+
+            var successMessage = localStorage.getItem("PacketTeaSaveSuccess");
+
+            if (successMessage) {
+
+                toastr.success(successMessage);
+
+                // Remove after showing
+                localStorage.removeItem("PacketTeaSaveSuccess");
+            }
+
+        });
     </script>
 </body>
 </html>

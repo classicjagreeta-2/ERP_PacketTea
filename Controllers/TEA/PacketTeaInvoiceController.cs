@@ -263,14 +263,29 @@ namespace PacketTea.Controllers.PacketTea
 
                 string startYear = DateTime.ParseExact(dates[0].Trim(), "dd/MM/yyyy", CultureInfo.InvariantCulture).ToString("yyyy-MM-dd");
                 string finalYear = DateTime.ParseExact(dates[1].Trim(), "dd/MM/yyyy", CultureInfo.InvariantCulture).ToString("yyyy-MM-dd");
-                foreach(var i in model.unblplt)
+                // IMPORTANT:
+                // Only send Free Tea details when user actually selected PLCRCD.
+                if (model.unblplt != null)
                 {
-                    i.PLCRCD = "01";
-                    i.BLNO = string.Empty;
+                    model.unblplt = model.unblplt
+                        .Where(x => !string.IsNullOrWhiteSpace(x.PLCRCD))
+                        .ToList();
                 }
+
+                // If nothing was selected, don't send UNBLPLT rows
+                if (model.unblplt == null || model.unblplt.Count == 0)
+                {
+                    model.unblplt = null;
+                }
+
+
                 var json = JsonSerializer.Serialize(model);
-                var response = await Services.FinancePostAsync<UNBLDATA>($"/api/Invoice/SaveOrUpdateAll?Stdt1={startYear}&Stdt2={finalYear}", model);
-                
+
+                var response = await Services.FinancePostAsync<UNBLDATA>(
+                    $"/api/Invoice/SaveOrUpdateAll?Stdt1={startYear}&Stdt2={finalYear}",
+                    model
+                );
+
                 if (response.IsSuccessStatusCode)
                 {
                     return Json(new

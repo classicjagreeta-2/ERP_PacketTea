@@ -103,6 +103,22 @@
             .form-col-33 .form-control {
                 width: 100%;
             }
+        /* FORCE TOAST TO CENTER OF SCREEN */
+        #toast-container {
+            position: fixed !important;
+            top: 40px !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: translateX(-50%) !important;
+            width: 350px !important;
+            z-index: 999999 !important;
+        }
+
+            #toast-container > .toast {
+                width: 350px !important;
+                margin: 0 auto 10px auto !important;
+            }
     </style>
     <style>
     </style>
@@ -175,7 +191,7 @@
                                 @Html.TextBoxFor(m => m.unbL_HED.veh, new { @class = "form-control VehNoDDL", @required = "required", @id = "txtVehNo" })
                             </div>
                             <div class="form-col-20">
-                                <label>Transaction Code<span>(*)</span></label>
+                                <label>Transporter <span>(*)</span></label>
                                 @Html.TextBoxFor(m => m.unbL_HED.tpt, new { @class = "form-control TransDDL", @required = "required", @id = "txtTransCode" })
                             </div>
                             <div class="form-col-20">
@@ -467,6 +483,8 @@
     <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <script>
         var freeTeaData = [];
+        var freeDetailsUsed = false;
+
     </script>
     <script>
         $('#BankCodeDDL').inputpicker({
@@ -825,20 +843,23 @@
                     console.log("AJAX REQUEST STARTED");
                 },
 
-                success: function (res) {
+              success: function (res) {
 
                     console.log("SERVER RESPONSE:", res);
-                        if (res.success) {
 
-                            toastr.success(res.message);
+                    if (res.success) {
 
-                            setTimeout(function () {
-                                window.location.href = '@Url.Action("Index", "PacketTeaInvoice")';
-                            }, 500);
+                        // Store success message for Index page
+                        localStorage.setItem("PacketTeaSaveSuccess", res.message);
 
-                        } else {
-                            toastr.error(res.message);
-                        }
+                        // Go to Index
+                        window.location.href = '@Url.Action("Index", "PacketTeaInvoice")';
+
+                    } else {
+
+                        // Error should remain on Insert page
+                        toastr.error(res.message);
+                    }
                 },
 
                 error: function (xhr, status, error) {
@@ -1082,32 +1103,63 @@ model.unbL_HED.tm = 'T';
                 row.tm = 'T';
                 model.unbl.push(row);
             });
-            // Free Tea Details
-            $("#tblFreeDetail tr").each(function (index) {
+            // ========================================
+            // FREE TEA DETAILS
+            // ========================================
 
-                var freeRow = {};
+            model.unblplt = null;
 
-                freeRow.srlno = index + 1;
+            if (freeDetailsUsed) {
 
-                //freeRow.plcrcd = $(this).find(".FreeTeaCode").val();
-                var code = $.trim($(this).find(".FreeTeaCode").val());
+                model.unblplt = [];
 
-                freeRow.plcrcd = code !== "" ? code : null;
-                freeRow.plcrqty = parseFloat($(this).find(".txtFreeTeaQty").val()) || 0;
-                freeRow.plcrrate = parseFloat($(this).find(".txtFreeTeaRate").val()) || 0;
-                freeRow.plcrval = parseFloat($(this).find(".txtFreeTeaAmount").val()) || 0;
+                $("#tblFreeDetail tbody tr").each(function (index) {
 
-                freeRow.blno = "";
-                freeRow.bldt = model.unbL_HED.bldt;
-                freeRow.pcd = model.unbL_HED.pcd;
-                freeRow.unit = model.unbL_HED.unit;
-                freeRow.loca = model.unbL_HED.loca;
-                freeRow.rt = 32;
-                freeRow.tm = "T";
-                freeRow.doc_YEAR = "2027";
+                    var $row = $(this);
 
-                model.unblplt.push(freeRow);
-            });
+                    var code = $.trim($row.find(".FreeTeaCode").val());
+
+                    // User did not select Free Tea code
+                    if (!code) {
+                        return;
+                    }
+
+                    var freeRow = {};
+
+                    freeRow.srlno = index + 1;
+                    freeRow.plcrcd = code;
+
+                    freeRow.plcrqty =
+                        parseFloat($row.find(".txtFreeTeaQty").val()) || 0;
+
+                    freeRow.plcrrate =
+                        parseFloat($row.find(".txtFreeTeaRate").val()) || 0;
+
+                    freeRow.plcrval =
+                        parseFloat($row.find(".txtFreeTeaAmount").val()) || 0;
+
+                    freeRow.blno = "";
+                    freeRow.bldt = model.unbL_HED.bldt;
+                    freeRow.pcd = model.unbL_HED.pcd;
+                    freeRow.unit = model.unbL_HED.unit;
+                    freeRow.loca = model.unbL_HED.loca;
+                    freeRow.rt = 32;
+                    freeRow.tm = "T";
+                    freeRow.doc_YEAR = "2027";
+
+                    model.unblplt.push(freeRow);
+                });
+
+                // If user clicked OK but didn't select anything,
+                // don't send an empty array.
+                if (model.unblplt.length === 0) {
+                    model.unblplt = null;
+                }
+            }
+
+            console.log("FINAL UNBLPLT:", model.unblplt);
+
+
             // Free Tea Details
             //model.unblplt = freeTeaData.map(function (item, index) {
 
@@ -1260,13 +1312,12 @@ model.unbL_HED.tm = 'T';
 
         //    $(".popup-overlay, .popup-box").hide();
         //});
+        var freeDetailsUsed = false;
+
         $(document).off("click", "#btnFreeOk").on("click", "#btnFreeOk", function (e) {
 
             e.preventDefault();
 
-            console.log("========== FREE OK CLICKED ==========");
-
-            // Store selected Free Tea rows
             freeTeaData = [];
 
             $("#tblFreeDetail tbody tr").each(function () {
@@ -1275,15 +1326,20 @@ model.unbL_HED.tm = 'T';
 
                 var $checkbox = $row.find(".chkFreeRow");
 
-                // Only checked rows
                 if ($checkbox.length > 0 && !$checkbox.prop("checked")) {
+                    return;
+                }
+
+                var code = $.trim($row.find(".FreeTeaCode").val());
+
+                // No code selected
+                if (!code) {
                     return;
                 }
 
                 var freeRow = {
                     srlno: parseInt($row.find(".txtFreeSlNo").val()) || 0,
-                    /*  PLCRCD: $row.find(".FreeTeaCode").val() || "",*/
-                    PLCRCD: $.trim($row.find(".FreeTeaCode").val()) || null,
+                    PLCRCD: code,
                     PLCRQTY: parseFloat($row.find(".txtFreeTeaQty").val()) || 0,
                     PLCRRATE: parseFloat($row.find(".txtFreeTeaRate").val()) || 0,
                     PLCRVAL: parseFloat($row.find(".txtFreeTeaAmount").val()) || 0
@@ -1292,12 +1348,15 @@ model.unbL_HED.tm = 'T';
                 freeTeaData.push(freeRow);
             });
 
-            console.log("FINAL freeTeaData =", freeTeaData);
+            // User has used Free Details
+            freeDetailsUsed = true;
 
-            // Close popup
+            console.log("freeDetailsUsed:", freeDetailsUsed);
+            console.log("freeTeaData:", freeTeaData);
+
             $(".popup-overlay, .popup-box").hide();
         });
-    
+
     </script>
     <script>
 

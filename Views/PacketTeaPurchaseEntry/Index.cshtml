@@ -59,16 +59,16 @@
             <li>
                 <button type="button"
                         class="IdaddNewRecord btn btn-link">
-                    @*disabled="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false))">*@
+                    disabled="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false))">
                     <i class="fa fa-plus"></i> New
                 </button>
             </li>
 
             <li>
                 <a href="javascript:void(0)" id="editBtn"
-                   @*style="@( !((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false)
+                   style="@( !((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false)
                         ? "pointer-events:none; opacity:0.5;"
-                        : "" )"*@>
+                        : "" )">
                     <i class="fa fa-pencil"></i> Edit
                 </a>
             </li>
@@ -173,6 +173,9 @@
         <div id="loading" style="display:none; text-align:center; padding:20px;">
             Loading...
         </div>
+        <div id="noMoreData" style="display:none; text-align:center; padding:20px; color:gray;">
+            No more data found
+        </div>
     </div>
     <div class="row">
         <div class="col-xs-12 col-sm-12 col-md-5">
@@ -216,8 +219,14 @@
 
     $("#shownCount").text(shown);
 
-    $("#loading").hide();
-    isLoading = false;
+            $("#loading").hide();
+            isLoading = false;
+
+            if (shown >= total) {
+                allLoaded = true;
+                $("#noMoreData").show();
+            }
+
 }
 
 

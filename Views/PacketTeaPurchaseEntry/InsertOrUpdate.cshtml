@@ -4596,6 +4596,14 @@ $(function () {
 
         });
     </script>
+    <script>
+        $(document).on('keydown', 'input', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
 </body>
 </html>
 
