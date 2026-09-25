@@ -19,8 +19,17 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <!-- Root UI lookup convention (see CLAUDE.md's "lookup pickers" rule) -- same
+         jquery.inputpicker include Packing / PacketTeaPurchaseEntry already use, replacing this
+         screen's earlier bespoke centered-modal picker for Sale Centre / Broker / Party / Warehouse. -->
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <script src="~/libraries/assetspo/js/custom.js"></script>
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <style>
+        .inputpicker-wrapped-list .inputpicker-active td,
+        .inputpicker-wrapped-list .inputpicker-active th { background: #404e68 !important; color: #fff !important; font-weight: bold; }
+        .inputpicker-wrapped-list { min-width: max-content !important; }
+        .inputpicker-wrapped-list table { width: max-content !important; }
         input[readonly] { background-color: #f3f4f7; color: #555; }
         .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         #gridTable th, #gridTable td { white-space: nowrap; }
@@ -107,7 +116,7 @@
                             <div class="form-col-20">
                                 <label>Doc Date <span>(*)</span></label>
                                 <input type="date" id="DOCDT" value="@(first?.DOCDT?.ToString("yyyy-MM-dd"))"
-                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
+                                       min="@ViewBag.MinDocDate" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
                             </div>
                             <div class="form-col-20">
                                 <label>Sale Centre <span>(*)</span></label>
@@ -163,7 +172,7 @@
                                 <thead>
                                     <tr>
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
-                                        <th style="width:30px;">Sl</th>
+                                        <th style="width:30px;text-align:right;">Sl</th>
                                         <th>Inv No <span style="color:red;">(*)</span></th>
                                         <th>AWR No</th>
                                         <th style="width:110px;">Pack Date</th>
@@ -191,15 +200,11 @@
         </div>
     </div>
 
+    <!-- Sale Centre / Broker / Party / Warehouse use jquery.inputpicker (Root UI convention -- see
+         CLAUDE.md's "lookup pickers" rule), which renders its own anchored dropdown next to the
+         field itself -- no shared modal markup needed. Only the bulk "Select Data" (AWR stock)
+         picker below stays a bespoke modal: it is a composite multi-row selection. -->
     <div class="popup-overlay" id="pickerOverlay"></div>
-    <div class="popup-box picker-box" id="genericPicker">
-        <div class="popup-header">
-            <h2 id="pickerTitle">Select</h2>
-            <button type="button" class="close-btn" onclick="closePicker()">X</button>
-        </div>
-        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
-        <div class="picker-body" id="pickerBody"></div>
-    </div>
 
     <div class="popup-box picker-box wide" id="stockPicker">
         <div class="popup-header">
@@ -247,7 +252,7 @@
             showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Could not load data. Please try again.');
         }
     }
-    $('#pickerOverlay, #genericPicker, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    $('#pickerOverlay, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
     var FY_MIN = '@ViewBag.FyStart';
@@ -255,6 +260,10 @@
 
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
+    // Qty / weights (Net Wt, Draw Qty, their totals) are 3 dp; Bag/Chest is a plain count (no forced decimals).
+    function round3(v) { return Math.round(num(v) * 1000) / 1000; }
+    function fmt3(v) { return round3(v).toFixed(3); }
+    function fmtCount(v) { return String(parseFloat(num(v).toFixed(6))); }
     function fmtDate(iso) {
         if (!iso) return '';
         var d = new Date(iso);
@@ -274,19 +283,19 @@
             totBag += num(r.BAG_CHEST); totDraw += num(r.DRAW_QTY);
             var tr = $('<tr data-cid="' + r._cid + '"></tr>');
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
-            tr.append('<td>' + r.SRLNO + '</td>');
+            tr.append('<td style="text-align:right;">' + r.SRLNO + '</td>');
             tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" placeholder="Via Select Data" readonly /></td>');
             tr.append('<td><input type="text" class="f-awrno" value="' + (r.AWR_NO || '') + '" readonly /></td>');
             tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-mark" value="' + (r.MarkName || r.MARK || '') + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-bagchest" value="' + round2(r.BAG_CHEST).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-netwt" value="' + round2(r.NET_WT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-drawqty" value="' + round2(r.DRAW_QTY).toFixed(2) + '" /></td>');
+            tr.append('<td><input type="number" step="any" class="f-bagchest" value="' + fmtCount(r.BAG_CHEST) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-netwt" value="' + fmt3(r.NET_WT) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-drawqty" value="' + fmt3(r.DRAW_QTY) + '" /></td>');
             $tb.append(tr);
         });
-        $('#ftBag').text(round2(totBag).toFixed(2));
-        $('#ftDraw').text(round2(totDraw).toFixed(2));
+        $('#ftBag').text(fmtCount(totBag));
+        $('#ftDraw').text(fmt3(totDraw));
     }
 
     function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
@@ -295,13 +304,13 @@
         var $tr = $(this).closest('tr');
         var r = findRow($tr.data('cid'));
         if (!r) return;
-        r.DRAW_QTY = num($(this).val());
+        r.DRAW_QTY = round3($(this).val());
         var totBag = 0, totDraw = 0;
         rows.forEach(function (x) { totBag += num(x.BAG_CHEST); totDraw += num(x.DRAW_QTY); });
-        $('#ftBag').text(round2(totBag).toFixed(2));
-        $('#ftDraw').text(round2(totDraw).toFixed(2));
+        $('#ftBag').text(fmtCount(totBag));
+        $('#ftDraw').text(fmt3(totDraw));
     });
-    $('#gridBody').on('blur', '.f-drawqty', function () { $(this).val(round2($(this).val()).toFixed(2)); });
+    $('#gridBody').on('blur', '.f-drawqty', function () { $(this).val(fmt3($(this).val())); });
 
     $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
     $('#btnRemoveRows').on('click', function () {
@@ -311,53 +320,84 @@
         renderGrid();
     });
 
+    // =========================================================
+    // Header field lookups -- jquery.inputpicker (Root UI convention: an anchored, paginated
+    // picker under the field itself -- see CLAUDE.md's "lookup pickers" rule). Replaces this
+    // screen's earlier bespoke centered-modal picker (#genericPicker, now removed) -- same
+    // pattern as Packing / Master / Final Blend Entry's header pickers. Every dropdown is
+    // searchable by all the columns it shows (the MVC picker actions + API match `q` on each).
+    // =========================================================
     var pickerConfig = {
-        salescentre: { url: '@Url.Action("GetSalesCentre", "TeaSampleDrawEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SALE_CENTRE' },
-        broker: { url: '@Url.Action("GetBroker", "TeaSampleDrawEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'BROK_CODE' },
-        party: { url: '@Url.Action("GetParty", "TeaSampleDrawEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCODE' },
-        warehouse: { url: '@Url.Action("GetWarehouse", "TeaSampleDrawEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['DESTI', 'Destination']], target: 'WAREHOUSE' }
+        salescentre: { url: '@Url.Action("GetSalesCentre", "TeaSampleDrawEntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'SALE_CENTRE' },
+        broker: { url: '@Url.Action("GetBroker", "TeaSampleDrawEntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'BROK_CODE' },
+        party: { url: '@Url.Action("GetParty", "TeaSampleDrawEntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'PCODE' },
+        warehouse: { url: '@Url.Action("GetWarehouse", "TeaSampleDrawEntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'DESTI', text: 'Destination' }], target: 'WAREHOUSE' }
     };
-    var activePicker = null, pickerXhr = null, pickerReqSeq = 0;
+
     $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
+
+    // The row the user picked, looked up in the data the dropdown last loaded. This copy of the
+    // plugin writes the picked value into the original input and fires "change" on it; it does
+    // not hand the row to a select handler, so read it back by the picked value.
+    function pickedRow($input, cfg) {
+        var key = cfg.fields[0].name, v = String($input.val() == null ? '' : $input.val()), data = [];
+        try { data = $input.inputpicker('data') || []; } catch (e) { data = []; }
+        for (var i = 0; i < data.length; i++) { if (String(data[i][key]) === v) return data[i]; }
+        return null;
+    }
+
+    // Open the dropdown AND refresh its rows. The plugin loads url-backed data asynchronously and
+    // only re-renders the list on a keystroke, so showing it right after init (before the first
+    // response lands) displayed "No results" -- the keyup makes it fetch and render the rows.
+    function showPickerList($orig) {
+        $orig.inputpicker('show');
+        $orig.next('.inputpicker-overflow-hidden').find('input').trigger($.Event('keyup', { keyCode: 0 }));
+    }
+
     function openPicker(key, $input) {
-        activePicker = { key: key, input: $input };
-        $('#pickerTitle').text('Select ' + key);
-        $('#pickerSearch').val('');
-        $('#pickerBody').empty().removeData('rows');
-        $('#pickerOverlay, #genericPicker').fadeIn(120);
-        loadPickerData('');
-        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
+        var cfg = pickerConfig[key];
+        $('.inputpicker-wrapped-list').remove();
+
+        // This plugin never sets $.data('inputpicker'); the class it puts on the original input
+        // is the "already initialised" test (otherwise every click re-wraps the field and drops
+        // whatever the user has typed).
+        // Showing is deferred a tick: called from a click, the click's own bubbling up to the
+        // plugin's document-level "outside click" handler would otherwise hide it straight away.
+        if ($input.hasClass('inputpicker-original')) {
+            setTimeout(function () { showPickerList($input); }, 0);
+            return;
+        }
+
+        $input.inputpicker({
+            url: cfg.url,
+            fields: cfg.fields,
+            fieldText: cfg.fields[0].name,
+            fieldValue: cfg.fields[0].name,
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+            width: 'auto',
+            urlDelay: 0.2      // seconds (the plugin multiplies by 1000): one request per pause in typing, not per keystroke
+        });
+        setTimeout(function () { showPickerList($input); }, 0);
+
+        function deliver(row) {
+            if (!row) return;
+            $('#' + cfg.target).val(row[cfg.fields[0].name]);
+            $('#' + cfg.target + '_disp').val(row[cfg.fields[1].name] || '');
+        }
+        // Both hooks call the same idempotent handler, so whichever this plugin build fires works.
+        $input.off('inputpicker.select').on('inputpicker.select', function (e, row) {
+            deliver(row);
+            $(this).inputpicker('hide');
+        });
+        $input.off('change.ipk').on('change.ipk', function () { deliver(pickedRow($input, cfg)); });
     }
-    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
-    function loadPickerData(term) {
-        var cfg = pickerConfig[activePicker.key];
-        var myReq = ++pickerReqSeq;
-        if (pickerXhr) { pickerXhr.abort(); }
-        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
-            if (myReq !== pickerReqSeq) return;
-            data = data || [];
-            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
-            data.forEach(function (row, i) {
-                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
-                    var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
-                    return '<td>' + (v == null ? '' : v) + '</td>';
-                }).join('') + '</tr>';
-            });
-            html += '</tbody></table>';
-            $('#pickerBody').html(html);
-            $('#pickerBody').data('rows', data);
-        }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
-    }
-    $('#pickerBody').on('click', 'tr[data-i]', function () {
-        var data = $('#pickerBody').data('rows');
-        var row = data[$(this).data('i')];
-        var cfg = pickerConfig[activePicker.key];
-        var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
-        var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
-        $('#' + cfg.target).val(code);
-        $('#' + cfg.target + '_disp').val(name || '');
-        closePicker();
-    });
 
     function openStockPicker() { $('#pickerOverlay, #stockPicker').fadeIn(120); loadStock(); }
     $('#btnSelectStock').on('click', openStockPicker);
@@ -378,7 +418,7 @@
             var html = '<table><thead><tr><th></th><th>Inv No</th><th>AWR No</th><th>Mark</th><th>Grade</th><th>Pack Date</th><th style="text-align:right;">Bag/Chest</th><th style="text-align:right;">Available Net Wt</th></tr></thead><tbody>';
             data.forEach(function (r, i) {
                 html += '<tr data-i="' + i + '"><td><input type="checkbox" class="stockChk" /></td><td>' + (r.invno || '') + '</td><td>' + (r.awrNo || '') + '</td><td>' + (r.markDescn || r.mark || '') + '</td>' +
-                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td style="text-align:right;">' + round2(r.bagChest).toFixed(2) + '</td><td style="text-align:right;">' + round2(r.netWt).toFixed(2) + '</td></tr>';
+                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td style="text-align:right;">' + fmtCount(r.bagChest) + '</td><td style="text-align:right;">' + fmt3(r.netWt) + '</td></tr>';
             });
             html += '</tbody></table>';
             if (!data.length) {
@@ -407,14 +447,14 @@
                 _cid: ++rowSeq,
                 MARK: s.mark, MarkName: s.markDescn || '',
                 INVNO: s.invno, AWR_NO: s.awrNo, AWR_DATE: s.awrDate, PACK_DATE: s.packDate, GRADE: s.grade,
-                BAG_CHEST: s.bagChest, NET_WT: s.netWt, DRAW_QTY: 0
+                BAG_CHEST: s.bagChest, NET_WT: round3(s.netWt), DRAW_QTY: 0
             };
             rows.push(newRow);
             if (saleCentre && s.grade) {
                 $.getJSON('@Url.Action("GetDrawQty", "TeaSampleDrawEntry")', {
                     saleCentre: saleCentre, bagChest: s.bagChest, grade: s.grade, docDate: docDate
                 }, function (r) {
-                    newRow.DRAW_QTY = (r && r.drawQty) || 0;
+                    newRow.DRAW_QTY = round3((r && r.drawQty) || 0);
                     renderGrid();
                 });
             }
@@ -428,10 +468,10 @@
         if (!$('#SALE_CENTRE').val()) { showAlert('Sale Centre cannot be blank'); return; }
         var validRows = rows.filter(function (r) { return r.INVNO; });
         if (!validRows.length) { showAlert('First row must have an Invoice No.'); return; }
-        if (validRows.some(function (r) { return !(num(r.NET_WT) > 0); })) { showAlert('Net Wt must be greater than zero for every line.'); return; }
-        if (validRows.some(function (r) { return num(r.DRAW_QTY) === 0; })) { showAlert('Draw Qty cannot be zero.'); return; }
+        if (validRows.some(function (r) { return !(round3(r.NET_WT) > 0); })) { showAlert('Net Wt must be greater than zero for every line.'); return; }
+        if (validRows.some(function (r) { return round3(r.DRAW_QTY) === 0; })) { showAlert('Draw Qty cannot be zero.'); return; }
         for (var i = 0; i < validRows.length; i++) {
-            if (num(validRows[i].DRAW_QTY) > num(validRows[i].NET_WT)) {
+            if (round3(validRows[i].DRAW_QTY) > round3(validRows[i].NET_WT)) {
                 showAlert('Draw Qty can\'t exceed available Net Wt for invoice ' + validRows[i].INVNO + '.');
                 return;
             }
@@ -440,7 +480,10 @@
         var payload = { T_SAMPLE_DRAW: validRows.map(function (r) {
             return {
                 ID: r.ID || 0,
-                UNIT: '@unit',
+                // The Unit picked on the list (new) / the record's own Unit (edit) -- stored as-is;
+                // the server checks it against the user's units and the AWRTypeUnit table is only
+                // the fallback when it is blank.
+                UNIT: $('#UNIT_disp').val(),
                 TRAN_CODE: $('#AWR_TYPE').val(),
                 DOCNO: '@docno',
                 DOCDT: $('#DOCDT').val(),
@@ -449,9 +492,12 @@
                 PCODE: $('#PCODE').val(),
                 WAREHOUSE: $('#WAREHOUSE').val(),
                 INVNO: r.INVNO, AWR_NO: r.AWR_NO, AWR_DATE: r.AWR_DATE, PACK_DATE: r.PACK_DATE, GRADE: r.GRADE, MARK: r.MARK,
-                BAG_CHEST: num(r.BAG_CHEST), NET_WT: num(r.NET_WT), DRAW_QTY: num(r.DRAW_QTY)
+                BAG_CHEST: num(r.BAG_CHEST), NET_WT: round3(r.NET_WT), DRAW_QTY: round3(r.DRAW_QTY)
             };
-        }) };
+        }),
+            // New vs Edit, for the server-side AEDV Add/Edit + back-date check (rows don't reliably say).
+            IsNew: !IS_EDIT
+        };
 
         $.ajax({
             url: '@Url.Action("Save", "TeaSampleDrawEntry")', type: 'POST', contentType: 'application/json', data: JSON.stringify(payload)
@@ -465,6 +511,15 @@
     });
 
     renderGrid();
+
+    // View mode (list page "View" button): runs after the first renderGrid() has built every grid
+    // row, then disables the header fields, the whole grid and the Save / row buttons.
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
+    if (IS_VIEW) {
+        $('.accordion-container :input').prop('disabled', true);
+        $('#btnSave').prop('disabled', true).css({ opacity: .4, cursor: 'not-allowed' });
+        $('#btnSelectStock, #btnRemoveRows').css({ opacity: .4, 'pointer-events': 'none' });
+    }
 </script>
 </body>
 </html>

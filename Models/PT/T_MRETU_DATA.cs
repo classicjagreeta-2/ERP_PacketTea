@@ -15,5 +15,9 @@ namespace PacketTea.Models.PT
 
         // 0 = current year, 1 = last year, 2 = before last year (VB6 ChkLastYr/chkLLYr).
         public int BillYearBack { get; set; }
+
+        // Sent by the entry screen (IsNew: !IS_EDIT) so Save can apply the AEDV Add vs Edit check +
+        // back-date window to the right case -- see MarketReturnController.Save.
+        public bool? IsNew { get; set; }
     }
 }

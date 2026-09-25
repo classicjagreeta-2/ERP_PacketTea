@@ -6,5 +6,10 @@ namespace PacketTea.Models.PT
     public class T_PROD_DATA
     {
         public T_PROD T_PROD { get; set; } = new T_PROD();
+
+        // Set by the client from the entry page's #isEdit flag (IsNew: !IS_EDIT) -- lets Save
+        // apply the AEDV Add-vs-Edit + back-date check. Only read by the MVC Save action; the
+        // API is sent T_PROD alone.
+        public bool? IsNew { get; set; }
     }
 }

@@ -1,0 +1,74 @@
+@* Table rows for the Tea Sample Draw Entry list. Rendered by Index.cshtml for the first chunk and
+   returned on its own (Request.IsAjaxRequest) for every further chunk the list's infinite
+   scroll asks for -- see Scripts/list-infinite-scroll.js and TeaSampleDrawEntryController.Index.
+   ViewBag.RowOffset keeps the "+" expand ids unique across chunks. The list starts with a Unit
+   column (the user's permitted Units); each row also carries its Unit and Type as data attributes /
+   link params, since a Doc No repeats across units. *@
+@model List<Finance.Controllers.TEA.SampleDrawDocRow>
+@{
+    var rowIndex = (int?)ViewBag.RowOffset ?? 0;
+    // Doc No is a link into Edit mode only for users holding the Edit right (AEDV) -- UX only:
+    // TeaSampleDrawEntryController.InsertOrUpdate re-checks the right and the back-date window.
+    var canEdit = (ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false;
+}
+@if (Model != null)
+{
+    foreach (var row in Model)
+    {
+        rowIndex++;
+        var detailId = "rowDetail" + rowIndex;
+        <tr class="data-row">
+            <td>
+                <input type="checkbox" class="row-check"
+                       value="@row.docno"
+                       data-docdt="@row.docdt?.ToString("yyyy-MM-dd")"
+                       data-awrtype="@row.tranCode"
+                       data-unit="@row.unit" />
+            </td>
+            <td style="text-align:center;">
+                <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show lines" style="cursor:pointer;"></i>
+            </td>
+            <td>@row.unit</td>
+            <td>
+                @if (canEdit)
+                {
+                    <a href="@Url.Action("InsertOrUpdate", "TeaSampleDrawEntry", new { docno = row.docno, docdt = row.docdt?.ToString("yyyy-MM-dd"), awrType = row.tranCode, unit = row.unit })">@row.docno</a>
+                }
+                else
+                {
+                    @row.docno
+                }
+            </td>
+            <td>@(row.docdt?.ToString("dd/MM/yyyy"))</td>
+            <td>@row.saleCentreName</td>
+            <td>@row.brokerName</td>
+            <td>@row.warehouse</td>
+            <td style="text-align:right;">@row.totalBagChest.ToString("0.##")</td>
+            <td style="text-align:right;">@row.totalDrawQty.ToString("0.000")</td>
+        </tr>
+        <tr class="row-detail" id="@detailId" style="display:none;"
+            data-docno="@row.docno" data-docdt="@row.docdt?.ToString("yyyy-MM-dd")" data-awrtype="@row.tranCode" data-unit="@row.unit">
+            <td colspan="10" style="background:#f8f9fc;padding:10px 12px;">
+                <div style="overflow-x:auto;">
+                    <table class="detail-sub-table">
+                        <thead>
+                            <tr>
+                                <th style="width:34px;">Sl</th>
+                                <th>Mark</th>
+                                <th>Inv No</th>
+                                <th>AWR No</th>
+                                <th>Grade</th>
+                                <th style="text-align:right;">Bag/Chest</th>
+                                <th style="text-align:right;">Net Wt</th>
+                                <th style="text-align:right;">Draw Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody class="detail-items-body">
+                            <tr><td colspan="8" style="text-align:center;color:#666;">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    }
+}

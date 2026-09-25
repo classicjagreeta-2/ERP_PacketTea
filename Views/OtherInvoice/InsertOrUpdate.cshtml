@@ -24,8 +24,20 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <!-- Root UI lookup convention (CLAUDE.md "Lookup pickers"): Party / Transporter / Bank and the grid's
+         Item / GST Code cells are jquery.inputpicker dropdowns, the same widget Packing / Tea Purchase Note use. -->
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <script src="~/libraries/assetspo/js/custom.js"></script>
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <style>
+        .inputpicker-wrapped-list .inputpicker-active td,
+        .inputpicker-wrapped-list .inputpicker-active th { background: #404e68 !important; color: #fff !important; font-weight: bold; }
+        .inputpicker-wrapped-list { min-width: max-content !important; }
+        .inputpicker-wrapped-list table { width: max-content !important; }
+        /* The plugin wraps a picked cell's input in a div with inline "overflow:auto; height:100%"; inside a
+           table cell that can sprout scrollbars, so keep the wrapper exactly the size of its input. */
+        #gridTable .inputpicker-div { overflow: hidden !important; height: auto !important; }
+        #gridTable .inputpicker-overflow-hidden { overflow: hidden; }
         input[readonly], textarea[readonly] { background-color: #f3f4f7; color: #555; }
         /* purchase-order.css only defines 10/15/20/50/100 */
         .form-col-40 { width: 40%; padding: 0 10px; margin-bottom: 10px; }
@@ -35,6 +47,9 @@
         .inp-pick input { flex: 1; min-width: 0; }
         .inp-pick .pick-btn { width: auto; padding: 0 9px; border: 1px solid #ccc; background: #f4f6fa; cursor: pointer; }
         .num2 { text-align: right; }
+        /* every numeric input/cell is right-aligned (Qty 3 dp, money/rates/% 2 dp, counts plain) */
+        #gridTable td.num input, .totals-row .tot-item input, #R_OFF, input.num2 { text-align: right; }
+        #gridTable th.num, #gridTable td.num, #glTable th.num, #glTable td.num { text-align: right; }
         .radio-row label { font-weight: normal; margin-right: 14px; }
         .radio-row input { width: auto; }
 
@@ -153,14 +168,13 @@
                             </div>
                             <div class="form-col-20">
                                 <label>@(isNote ? "Doc Date" : "Invoice Date") <span>(*)</span></label>
-                                <input type="date" id="DOCDT" value="@Iso(head.DOCDT)" @(isEdit ? "readonly" : "") max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                                @* min = later of the FY start and the AEDV back-date window (OtherInvoiceController.SetMinDocDate) *@
+                                <input type="date" id="DOCDT" value="@Iso(head.DOCDT)" @(isEdit ? "readonly" : "") min="@ViewBag.MinDocDate" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
                             </div>
                             <div class="form-col-20">
                                 <label>Party <span>(*)</span></label>
-                                <div class="inp-pick">
-                                    <input type="text" id="PCD" value="@head.PCD" placeholder="Code" maxlength="6" style="text-transform:uppercase;" />
-                                    <button type="button" class="pick-btn" data-pick="party" title="Search party"><i class="fa fa-search"></i></button>
-                                </div>
+                                @* jquery.inputpicker dropdown (Root UI) -- attached on click / focus, see openLookup() *@
+                                <input type="text" id="PCD" value="@head.PCD" placeholder="Click to select" autocomplete="off" />
                             </div>
                             <div class="form-col-40">
                                 <label>Party Name</label>
@@ -210,10 +224,7 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Transporter</label>
-                                <div class="inp-pick">
-                                    <input type="text" id="TRANS_CODE" value="@head.TRANS_CODE" placeholder="Code" maxlength="6" style="text-transform:uppercase;" />
-                                    <button type="button" class="pick-btn" data-pick="transporter" title="Search transporter"><i class="fa fa-search"></i></button>
-                                </div>
+                                <input type="text" id="TRANS_CODE" value="@head.TRANS_CODE" placeholder="Click to select" autocomplete="off" />
                             </div>
                             <div class="form-col-20">
                                 <label>Transporter Name</label>
@@ -244,10 +255,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Bank Code <span>(*)</span></label>
-                                <div class="inp-pick">
-                                    <input type="text" id="BANK_CODE" value="@head.BANK_CODE" placeholder="Code" maxlength="8" />
-                                    <button type="button" class="pick-btn" data-pick="bank" title="Search bank"><i class="fa fa-search"></i></button>
-                                </div>
+                                <input type="text" id="BANK_CODE" value="@head.BANK_CODE" placeholder="Click to select" autocomplete="off" />
                             </div>
                             <div class="form-col-40">
                                 <label>Bank Name</label>
@@ -295,7 +303,7 @@
                                 <thead>
                                     <tr>
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
-                                        <th style="width:30px;">Sl</th>
+                                        <th class="num" style="width:30px;">Sl</th>
                                         <th>Item <span style="color:red;">(*)</span></th>
                                         <th>Item Name</th>
                                         <th>Description</th>
@@ -388,7 +396,7 @@
         <div class="gl-body">
             <table id="glTable">
                 <thead>
-                    <tr><th>Sl</th><th>A/c Code</th><th>Sub Code</th><th>Account Name</th><th>Ref Code</th><th>Cost Centre</th><th class="num">Debit</th><th class="num">Credit</th></tr>
+                    <tr><th class="num">Sl</th><th>A/c Code</th><th>Sub Code</th><th>Account Name</th><th>Ref Code</th><th>Cost Centre</th><th class="num">Debit</th><th class="num">Credit</th></tr>
                 </thead>
                 <tbody id="glBody"></tbody>
                 <tfoot><tr><td colspan="6" style="text-align:right;">Total</td><td class="num" id="glDr"></td><td class="num" id="glCr"></td></tr></tfoot>
@@ -447,7 +455,8 @@
     var TRAN = '@tran';
     var IS_NOTE = TRAN !== '1';
     var IS_EDIT = @Html.Raw(isEdit ? "true" : "false");
-    var READ_ONLY = @Html.Raw(readOnly ? "true" : "false");
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
+    var READ_ONLY = @Html.Raw(readOnly ? "true" : "false");   // View mode, an e-Invoiced document or a month-locked one
     var LIST_URL = '@Url.Action(listAction, "OtherInvoice")';
     var HEAD = @Html.Raw(JsonConvert.SerializeObject(new {
         head.DOC_YEAR, head.UNIT, head.DOCTYPE, head.DOCNO, head.UnitStateCode,
@@ -466,6 +475,13 @@
     function round2(v) { var n = num(v); return Math.sign(n) * Math.round(Math.abs(n) * 100 + 1e-8) / 100; }
     function f2(v) { return round2(v).toFixed(2); }
     function fmt2(v) { return round2(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    // Qty / weights: exactly 3 decimals (own helpers so Qty is never squeezed to 2 dp).
+    function round3(v) { var n = num(v); return Math.sign(n) * Math.round(Math.abs(n) * 1000 + 1e-8) / 1000; }
+    function f3(v) { return round3(v).toFixed(3); }
+    function fmt3(v) { return round3(v).toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }); }
+    // Decimals allowed by a numeric input: 3 for Qty (class qty3), otherwise 2.
+    function dpOf(el) { return $(el).hasClass('qty3') ? 3 : 2; }
+    function fdp(v, dp) { return dp === 3 ? f3(v) : f2(v); }
     function esc(v) { return $('<div>').text(v == null ? '' : v).html(); }
     function up(v) { return $.trim(v || '').toUpperCase(); }
     function isoDate(v) { return v ? String(v).substring(0, 10) : ''; }
@@ -477,11 +493,12 @@
     // Numeric inputs: digits and one decimal point only, 2 decimals,
     // right-aligned (class num2; data-neg allows a leading minus).
     // =========================================================
-    function cleanNum(s, allowNeg) {
+    function cleanNum(s, allowNeg, dp) {
+        dp = dp || 2;
         s = String(s || '').replace(allowNeg ? /[^0-9.\-]/g : /[^0-9.]/g, '');
         if (allowNeg) s = s.replace(/(?!^)-/g, '');
         var i = s.indexOf('.');
-        if (i >= 0) s = s.substring(0, i + 1) + s.substring(i + 1).replace(/\./g, '').substring(0, 2);
+        if (i >= 0) s = s.substring(0, i + 1) + s.substring(i + 1).replace(/\./g, '').substring(0, dp);
         return s;
     }
     $(document).on('keypress', 'input.num2', function (e) {
@@ -491,15 +508,16 @@
         if (ch === '.' && v.indexOf('.') < 0) return;
         if (!/[0-9]/.test(ch)) { e.preventDefault(); return; }
         var dot = v.indexOf('.');
-        if (dot >= 0 && this.selectionStart > dot && this.selectionStart === this.selectionEnd && v.length - dot > 2) e.preventDefault();
+        if (dot >= 0 && this.selectionStart > dot && this.selectionStart === this.selectionEnd && v.length - dot > dpOf(this)) e.preventDefault();
     });
     $(document).on('input paste', 'input.num2', function () {
-        var c = cleanNum(this.value, !!$(this).data('neg'));
+        var c = cleanNum(this.value, !!$(this).data('neg'), dpOf(this));
         if (c !== this.value) this.value = c;
     });
     $(document).on('blur', 'input.num2', function () {
-        if (this.value === '' || this.value === '-') { this.value = '0.00'; }
-        else this.value = f2(this.value);
+        var dp = dpOf(this);
+        if (this.value === '' || this.value === '-') { this.value = fdp(0, dp); }
+        else this.value = fdp(this.value, dp);
     });
 
     // =========================================================
@@ -507,7 +525,7 @@
     // =========================================================
     function calcLine(r) {
         var g = GST[up(r.GST_CODE)];
-        var qty = num(r.QTY), rate = num(r.RATE);
+        var qty = round3(r.QTY), rate = round2(r.RATE);   // Qty 3 dp, Rate 2 dp (as shown / posted)
         r.AMT = round2(qty * rate);
         r.CGST_RATE = r.SGST_RATE = r.IGST_RATE = r.GCESS_RATE = r.TCS_RATE = 0;
         var taxPct = 0;
@@ -535,16 +553,16 @@
         var q = 0, taxable = 0, gst = 0, tcs = 0, gross = 0;
         rows.forEach(function (r) {
             if (!r.ITCD || !r.AMT) return;
-            q += num(r.QTY); taxable += num(r._amtO);
+            q += round3(r.QTY); taxable += num(r._amtO);
             gst += num(r.CGST_AMT) + num(r.SGST_AMT) + num(r.IGST_AMT) + num(r.GCESS_AMT);
             tcs += num(r.TCS_AMT); gross += num(r.TOT_AMT);
         });
-        $('#totQty').val(fmt2(q)); $('#totTaxable').val(fmt2(taxable)); $('#totGst').val(fmt2(gst));
+        $('#totQty').val(fmt3(q)); $('#totTaxable').val(fmt2(taxable)); $('#totGst').val(fmt2(gst));
         $('#totTcs').val(fmt2(tcs)); $('#totGross').val(fmt2(gross));
         $('#totNet').val(fmt2(round2(gross) + num($('#R_OFF').val())));
     }
 
-    function cell(cls, v, ro) { return '<td class="num"><input type="text" class="' + cls + (ro ? ' calc' : ' num2') + '" inputmode="decimal" value="' + f2(v) + '"' + (ro ? ' readonly tabindex="-1"' : '') + ' /></td>'; }
+    function cell(cls, v, ro, dp) { dp = dp || 2; return '<td class="num"><input type="text" class="' + cls + (dp === 3 ? ' qty3' : '') + (ro ? ' calc' : ' num2') + '" inputmode="decimal" style="text-align:right;" value="' + fdp(v, dp) + '"' + (ro ? ' readonly tabindex="-1"' : '') + ' /></td>'; }
     function pct(cls, v) { return '<td class="num"><input type="text" class="' + cls + ' calc pct" value="' + f2(v) + '" readonly tabindex="-1" /></td>'; }
 
     function renderGrid() {
@@ -554,16 +572,17 @@
             if (r._amtO === undefined) calcLine(r);
             var tr = $('<tr data-cid="' + r._cid + '"></tr>');
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
-            tr.append('<td>' + r.SRLNO + '</td>');
-            tr.append('<td><input type="text" class="f-itcd" maxlength="4" value="' + esc(r.ITCD) + '" /><button type="button" class="grid-pick-btn" data-gpick="item" title="Search item">...</button></td>');
+            tr.append('<td class="num">' + r.SRLNO + '</td>');
+            // Item / GST Code: the code box is itself the inputpicker dropdown (no "..." button) -- see rowLookups.
+            tr.append('<td><input type="text" class="f-itcd" value="' + esc(r.ITCD) + '" placeholder="Code" autocomplete="off" /></td>');
             tr.append('<td><input type="text" class="f-name" value="' + esc(r.ITEM_NAME) + '" readonly tabindex="-1" /></td>');
             tr.append('<td><input type="text" class="f-desc" maxlength="200" value="' + esc(r.ITDESC1) + '" /><button type="button" class="grid-pick-btn" data-gpick="desc" title="Description lines 1-4">...</button></td>');
             tr.append('<td><input type="text" class="f-hsn" maxlength="10" value="' + esc(r.HSN_CODE) + '" style="min-width:80px;width:80px;" /></td>');
-            tr.append(cell('f-qty', r.QTY, false));
+            tr.append(cell('f-qty', r.QTY, false, 3));
             tr.append('<td><input type="text" class="f-uom" maxlength="19" value="' + esc(r.UNIT_DESC) + '" style="min-width:50px;width:56px;" /></td>');
             tr.append(cell('f-rate', r.RATE, false));
             tr.append(cell('f-amt', r.AMT, true));
-            tr.append('<td><input type="text" class="f-gst" maxlength="3" value="' + esc(r.GST_CODE) + '" /><button type="button" class="grid-pick-btn" data-gpick="gst" title="Search GST code">...</button></td>');
+            tr.append('<td><input type="text" class="f-gst" value="' + esc(r.GST_CODE) + '" placeholder="Code" autocomplete="off" /></td>');
             tr.append(pct('f-cgstr', r.CGST_RATE)); tr.append(cell('f-cgsta', r.CGST_AMT, true));
             tr.append(pct('f-sgstr', r.SGST_RATE)); tr.append(cell('f-sgsta', r.SGST_AMT, true));
             tr.append(pct('f-igstr', r.IGST_RATE)); tr.append(cell('f-igsta', r.IGST_AMT, true));
@@ -590,10 +609,10 @@
     function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
 
     $('#gridBody').on('input', '.f-qty, .f-rate', function () {
-        var c = cleanNum(this.value, false);
+        var c = cleanNum(this.value, false, dpOf(this));
         if (c !== this.value) this.value = c;
         var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
-        r.QTY = num($tr.find('.f-qty').val()); r.RATE = num($tr.find('.f-rate').val());
+        r.QTY = round3($tr.find('.f-qty').val()); r.RATE = round2($tr.find('.f-rate').val());
         calcLine(r); refreshRowCells($tr, r);
     });
     $('#gridBody').on('input', '.f-desc, .f-hsn, .f-uom', function () {
@@ -617,35 +636,16 @@
         calcLine(r); refreshRowCells($tr, r);
     }
 
-    // Typed codes are resolved exactly against the master (VB6 *_Validate).
-    $('#gridBody').on('change', '.f-itcd', function () {
-        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid')), code = up($(this).val());
-        if (!code) { r.ITCD = ''; r.ITEM_NAME = ''; $tr.find('.f-name').val(''); calcLine(r); refreshRowCells($tr, r); return; }
-        lookupCode('item', code, function (it) {
-            if (it) applyItem($tr, r, it);
-            else { showAlert('Enter valid item (' + code + ').'); $tr.find('.f-itcd').val(r.ITCD || ''); }
-        });
-    });
-    $('#gridBody').on('change', '.f-gst', function () {
-        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid')), code = up($(this).val());
-        if (!code) { r.GST_CODE = ''; calcLine(r); refreshRowCells($tr, r); return; }
-        if (GST[code]) { applyGst($tr, r, GST[code]); return; }
-        lookupCode('gst', code, function (g) {
-            if (g) applyGst($tr, r, g);
-            else { showAlert('GST Code ' + code + ' is not defined.'); $tr.find('.f-gst').val(r.GST_CODE || ''); }
-        });
-    });
+    // Item / GST Code cells: the row's own code box is the inputpicker dropdown (see rowLookups below,
+    // after openLookup). A pick fills the row; clearing the box clears the line's item / GST code.
+    function clearItem($tr, r) { r.ITCD = ''; r.ITEM_NAME = ''; $tr.find('.f-name').val(''); calcLine(r); refreshRowCells($tr, r); }
+    function clearGst($tr, r) { r.GST_CODE = ''; calcLine(r); refreshRowCells($tr, r); }
 
+    // The "..." button that remains on a grid row is the Description popup (ITDESC1-4).
     $('#gridBody').on('click', '.grid-pick-btn', function () {
         if (READ_ONLY) return;
         var $tr = $(this).closest('tr'), r = findRow($tr.data('cid')), kind = $(this).data('gpick');
-        if (kind === 'item') openPicker('item', function (it) { applyItem($tr, r, it); $tr.find('.f-desc').focus(); });
-        else if (kind === 'gst') openPicker('gst', function (g) { applyGst($tr, r, g); });
-        else if (kind === 'desc') openDesc($tr, r);
-    });
-    // F2 / F1 on a code cell opens its search (VB6 F1 help).
-    $('#gridBody').on('keydown', '.f-itcd, .f-gst', function (e) {
-        if (e.key === 'F2' || e.key === 'F1') { e.preventDefault(); $(this).siblings('.grid-pick-btn').click(); }
+        if (kind === 'desc') openDesc($tr, r);
     });
 
     $('#btnAddRow').on('click', function () {
@@ -685,22 +685,126 @@
     });
 
     // =========================================================
-    // Searchable pickers -- the server matches the typed text against every
-    // column shown (and returns at most 100 rows).
+    // Simple code/name lookups -- Party, Transporter, Bank, Item, GST Code -- are jquery.inputpicker
+    // dropdowns (Root UI convention, CLAUDE.md "Lookup pickers"): anchored under the field, paged, and
+    // searched server-side on EVERY column shown (the MVC picker actions take (q, limit, ..., p) and
+    // reply { data, count }; the API matches `search` case-insensitively on all the columns below).
+    // The first field is the value written to the box; `unit` rides along on every request.
+    // =========================================================
+    var LOOKUPS = {
+        party: { url: '@Url.Action("GetParty", "OtherInvoice")',
+                 fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'CITY', text: 'City' },
+                          { name: 'ROUTE', text: 'Route' }, { name: 'MOBILE', text: 'Mobile' }, { name: 'GST_NO', text: 'GSTIN' }] },
+        transporter: { url: '@Url.Action("GetTransporter", "OtherInvoice")',
+                 fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'CITY', text: 'City' }] },
+        bank: { url: '@Url.Action("GetBank", "OtherInvoice")',
+                 fields: [{ name: 'CODE', text: 'A/c Code' }, { name: 'NAME', text: 'Account Name' }, { name: 'BANK_NAME', text: 'Bank' }, { name: 'AC_NO', text: 'A/c No' }] },
+        item: { url: '@Url.Action("GetItemMaster", "OtherInvoice")',
+                 fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'UOM', text: 'UOM' }, { name: 'HSN_CODE', text: 'HSN' }] },
+        gst: { url: '@Url.Action("GetGstCode", "OtherInvoice")',
+                 fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Description' }, { name: 'CGST_RATE', text: 'CGST %' },
+                          { name: 'SGST_RATE', text: 'SGST %' }, { name: 'IGST_RATE', text: 'IGST %' }, { name: 'GCESS_RATE', text: 'Cess %' }] }
+    };
+    var GST_RATES_URL = '@Url.Action("GetGstRates", "OtherInvoice")';
+    var lookupParams = { unit: UNIT };
+
+    // The row the user picked, looked up in the data the dropdown last loaded. This copy of the plugin
+    // writes the picked value into the original input and fires "change" on it; it does not hand the
+    // row to a select handler, so read it back by the picked value.
+    function pickedRow($input, cfg) {
+        var key = cfg.fields[0].name, v = String($input.val() == null ? '' : $input.val()), data = [];
+        try { data = $input.inputpicker('data') || []; } catch (e) { data = []; }
+        for (var i = 0; i < data.length; i++) { if (String(data[i][key]) === v) return data[i]; }
+        return null;
+    }
+    // Open the dropdown AND refresh its rows. The plugin loads url-backed data asynchronously and only
+    // re-renders the list on a keystroke, so showing it right after init (before the first response
+    // lands) displayed "No results" -- the keyup makes it fetch and render the rows.
+    function showPickerList($orig) {
+        $orig.inputpicker('show');
+        $orig.next('.inputpicker-overflow-hidden').find('input').trigger($.Event('keyup', { keyCode: 0 }));
+    }
+    // Show `code` in an inputpicker-backed box after it was set from code (the plugin only refreshes
+    // its visible clone on a pick).
+    function setPickerText($orig, code) {
+        $orig.val(code);
+        $orig.next('.inputpicker-overflow-hidden').find('input.inputpicker-input').val(code);
+    }
+
+    // onSelect(row) runs for a picked row; onClear() when the box was emptied.
+    function openLookup(key, $input, onSelect, onClear) {
+        var cfg = LOOKUPS[key];
+        $('.inputpicker-wrapped-list').remove();
+
+        // This plugin never sets $.data('inputpicker'); the class it puts on the original input is the
+        // "already initialised" test (otherwise every click re-wraps the field and drops what the user
+        // has typed). Showing is deferred a tick: called from a click, the click's own bubbling up to the
+        // plugin's document-level "outside click" handler would otherwise hide it straight away.
+        if ($input.hasClass('inputpicker-original')) {
+            setTimeout(function () { showPickerList($input); }, 0);
+            return;
+        }
+
+        $input.inputpicker({
+            url: cfg.url,
+            urlParam: lookupParams,
+            fields: cfg.fields,
+            fieldText: cfg.fields[0].name,
+            fieldValue: cfg.fields[0].name,
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+            width: 'auto',
+            urlDelay: 0.2      // seconds (the plugin multiplies by 1000): one request per pause in typing, not per keystroke
+        });
+        setTimeout(function () { showPickerList($input); }, 0);
+
+        function deliver(row) { if (row && onSelect) onSelect(row); }
+        // Both hooks call the same idempotent handler, so whichever this plugin build fires works.
+        $input.off('inputpicker.select').on('inputpicker.select', function (e, row) {
+            deliver(row);
+            $(this).inputpicker('hide');
+        });
+        $input.off('change.ipk').on('change.ipk', function () {
+            var row = pickedRow($input, cfg);
+            if (row) deliver(row);
+            else if (!$.trim($input.val()) && onClear) onClear();
+        });
+    }
+
+    // Grid cells (Item / GST Code): the row's own code box is the dropdown -- clicking / focusing it opens
+    // the inputpicker anchored right under it. The plugin clones the input it is attached to (classes
+    // included), so the clone (.inputpicker-input) must not match here or a second picker would be
+    // attached inside the first.
+    var rowLookups = [
+        { sel: '.f-itcd', key: 'item',
+          apply: function (r, row, $tr) { applyItem($tr, r, row); $tr.find('.f-desc').focus(); },
+          clear: clearItem },
+        { sel: '.f-gst', key: 'gst',
+          apply: function (r, row, $tr) { applyGst($tr, r, row); },
+          clear: clearGst }
+    ];
+    rowLookups.forEach(function (lk) {
+        $('#gridBody').on('click focus', lk.sel + ':not(.inputpicker-input)', function () {
+            if (READ_ONLY) return;
+            var $in = $(this), $tr = $in.closest('tr'), r = findRow($tr.data('cid'));
+            if (!r) return;
+            openLookup(lk.key, $in, function (row) { lk.apply(r, row, $tr); }, function () { lk.clear($tr, r); });
+        });
+    });
+
+    // =========================================================
+    // Bespoke modal picker -- ONLY for the composite / accounting dialogs that are deliberately not
+    // inputpicker lookups: the party's reference invoice (Debit / Credit Note) and the accounting
+    // preview's Ref Code / Cost Centre cells. The server matches the typed text against every column
+    // shown (and returns at most 100 rows).
     // =========================================================
     var pickers = {
-        party: { title: 'Party', url: '@Url.Action("GetParty", "OtherInvoice")', wide: true,
-                 cols: [['CODE', 'Code'], ['NAME', 'Name'], ['CITY', 'City'], ['ROUTE', 'Route'], ['MOBILE', 'Mobile'], ['GST_NO', 'GSTIN']],
-                 params: function () { return { unit: UNIT }; } },
-        transporter: { title: 'Transporter', url: '@Url.Action("GetTransporter", "OtherInvoice")',
-                 cols: [['CODE', 'Code'], ['NAME', 'Name'], ['CITY', 'City']], params: function () { return { unit: UNIT }; } },
-        bank: { title: 'Bank', url: '@Url.Action("GetBank", "OtherInvoice")', wide: true,
-                 cols: [['CODE', 'A/c Code'], ['NAME', 'Account Name'], ['BANK_NAME', 'Bank'], ['AC_NO', 'A/c No']], params: function () { return { unit: UNIT }; } },
-        item: { title: 'Item', url: '@Url.Action("GetItemMaster", "OtherInvoice")',
-                 cols: [['CODE', 'Code'], ['NAME', 'Name'], ['UOM', 'UOM'], ['HSN_CODE', 'HSN']], params: function () { return { unit: UNIT }; } },
-        gst: { title: 'GST Code', url: '@Url.Action("GetGstCode", "OtherInvoice")', wide: true,
-                 cols: [['CODE', 'Code'], ['NAME', 'Description'], ['CGST_RATE', 'CGST %', 1], ['SGST_RATE', 'SGST %', 1], ['IGST_RATE', 'IGST %', 1], ['GCESS_RATE', 'Cess %', 1]],
-                 params: function () { return { unit: UNIT }; } },
         refinv: { title: 'Invoice of the party', url: '@Url.Action("GetRefInvoices", "OtherInvoice")',
                  cols: [['DOCNO', 'Invoice No'], ['DOCDT', 'Date', 0, 1], ['TOTAL_AMT', 'Amount', 1]],
                  params: function () { return { pcd: up($('#PCD').val()), unit: UNIT, lastYear: $('#chkLastYr').is(':checked') }; } },
@@ -779,44 +883,28 @@
         } else if (e.key === 'Escape') { closePicker(false); }
     });
 
-    // Exact code lookup (typed code instead of picking).
-    function lookupCode(key, code, cb) {
-        var cfg = pickers[key];
-        $.getJSON(cfg.url, $.extend({ code: code }, cfg.params ? cfg.params() : {}), function (data) {
-            cb((data || []).find(function (x) { return up(x.CODE) === up(code); }) || null);
-        }).fail(handleAjaxFail);
-    }
-
     // =========================================================
-    // Header lookups
+    // Header lookups -- Party / Transporter / Bank are inputpicker dropdowns attached on click / focus.
+    // The plugin has already written the picked code into the box by the time these run.
     // =========================================================
     function setParty(p) {
         $('#PCD').val(p ? p.CODE : ''); $('#PCD_disp').val(p ? p.NAME : '');
         PARTY = { state: p ? (p.STATE_CODE || '') : '', pan: p ? (p.PANNO || '') : '', tcsTag: p ? (p.TCS_TAG || 'N') : 'N' };
-        if (p && UNIT_STATE && PARTY.state !== UNIT_STATE) $('#PCD_disp').attr('title', 'Inter-state party: IGST applies');
+        $('#PCD_disp').attr('title', p && UNIT_STATE && PARTY.state !== UNIT_STATE ? 'Inter-state party: IGST applies' : '');
         recalcAll();
     }
-    function bindHeaderLookup(id, key, onSet) {
-        $('#' + id).on('change', function () {
-            var code = up($(this).val());
-            if (!code) { onSet(null); return; }
-            lookupCode(key, code, function (x) {
-                if (x) onSet(x);
-                else { onSet(null); showAlert(pickers[key].title + ' Code Not Valid (' + code + ').', function () { $('#' + id).focus(); }); }
-            });
-        });
-    }
     function setSimple(id) { return function (x) { $('#' + id).val(x ? x.CODE : ''); $('#' + id + '_disp').val(x ? x.NAME : ''); }; }
-    bindHeaderLookup('PCD', 'party', setParty);
-    bindHeaderLookup('TRANS_CODE', 'transporter', setSimple('TRANS_CODE'));
-    bindHeaderLookup('BANK_CODE', 'bank', setSimple('BANK_CODE'));
-    $('.pick-btn[data-pick]').on('click', function () {
+    $('#PCD').on('click focus', function () {
         if (READ_ONLY) return;
-        var key = $(this).data('pick');
-        openPicker(key, key === 'party' ? setParty : setSimple(key === 'bank' ? 'BANK_CODE' : 'TRANS_CODE'));
+        openLookup('party', $(this), setParty, function () { setParty(null); });
     });
-    $('#PCD, #TRANS_CODE, #BANK_CODE').on('keydown', function (e) {
-        if (e.key === 'F2' || e.key === 'F1') { e.preventDefault(); $(this).siblings('.pick-btn').click(); }
+    $('#TRANS_CODE').on('click focus', function () {
+        if (READ_ONLY) return;
+        openLookup('transporter', $(this), setSimple('TRANS_CODE'), function () { setSimple('TRANS_CODE')(null); });
+    });
+    $('#BANK_CODE').on('click focus', function () {
+        if (READ_ONLY) return;
+        openLookup('bank', $(this), setSimple('BANK_CODE'), function () { setSimple('BANK_CODE')(null); });
     });
 
     // =========================================================
@@ -837,7 +925,7 @@
                 $('#itemsTitle').text('Select Item -- ' + inv.DOCNO);
                 $('#itemsBody').html(refLines.map(function (l, i) {
                     return '<tr><td><input type="checkbox" class="itemChk" data-i="' + i + '" checked /></td><td>' + esc(l.ITCD) + '</td><td>' + esc(l.DESCN) +
-                        '</td><td class="num">' + fmt2(l.QTY) + '</td><td class="num">' + fmt2(l.RATE) + '</td><td class="num">' + fmt2(l.AMT) + '</td><td>' + esc(l.GST_CODE) + '</td></tr>';
+                        '</td><td class="num">' + fmt3(l.QTY) + '</td><td class="num">' + fmt2(l.RATE) + '</td><td class="num">' + fmt2(l.AMT) + '</td><td>' + esc(l.GST_CODE) + '</td></tr>';
                 }).join(''));
                 $('#itemsAll').prop('checked', true);
                 $('#pickerOverlay, #itemsBox').fadeIn(120);
@@ -852,7 +940,7 @@
         if (!picked.length) return;
         rows = picked.map(function (l) {
             return { _cid: ++rowSeq, ITCD: l.ITCD, ITEM_NAME: l.DESCN, ITDESC1: l.ITDESC1 || '', UNIT_DESC: l.UNIT_DESC || '',
-                     HSN_CODE: l.HSN_CODE || '', QTY: num(l.QTY), RATE: 0, GST_CODE: l.GST_CODE || '' };
+                     HSN_CODE: l.HSN_CODE || '', QTY: round3(l.QTY), RATE: 0, GST_CODE: l.GST_CODE || '' };
         });
         ensureGst(rows.map(function (r) { return r.GST_CODE; }), recalcAll);
     });
@@ -861,7 +949,7 @@
     function ensureGst(codes, cb) {
         var missing = codes.map(up).filter(function (c, i, a) { return c && !GST[c] && a.indexOf(c) === i; });
         if (!missing.length) { cb(); return; }
-        $.getJSON(pickers.gst.url, { unit: UNIT }, function (data) {
+        $.getJSON(GST_RATES_URL, { unit: UNIT }, function (data) {
             (data || []).forEach(function (g) { GST[up(g.CODE)] = g; });
             cb();
         }).fail(function (x) { handleAjaxFail(x); cb(); });
@@ -873,9 +961,12 @@
     function buildModel(legs) {
         return {
             TRAN: TRAN,
+            // IsNew lets the server apply the AEDV Add/Edit + back-date check (OtherInvoiceController.CheckSaveAllowedAsync).
+            IsNew: !IS_EDIT,
             TRN_INV_HEAD: {
                 TRAN: TRAN,
-                DOC_YEAR: HEAD.DOC_YEAR, UNIT: UNIT, DOCTYPE: HEAD.DOCTYPE, DOCNO: HEAD.DOCNO || '',
+                // UNIT: the read-only Unit box -- the Unit picked on the list for a new document, the document's own on edit.
+                DOC_YEAR: HEAD.DOC_YEAR, UNIT: $.trim($('#UNIT').val()) || UNIT, DOCTYPE: HEAD.DOCTYPE, DOCNO: HEAD.DOCNO || '',
                 DOCDT: $('#DOCDT').val(),
                 PCD: up($('#PCD').val()),
                 CONTRACT_NO: $.trim($('#CONTRACT_NO').val()), CONTRACT_DATE: $('#CONTRACT_DATE').val() || null,
@@ -888,7 +979,7 @@
             },
             TRN_INV_DETAIL: rows.filter(function (r) { return r.ITCD || num(r.QTY) || num(r.RATE); }).map(function (r) {
                 return { ITCD: up(r.ITCD), ITDESC1: r.ITDESC1 || '', ITDESC2: r.ITDESC2 || '', ITDESC3: r.ITDESC3 || '', ITDESC4: r.ITDESC4 || '',
-                         UNIT_DESC: r.UNIT_DESC || '', HSN_CODE: r.HSN_CODE || '', QTY: num(r.QTY), RATE: num(r.RATE), GST_CODE: up(r.GST_CODE) };
+                         UNIT_DESC: r.UNIT_DESC || '', HSN_CODE: r.HSN_CODE || '', QTY: round3(r.QTY), RATE: round2(r.RATE), GST_CODE: up(r.GST_CODE) };
             }),
             LEGS: legs || []
         };
@@ -910,7 +1001,7 @@
 
     var lastPreview = null;
     $('#btnSave').on('click', function () {
-        if (READ_ONLY) return;
+        if (IS_VIEW || READ_ONLY) return;
         var err = clientChecks();
         if (err) { showAlert(err[0], function () { if (err[1]) $(err[1]).focus(); }); return; }
         var zeroQty = rows.filter(function (r) { return r.ITCD && num(r.QTY) === 0; });
@@ -937,7 +1028,7 @@
         $('#glWarn').html(warn ? '<div class="gl-warn">' + warn + '</div>' : '');
         $('#glBody').html((p.Legs || []).map(function (g) {
             return '<tr data-srl="' + g.SRLNO + '" data-acode="' + esc(g.ACODE) + '">' +
-                '<td>' + g.SRLNO + '</td><td>' + esc(g.ACODE) + '</td><td>' + esc(g.SUBCODE) + '</td>' +
+                '<td class="num">' + g.SRLNO + '</td><td>' + esc(g.ACODE) + '</td><td>' + esc(g.SUBCODE) + '</td>' +
                 '<td>' + esc(g.ACNAME || (g.ACC_EXISTS ? '' : '(not in chart of accounts)')) + '</td>' +
                 '<td><input type="text" class="gl-ref' + (g.NEED_REF ? ' need' : '') + '" maxlength="7" value="' + esc(g.REF_CODE) + '" /><button type="button" class="grid-pick-btn gl-pick" data-k="refcode">...</button></td>' +
                 '<td><input type="text" class="gl-cost' + (g.NEED_COST ? ' need' : '') + '" maxlength="10" value="' + esc(g.COST_CENTRE) + '" /><button type="button" class="grid-pick-btn gl-pick" data-k="cost">...</button></td>' +

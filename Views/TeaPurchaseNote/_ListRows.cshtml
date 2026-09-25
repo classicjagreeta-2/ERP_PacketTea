@@ -1,0 +1,75 @@
+@* Table rows for the Tea Purchase Debit / Credit Note list (tran 36 / 37, ViewBag.Tran). Rendered by
+   Index.cshtml for the first chunk and returned on its own (Request.IsAjaxRequest) for every further
+   chunk the list's infinite scroll asks for -- see Scripts/list-infinite-scroll.js and
+   TeaPurchaseNoteController.List. ViewBag.RowOffset keeps the "+" expand ids unique across chunks. *@
+@model List<Finance.Controllers.TEA.PurNoteRow>
+@{
+    string tran = (string)ViewBag.Tran;
+    Func<string, string> adjName = q => q == "Y" ? "Quantity Return" : q == "A" ? "Short Adjustment" : "Rate Difference";
+    var rowIndex = (int?)ViewBag.RowOffset ?? 0;
+    // The Doc No is a link into View mode only for users holding the View right (AEDV) -- UX only:
+    // TeaPurchaseNoteController.InsertOrUpdate re-checks the right server-side.
+    var canView = (ViewBag.Permission as PacketTea.Helpers.AEDV)?.View ?? false;
+}
+@if (Model != null)
+{
+    foreach (var row in Model)
+    {
+        rowIndex++;
+        var detailId = "rowDetail" + rowIndex;
+        var dt = row.DOCDT?.ToString("yyyy-MM-dd");
+        <tr class="data-row">
+            <td>
+                <input type="checkbox" class="row-check" value="@row.DOCNO" data-docdt="@dt" data-unit="@row.UNIT" data-irn="@(string.IsNullOrEmpty(row.IRN) ? "" : "Y")" />
+            </td>
+            <td style="text-align:center;">
+                <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show lines" style="cursor:pointer;"></i>
+            </td>
+            <td>@row.UNIT</td>
+            <td>
+                @if (canView)
+                {
+                    <a href="@Url.Action("InsertOrUpdate", "TeaPurchaseNote", new { tran, unit = row.UNIT, docno = row.DOCNO, docdt = dt, view = true })">@row.DOCNO</a>
+                }
+                else
+                {
+                    @row.DOCNO
+                }
+            </td>
+            <td>@(row.DOCDT?.ToString("dd/MM/yyyy"))</td>
+            <td>@row.TYPE_NAME (@row.SALE_TYPE)</td>
+            <td>@row.PCD - @row.PARTY_NAME</td>
+            <td>@row.BLNO</td>
+            <td>@(row.BLDT?.ToString("dd/MM/yyyy"))</td>
+            <td>@row.SALE_CENTRE_NAME</td>
+            <td>@adjName(row.QTY_RETURN)</td>
+            <td>@row.JV_DOCNO</td>
+            <td class="num">@((row.TOTAL_AMT ?? 0).ToString("0.00"))</td>
+        </tr>
+        <tr class="row-detail" id="@detailId" style="display:none;" data-docno="@row.DOCNO" data-docdt="@dt" data-unit="@row.UNIT">
+            <td colspan="13" style="background:#f8f9fc;padding:10px 12px;">
+                <div style="overflow-x:auto;">
+                    <table class="detail-sub-table">
+                        <thead>
+                            <tr>
+                                <th style="width:34px;">Sl</th>
+                                <th>Inv No</th>
+                                <th>Grade</th>
+                                <th>Mark</th>
+                                <th class="num">Bags</th>
+                                <th class="num">Return Qty</th>
+                                <th class="num">Rate</th>
+                                <th class="num">Amount</th>
+                                <th class="num">GST</th>
+                                <th class="num">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="detail-items-body">
+                            <tr><td colspan="10" style="text-align:center;color:#666;">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    }
+}

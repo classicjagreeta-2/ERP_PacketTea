@@ -16,7 +16,8 @@
        search:   'current search text',
        pageSize: 15,
        total:    2098,             // total rows for the current search (server rowCount)
-       startPage: 1                // page already rendered with the page itself
+       startPage: 1,               // page already rendered with the page itself
+       extra:    { sortBy: 'DOCNO', sortDir: 'asc' }   // optional: more query params sent with every chunk
    });
 */
 (function (w) {
@@ -40,7 +41,7 @@
             if (loading || !hasMore()) return;
             loading = true;
             $(o.loading).show();
-            $.get(o.url, { searchString: o.search, page: page + 1, pageSize: o.pageSize })
+            $.get(o.url, $.extend({ searchString: o.search, page: page + 1, pageSize: o.pageSize }, o.extra || {}))
                 .done(function (html) {
                     var $rows = $('<tbody>').html(html).children('tr');
                     if ($rows.filter('.data-row').length === 0) { done = true; return; }

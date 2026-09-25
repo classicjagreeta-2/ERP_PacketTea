@@ -1,0 +1,66 @@
+@* Table rows for the Production Entry list. Rendered by Index.cshtml for the first chunk and
+   returned on its own (Request.IsAjaxRequest) for every further chunk the list's infinite
+   scroll asks for -- see Scripts/list-infinite-scroll.js and ProductionEntryController.Index.
+   ViewBag.RowOffset keeps the "+" expand ids unique across chunks.
+   Each row carries its own Unit as a data attribute / link param -- a Doc No repeats across
+   units, so Edit / View / Delete / "+" all identify the document by Doc No + Unit. *@
+@model List<Finance.Controllers.TEA.ProdDocRow>
+@{
+    var rowIndex = (int?)ViewBag.RowOffset ?? 0;
+    // Doc No is a link into Edit mode only for users holding the Edit right (AEDV) -- UX only:
+    // ProductionEntryController.InsertOrUpdate re-checks the right and the back-date window server-side.
+    var canEdit = (ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false;
+}
+@if (Model != null)
+{
+    foreach (var row in Model)
+    {
+        rowIndex++;
+        var detailId = "rowDetail" + rowIndex;
+        <tr class="data-row">
+            <td><input type="checkbox" class="row-check" value="@row.docno" data-unit="@row.unit" /></td>
+            <td style="text-align:center;">
+                <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show details" style="cursor:pointer;"></i>
+            </td>
+            <td>@row.unit</td>
+            <td>
+                @if (canEdit)
+                {
+                    <a href="@Url.Action("InsertOrUpdate", "ProductionEntry", new { docno = row.docno, unit = row.unit })">@row.docno</a>
+                }
+                else
+                {
+                    @row.docno
+                }
+            </td>
+            <td>@(row.docdt?.ToString("dd/MM/yyyy"))</td>
+            <td>@row.itemName</td>
+            <td>@row.mrp</td>
+            <td>@row.batchno</td>
+            <td>@(row.mfgdt?.ToString("dd/MM/yyyy"))</td>
+            <td style="text-align:right;">@(row.pd?.ToString("N3"))</td>
+            <td style="text-align:right;">@(row.grossWeight?.ToString("N3"))</td>
+            <td style="text-align:right;">@(row.netWeight?.ToString("N3"))</td>
+        </tr>
+        <tr class="row-detail" id="@detailId" style="display:none;" data-docno="@row.docno" data-unit="@row.unit">
+            <td colspan="12" style="background:#f8f9fc;padding:10px 12px;">
+                <div style="overflow-x:auto;">
+                    <table class="detail-sub-table">
+                        <thead>
+                            <tr>
+                                <th>Item Code</th>
+                                <th>Shift</th>
+                                <th>Time From</th>
+                                <th>Time To</th>
+                                <th style="text-align:right;">Gain/Loss (Kg.)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="detail-items-body">
+                            <tr><td colspan="5" style="text-align:center;color:#666;">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    }
+}

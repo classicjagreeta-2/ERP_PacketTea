@@ -17,17 +17,20 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <!-- Root UI lookup convention (see CLAUDE.md's "lookup pickers" rule) -- the same
+         jquery.inputpicker include PacketTeaPurchaseEntry / Packing / AWR use, replacing this
+         screen's earlier bespoke centered-modal Item picker (#genericPicker). -->
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <script src="~/libraries/assetspo/js/custom.js"></script>
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <style>
+        .inputpicker-wrapped-list .inputpicker-active td,
+        .inputpicker-wrapped-list .inputpicker-active th { background: #404e68 !important; color: #fff !important; font-weight: bold; }
+        .inputpicker-wrapped-list { min-width: max-content !important; }
+        .inputpicker-wrapped-list table { width: max-content !important; }
         input[readonly] { background-color: #f3f4f7; color: #555; }
         .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
-        input[type="number"] { text-align: right; }
-        .popup-box.picker-box { width: 420px; display: none; }
-        .popup-box .picker-body { max-height: 36vh; overflow-y: auto; margin-top: 8px; }
-        .popup-box .picker-body table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .popup-box .picker-body th { text-align: left; background: #f4f6fa; padding: 6px 8px; border-bottom: 2px solid #ddd; color: #333; }
-        .popup-box .picker-body td { padding: 5px 8px; border-bottom: 1px solid #eee; cursor: pointer; color: #222; }
-        .popup-box .picker-body tr:hover td { background: #eef3ff; }
+        input[type="number"], #MRP { text-align: right; }
         .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
         .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
         .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -99,7 +102,8 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Date <span>(*)</span></label>
-                                <input type="date" id="DATE_ORA" value="@(head.DATE_ORA?.ToString("yyyy-MM-dd"))" />
+                                <input type="date" id="DATE_ORA" value="@(head.DATE_ORA?.ToString("yyyy-MM-dd"))"
+                                       min="@ViewBag.MinDocDate" max="@ViewBag.FyEnd" />
                             </div>
                             <div class="form-col-20">
                                 <label>Item <span>(*)</span></label>
@@ -145,19 +149,19 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Production (Pkts/Bags) <span>(*)</span></label>
-                                <input type="number" step="0.01" id="PD" value="@head.PD" />
+                                <input type="number" step="0.001" id="PD" value="@(head.PD?.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture))" />
                             </div>
                             <div class="form-col-20">
                                 <label>Gross Weight (Kg.)</label>
-                                <input type="number" step="0.0001" id="GROSS_WEIGHT" value="@head.GROSS_WEIGHT" />
+                                <input type="number" step="0.001" id="GROSS_WEIGHT" value="@(head.GROSS_WEIGHT?.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture))" />
                             </div>
                             <div class="form-col-20">
                                 <label>Net Weight (Kg.)</label>
-                                <input type="number" step="0.0001" id="NET_WEIGHT" value="@head.NET_WEIGHT" />
+                                <input type="number" step="0.001" id="NET_WEIGHT" value="@(head.NET_WEIGHT?.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture))" />
                             </div>
                             <div class="form-col-20">
                                 <label>Gain/Loss (Kg.)</label>
-                                <input type="number" step="0.0001" id="GAIN_LOSS" value="@head.GAIN_LOSS" />
+                                <input type="number" step="0.001" id="GAIN_LOSS" value="@(head.GAIN_LOSS?.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture))" />
                             </div>
                         </div>
 
@@ -165,16 +169,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="popup-overlay" id="pickerOverlay"></div>
-    <div class="popup-box picker-box" id="genericPicker">
-        <div class="popup-header">
-            <h2 id="pickerTitle">Select</h2>
-            <button type="button" class="close-btn" onclick="closePicker()">X</button>
-        </div>
-        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
-        <div class="picker-body" id="pickerBody"></div>
     </div>
 
     <div class="popup-overlay" id="appAlertOverlay"></div>
@@ -212,11 +206,14 @@
         }
     }
 
-    $('#pickerOverlay, #genericPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    $('#appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
+    // Qty / weights are shown, calculated and posted with exactly 3 decimals.
+    function round3(v) { return Math.round(num(v) * 1000) / 1000; }
+    function fmt3(v) { return round3(v).toFixed(3); }
 
     // PROD.MRP is VARCHAR2(4) and is matched as text against STOCK.MRP, so it is
     // kept exactly as typed (no rounding/reformatting) and limited to 4 chars.
@@ -231,8 +228,7 @@
     });
 
     $('#GROSS_WEIGHT, #NET_WEIGHT, #GAIN_LOSS, #PD').on('blur', function () {
-        var step = $(this).attr('step') === '0.0001' ? 4 : 2;
-        $(this).val(Number(num($(this).val()).toFixed(step)));
+        $(this).val(fmt3($(this).val()));
     });
 
     // =========================================================
@@ -257,7 +253,7 @@
         var nob = Math.max(1, parseInt(field(row, 'NOB'), 10) || 1);
         // VB text1_Validate -> blankrec: a different pieces-per-case makes the entered quantities meaningless.
         if (currentItem && currentItem.nob !== nob) {
-            $('#PD, #GROSS_WEIGHT, #NET_WEIGHT, #GAIN_LOSS').val(0);
+            $('#PD, #GROSS_WEIGHT, #NET_WEIGHT, #GAIN_LOSS').val(fmt3(0));
         }
         currentItem = { code: field(row, 'CODE'), nob: nob, bbd: parseInt(field(row, 'BBD'), 10) || 0 };
         $('#ITCD').val(currentItem.code);
@@ -265,8 +261,9 @@
     }
 
     function lookupItem(code, onFound, onMissing) {
-        $.getJSON('@Url.Action("GetItemMaster", "ProductionEntry")', { search: code }, function (data) {
-            var hit = (data || []).filter(function (r) { return String(field(r, 'CODE') || '').trim().toUpperCase() === code.toUpperCase(); })[0];
+        // Same endpoint as the Item dropdown: { data, count } (q = typed text, matched on Code and Name).
+        $.getJSON('@Url.Action("GetItemMaster", "ProductionEntry")', { q: code, limit: 50 }, function (resp) {
+            var hit = ((resp && resp.data) || []).filter(function (r) { return String(field(r, 'CODE') || '').trim().toUpperCase() === code.toUpperCase(); })[0];
             if (hit) onFound(hit); else if (onMissing) onMissing();
         }).fail(handleLookupFail);
     }
@@ -274,6 +271,9 @@
     $('#ITCD').on('change', function () {
         var code = $.trim($(this).val());
         if (!code) { currentItem = null; $('#ITCD_disp').val(''); return; }
+        // Picked from the dropdown: the row (incl. NOB / BBD) is already in the data it loaded.
+        var picked = pickedRow($(this), pickerConfig.item);
+        if (picked) { applyItem(picked); return; }
         lookupItem(code, applyItem, function () {
             $('#ITCD, #ITCD_disp').val('');
             currentItem = null;
@@ -319,65 +319,74 @@
     }
 
     // =========================================================
-    // Generic single-select picker (Item)
+    // Item lookup -- jquery.inputpicker (Root UI convention: an anchored, paginated picker
+    // under the field itself -- see CLAUDE.md's "lookup pickers" rule). The endpoint matches the
+    // typed text against every column shown (Code and Name).
     // =========================================================
     var pickerConfig = {
-        item: { url: '@Url.Action("GetItemMaster", "ProductionEntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'ITCD' }
+        item: { url: '@Url.Action("GetItemMaster", "ProductionEntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'ITCD' }
     };
-    var activePicker = null;
-    var pickerXhr = null;
-    var pickerReqSeq = 0;
 
     $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
 
-    function openPicker(key, $input, onSelect) {
-        activePicker = { key: key, input: $input, onSelect: onSelect };
-        $('#pickerTitle').text('Select ' + key);
-        $('#pickerSearch').val('');
-        $('#pickerBody').empty().removeData('rows');
-        $('#pickerOverlay, #genericPicker').fadeIn(120);
-        loadPickerData('');
-        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
-    }
-    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
-
-    function loadPickerData(term) {
-        var cfg = pickerConfig[activePicker.key];
-        var myReq = ++pickerReqSeq;
-        if (pickerXhr) { pickerXhr.abort(); }
-        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
-            if (myReq !== pickerReqSeq) return;
-            data = data || [];
-            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
-            data.forEach(function (row, i) {
-                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
-                    var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
-                    return '<td>' + (v == null ? '' : v) + '</td>';
-                }).join('') + '</tr>';
-            });
-            html += '</tbody></table>';
-            $('#pickerBody').html(html);
-            $('#pickerBody').data('rows', data);
-        }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
+    // The row the user picked, looked up in the data the dropdown last loaded. This copy of the
+    // plugin writes the picked value into the original input and fires "change" on it; it does
+    // not hand the row to a select handler, so read it back by the picked value.
+    function pickedRow($input, cfg) {
+        if (!$input.hasClass('inputpicker-original')) return null;
+        var key = cfg.fields[0].name, v = String($input.val() == null ? '' : $input.val()), data = [];
+        try { data = $input.inputpicker('data') || []; } catch (e) { data = []; }
+        for (var i = 0; i < data.length; i++) { if (String(data[i][key]) === v) return data[i]; }
+        return null;
     }
 
-    $('#pickerBody').on('click', 'tr[data-i]', function () {
-        var data = $('#pickerBody').data('rows');
-        var row = data[$(this).data('i')];
-        var cfg = pickerConfig[activePicker.key];
+    // Open the dropdown AND refresh its rows. The plugin loads url-backed data asynchronously and
+    // only re-renders the list on a keystroke, so showing it right after init (before the first
+    // response lands) displayed "No results" -- the keyup makes it fetch and render the rows.
+    function showPickerList($orig) {
+        $orig.inputpicker('show');
+        $orig.next('.inputpicker-overflow-hidden').find('input').trigger($.Event('keyup', { keyCode: 0 }));
+    }
 
-        if (activePicker.onSelect) {
-            activePicker.onSelect(row);
-        } else if (activePicker.key === 'item') {
-            applyItem(row);
-        } else if (cfg.target) {
-            var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
-            var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
-            $('#' + cfg.target).val(code);
-            $('#' + cfg.target + '_disp').val(name || '');
+    function openPicker(key, $input) {
+        var cfg = pickerConfig[key];
+        $('.inputpicker-wrapped-list').remove();
+
+        // This plugin never sets $.data('inputpicker'); the class it puts on the original input
+        // is the "already initialised" test (otherwise every click re-wraps the field and drops
+        // whatever the user has typed).
+        // Showing is deferred a tick: called from a click, the click's own bubbling up to the
+        // plugin's document-level "outside click" handler would otherwise hide it straight away.
+        if ($input.hasClass('inputpicker-original')) {
+            setTimeout(function () { showPickerList($input); }, 0);
+            return;
         }
-        closePicker();
-    });
+
+        $input.inputpicker({
+            url: cfg.url,
+            fields: cfg.fields,
+            fieldText: cfg.fields[0].name,
+            fieldValue: cfg.fields[0].name,
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+            width: 'auto',
+            urlDelay: 0.2      // seconds (the plugin multiplies by 1000): one request per pause in typing, not per keystroke
+        });
+        setTimeout(function () { showPickerList($input); }, 0);
+
+        // Both hooks apply the same idempotent handler, so whichever this plugin build fires works.
+        $input.off('inputpicker.select').on('inputpicker.select', function (e, row) {
+            if (row) applyItem(row);
+            $(this).inputpicker('hide');
+        });
+        // (The page-level #ITCD "change" handler above applies the picked row via pickedRow().)
+    }
 
     // =========================================================
     // Save (mirrors VB Command1_Click validation order)
@@ -409,7 +418,9 @@
         showConfirm(confirmMsg, function () {
             var model = {
                 ID: $('#ID').val() ? parseInt($('#ID').val(), 10) : 0,
-                UNIT: '@head.UNIT',
+                // The Unit picked on the list (new) / the record's own Unit (edit) -- stored as-is;
+                // the server checks it against the user's linked units.
+                UNIT: $('#UNIT_disp').val(),
                 DOCNO: $('#DOCNO').val(),
                 DATE_ORA: $('#DATE_ORA').val(),
                 ITCD: $.trim($('#ITCD').val()),
@@ -420,19 +431,19 @@
                 SHIFT: $('#SHIFT').val(),
                 TIME_FROM: $('#TIME_FROM').val(),
                 TIME_TO: $('#TIME_TO').val(),
-                PD: num($('#PD').val()),
-                GROSS_WEIGHT: num($('#GROSS_WEIGHT').val()),
-                NET_WEIGHT: num($('#NET_WEIGHT').val()),
-                GAIN_LOSS: num($('#GAIN_LOSS').val())
+                PD: round3($('#PD').val()),
+                GROSS_WEIGHT: round3($('#GROSS_WEIGHT').val()),
+                NET_WEIGHT: round3($('#NET_WEIGHT').val()),
+                GAIN_LOSS: round3($('#GAIN_LOSS').val())
             };
 
             $.ajax({
                 url: '@Url.Action("Save", "ProductionEntry")',
-                type: 'POST', contentType: 'application/json', data: JSON.stringify({ T_PROD: model }),
+                type: 'POST', contentType: 'application/json', data: JSON.stringify({ T_PROD: model, IsNew: !IS_EDIT }),
                 success: function (resp) {
                     if (resp.success) {
                         showAlert(resp.message || 'Saved.', function () {
-                            window.location.href = '@Url.Action("Index", "ProductionEntry")' + '?unit=' + encodeURIComponent('@head.UNIT');
+                            window.location.href = '@Url.Action("Index", "ProductionEntry")' + '?unit=' + encodeURIComponent($('#UNIT_disp').val());
                         });
                     } else {
                         fail(resp.message || 'Save failed.', resp.field);

@@ -12,6 +12,9 @@ namespace PacketTea.Models.PT
         public T_INV_HEAD TRN_INV_HEAD { get; set; } = new T_INV_HEAD();
         public List<T_INV_DETAIL> TRN_INV_DETAIL { get; set; } = new List<T_INV_DETAIL>();
         public List<T_INV_GL_LEG> LEGS { get; set; } = new List<T_INV_GL_LEG>();
+        // Sent by the entry screen (`!IS_EDIT`): lets Save's AEDV Add/Edit + back-date check know
+        // new-vs-edit. Also mirrored on the API DTO (ignored there).
+        public bool? IsNew { get; set; }
     }
 
     // Ref Code / Cost Centre entered on the accounting preview, per voucher line.

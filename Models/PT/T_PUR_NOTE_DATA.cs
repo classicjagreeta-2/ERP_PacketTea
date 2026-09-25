@@ -24,6 +24,9 @@ namespace PacketTea.Models.PT
         public string REM3 { get; set; }
         public string REM4 { get; set; }
         public bool LAST_YR { get; set; }
+        // Sent by the entry screen (`!IS_EDIT`): lets Save's AEDV Add/Edit + back-date check
+        // know new-vs-edit. Also mirrored on the API DTO (ignored there).
+        public bool? IsNew { get; set; }
         public List<T_PUR_NOTE_LINE> LINES { get; set; } = new List<T_PUR_NOTE_LINE>();
     }
 

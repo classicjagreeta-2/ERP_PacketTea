@@ -20,18 +20,28 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <!-- Root UI lookup convention (see CLAUDE.md's "lookup pickers" rule) -- the same
+         jquery.inputpicker include PacketTeaPurchaseEntry / Packing use, replacing this screen's
+         earlier bespoke centered-modal picker (#genericPicker). -->
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <script src="~/libraries/assetspo/js/custom.js"></script>
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <style>
+        .inputpicker-wrapped-list .inputpicker-active td,
+        .inputpicker-wrapped-list .inputpicker-active th { background: #404e68 !important; color: #fff !important; font-weight: bold; }
+        .inputpicker-wrapped-list { min-width: max-content !important; }
+        .inputpicker-wrapped-list table { width: max-content !important; }
         input[readonly] { background-color: #f3f4f7; color: #555; }
         .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         #gridTable th, #gridTable td { white-space: nowrap; }
         #gridTable td input { min-width: 90px; }
-        /* Every numeric field, grid and header alike, right-aligned and 2 decimals
-           (see round2().toFixed(2) in renderGrid()) -- same convention as Master
-           Blend Entry / Packing / FinalBlendEntry's InsertOrUpdate pages. */
+        /* Every numeric field, grid and header alike, is right-aligned. Weights (Net Wt, Total
+           Net/Gross Wt, Net/Gross Rcvd) show exactly 3 decimals (round3().toFixed(3)); Bag/Chest
+           and Bag Rcvd are whole-number counts (no forced decimals) -- see renderGrid(). */
         #gridTable td input.f-bagchest, #gridTable td input.f-netwt, #gridTable td input.f-tnetwt,
         #gridTable td input.f-tgrosswt, #gridTable td input.f-bagrcvd, #gridTable td input.f-netrcvd,
         #gridTable td input.f-grossrcvd, input[type="number"] { text-align: right; }
+        #gridTable tfoot td, .popup-box .picker-body td.num, .popup-box .picker-body th.num { text-align: right; }
         #gridTable td input.f-invno[readonly] { background-color: #f3f4f7; color: #555; cursor: default; }
         .popup-box.picker-box { width: 420px; display: none; }
         .popup-box.picker-box.wide { width: 700px; max-width: 90vw; }
@@ -83,6 +93,11 @@
                     <div class="accordion-header active"><span class="txt">Unit / AWR Type</span></div>
                     <div class="accordion-body">
                         <div class="form-row">
+                            <!-- Read-only: the Unit picked on the list page (new) / the record's own Unit (edit).
+                                 It is POSTED on Save (UNIT) and stored as-is; the server checks a new
+                                 record's Unit against the user's linked units. The AWR Type locks
+                                 (read-only) once Unit + AWR Type were chosen on the list (lockedFromList)
+                                 and in Edit mode. -->
                             <div class="form-col-20">
                                 <label>Unit</label>
                                 <input type="text" id="UNIT_disp" value="@unit" readonly />
@@ -115,7 +130,7 @@
                             <div class="form-col-20">
                                 <label>AWR Date <span>(*)</span></label>
                                 <input type="date" id="AWR_DATE" value="@(first?.AWR_DATE.ToString("yyyy-MM-dd"))"
-                                       min="@ViewBag.FyStart" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
+                                       min="@ViewBag.MinDocDate" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
                             </div>
                             <div class="form-col-20">
                                 <label>Arrival Date</label>
@@ -205,15 +220,6 @@
 
     <div class="popup-overlay" id="pickerOverlay"></div>
 
-    <div class="popup-box picker-box" id="genericPicker">
-        <div class="popup-header">
-            <h2 id="pickerTitle">Select</h2>
-            <button type="button" class="close-btn" onclick="closePicker()">X</button>
-        </div>
-        <input type="text" id="pickerSearch" class="picker-search" placeholder="Type to search..." />
-        <div class="picker-body" id="pickerBody"></div>
-    </div>
-
     <div class="popup-box picker-box wide" id="stockPicker">
         <div class="popup-header">
             <h2>Select Despatch Data</h2>
@@ -258,7 +264,7 @@
             showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Could not load data. Please try again.');
         }
     }
-    $('#pickerOverlay, #genericPicker, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
+    $('#pickerOverlay, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
     var FY_MIN = '@ViewBag.FyStart';
@@ -266,6 +272,10 @@
 
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
+    function round3(v) { return Math.round(num(v) * 1000) / 1000; }
+    // Whole-number/count fields (Bag/Chest, Bag Rcvd): shown as they are (12, not 12.00), never rounded.
+    // (Only float noise beyond 6 dp is trimmed, so sums like 0.1+0.2 don't print 0.30000000000000004.)
+    function fmtCount(v) { return String(Math.round(num(v) * 1e6) / 1e6); }
     function toIso(dmy) { return dmy || null; }
     function fmtDate(iso) {
         if (!iso) return '';
@@ -293,21 +303,16 @@
             tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-mark" value="' + (r.MarkName || r.MARK || '') + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-bagchest" value="' + round2(r.BAG_CHEST).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-netwt" value="' + round2(r.NET_WT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-tnetwt" value="' + round2(r.TNET_WT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-tgrosswt" value="' + round2(r.TGROSS_WT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-bagrcvd" value="' + round2(r.BAG_RCVD).toFixed(2) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-netrcvd" value="' + round2(r.NET_RCVD).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-grossrcvd" value="' + round2(r.GROSS_RCVD).toFixed(2) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="any" style="text-align:right;" class="f-bagchest" value="' + fmtCount(r.BAG_CHEST) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.001" style="text-align:right;" class="f-netwt" value="' + round3(r.NET_WT).toFixed(3) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.001" style="text-align:right;" class="f-tnetwt" value="' + round3(r.TNET_WT).toFixed(3) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.001" style="text-align:right;" class="f-tgrosswt" value="' + round3(r.TGROSS_WT).toFixed(3) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="any" style="text-align:right;" class="f-bagrcvd" value="' + fmtCount(r.BAG_RCVD) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" style="text-align:right;" class="f-netrcvd" value="' + round3(r.NET_RCVD).toFixed(3) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.001" style="text-align:right;" class="f-grossrcvd" value="' + round3(r.GROSS_RCVD).toFixed(3) + '" readonly /></td>');
             $tb.append(tr);
         });
-        $('#ftBag').text(round2(totBag).toFixed(2));
-        $('#ftTNet').text(round2(totTNet).toFixed(2));
-        $('#ftTGross').text(round2(totTGross).toFixed(2));
-        $('#ftBagRcvd').text(round2(totBagRcvd).toFixed(2));
-        $('#ftNetRcvd').text(round2(totNetRcvd).toFixed(2));
-        $('#ftGrossRcvd').text(round2(totGrossRcvd).toFixed(2));
+        renderTotalsOnly();
     }
 
     function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
@@ -322,13 +327,14 @@
         r.BAG_RCVD = num($(this).val());
         var bagChest = num(r.BAG_CHEST);
         var netWtPerBag = bagChest > 0 ? num(r.TNET_WT) / bagChest : 0;
-        r.NET_RCVD = round2(netWtPerBag * r.BAG_RCVD);
-        r.GROSS_RCVD = bagChest > 0 ? round2(num(r.TGROSS_WT) * r.BAG_RCVD / bagChest) : 0;
-        $tr.find('.f-netrcvd').val(r.NET_RCVD.toFixed(2));
-        $tr.find('.f-grossrcvd').val(r.GROSS_RCVD.toFixed(2));
+        r.NET_RCVD = round3(netWtPerBag * r.BAG_RCVD);
+        r.GROSS_RCVD = bagChest > 0 ? round3(num(r.TGROSS_WT) * r.BAG_RCVD / bagChest) : 0;
+        $tr.find('.f-netrcvd').val(r.NET_RCVD.toFixed(3));
+        $tr.find('.f-grossrcvd').val(r.GROSS_RCVD.toFixed(3));
         renderTotalsOnly();
     });
-    $('#gridBody').on('blur', '.f-bagrcvd', function () { $(this).val(round2($(this).val()).toFixed(2)); });
+    // Bag Rcvd is a count: on blur just normalise the text (12, not 12.00) -- never rounded.
+    $('#gridBody').on('blur', '.f-bagrcvd', function () { $(this).val(fmtCount($(this).val())); });
 
     function renderTotalsOnly() {
         var totBag = 0, totTNet = 0, totTGross = 0, totBagRcvd = 0, totNetRcvd = 0, totGrossRcvd = 0;
@@ -336,12 +342,12 @@
             totBag += num(r.BAG_CHEST); totTNet += num(r.TNET_WT); totTGross += num(r.TGROSS_WT);
             totBagRcvd += num(r.BAG_RCVD); totNetRcvd += num(r.NET_RCVD); totGrossRcvd += num(r.GROSS_RCVD);
         });
-        $('#ftBag').text(round2(totBag).toFixed(2));
-        $('#ftTNet').text(round2(totTNet).toFixed(2));
-        $('#ftTGross').text(round2(totTGross).toFixed(2));
-        $('#ftBagRcvd').text(round2(totBagRcvd).toFixed(2));
-        $('#ftNetRcvd').text(round2(totNetRcvd).toFixed(2));
-        $('#ftGrossRcvd').text(round2(totGrossRcvd).toFixed(2));
+        $('#ftBag').text(fmtCount(totBag));
+        $('#ftTNet').text(round3(totTNet).toFixed(3));
+        $('#ftTGross').text(round3(totTGross).toFixed(3));
+        $('#ftBagRcvd').text(fmtCount(totBagRcvd));
+        $('#ftNetRcvd').text(round3(totNetRcvd).toFixed(3));
+        $('#ftGrossRcvd').text(round3(totGrossRcvd).toFixed(3));
     }
 
     $('#btnAddRow').on('click', function () {
@@ -356,52 +362,82 @@
         renderGrid();
     });
 
-    // Generic single-select picker (Warehouse/Sales Centre)
+    // =========================================================
+    // Header lookups (Warehouse / Sales Centre) -- jquery.inputpicker (Root UI convention: an
+    // anchored, paginated picker under the field itself -- see CLAUDE.md's "lookup pickers" rule).
+    // Replaces this screen's earlier bespoke centered-modal picker (#genericPicker, now removed).
+    // The endpoints match the typed text against every column shown (Warehouse: Code, Name,
+    // Destination; Sales Centre: Code, Name).
+    // =========================================================
     var pickerConfig = {
-        warehouse: { url: '@Url.Action("GetWarehouse", "AWREntry")', cols: [['CODE', 'Code'], ['NAME', 'Name'], ['DESTI', 'Destination']], target: 'WAREHOUSE' },
-        salescentre: { url: '@Url.Action("GetSalesCentre", "AWREntry")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'SALE_CENTRE' }
+        warehouse: { url: '@Url.Action("GetWarehouse", "AWREntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'DESTI', text: 'Destination' }], target: 'WAREHOUSE' },
+        salescentre: { url: '@Url.Action("GetSalesCentre", "AWREntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'SALE_CENTRE' }
     };
-    var activePicker = null, pickerXhr = null, pickerReqSeq = 0;
+
     $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
-    function openPicker(key, $input, onSelect) {
-        activePicker = { key: key, input: $input, onSelect: onSelect };
-        $('#pickerTitle').text('Select ' + key);
-        $('#pickerSearch').val('');
-        $('#pickerBody').empty().removeData('rows');
-        $('#pickerOverlay, #genericPicker').fadeIn(120);
-        loadPickerData('');
-        $('#pickerSearch').off('input').on('input', function () { loadPickerData($(this).val()); });
+
+    // The row the user picked, looked up in the data the dropdown last loaded. This copy of the
+    // plugin writes the picked value into the original input and fires "change" on it; it does
+    // not hand the row to a select handler, so read it back by the picked value.
+    function pickedRow($input, cfg) {
+        var key = cfg.fields[0].name, v = String($input.val() == null ? '' : $input.val()), data = [];
+        try { data = $input.inputpicker('data') || []; } catch (e) { data = []; }
+        for (var i = 0; i < data.length; i++) { if (String(data[i][key]) === v) return data[i]; }
+        return null;
     }
-    function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
-    function loadPickerData(term) {
-        var cfg = pickerConfig[activePicker.key];
-        var myReq = ++pickerReqSeq;
-        if (pickerXhr) { pickerXhr.abort(); }
-        pickerXhr = $.getJSON(cfg.url, { search: term }, function (data) {
-            if (myReq !== pickerReqSeq) return;
-            data = data || [];
-            var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
-            data.forEach(function (row, i) {
-                html += '<tr data-i="' + i + '">' + cfg.cols.map(function (c) {
-                    var v = row[c[0]] !== undefined ? row[c[0]] : row[c[0].toLowerCase()];
-                    return '<td>' + (v == null ? '' : v) + '</td>';
-                }).join('') + '</tr>';
-            });
-            html += '</tbody></table>';
-            $('#pickerBody').html(html);
-            $('#pickerBody').data('rows', data);
-        }).fail(function (jqXHR) { if (myReq === pickerReqSeq) handleLookupFail(jqXHR); });
+
+    // Open the dropdown AND refresh its rows. The plugin loads url-backed data asynchronously and
+    // only re-renders the list on a keystroke, so showing it right after init (before the first
+    // response lands) displayed "No results" -- the keyup makes it fetch and render the rows.
+    function showPickerList($orig) {
+        $orig.inputpicker('show');
+        $orig.next('.inputpicker-overflow-hidden').find('input').trigger($.Event('keyup', { keyCode: 0 }));
     }
-    $('#pickerBody').on('click', 'tr[data-i]', function () {
-        var data = $('#pickerBody').data('rows');
-        var row = data[$(this).data('i')];
-        var cfg = pickerConfig[activePicker.key];
-        var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
-        var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
-        $('#' + cfg.target).val(code);
-        $('#' + cfg.target + '_disp').val(name || '');
-        closePicker();
-    });
+
+    function openPicker(key, $input) {
+        var cfg = pickerConfig[key];
+        $('.inputpicker-wrapped-list').remove();
+
+        // This plugin never sets $.data('inputpicker'); the class it puts on the original input
+        // is the "already initialised" test (otherwise every click re-wraps the field and drops
+        // whatever the user has typed).
+        // Showing is deferred a tick: called from a click, the click's own bubbling up to the
+        // plugin's document-level "outside click" handler would otherwise hide it straight away.
+        if ($input.hasClass('inputpicker-original')) {
+            setTimeout(function () { showPickerList($input); }, 0);
+            return;
+        }
+
+        $input.inputpicker({
+            url: cfg.url,
+            fields: cfg.fields,
+            fieldText: cfg.fields[0].name,
+            fieldValue: cfg.fields[0].name,
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+            width: 'auto',
+            urlDelay: 0.2      // seconds (the plugin multiplies by 1000): one request per pause in typing, not per keystroke
+        });
+        setTimeout(function () { showPickerList($input); }, 0);
+
+        function deliver(row) {
+            if (!row) return;
+            $('#' + cfg.target).val(row[cfg.fields[0].name]);
+            $('#' + cfg.target + '_disp').val(row[cfg.fields[1].name] || '');
+        }
+        // Both hooks call the same idempotent handler, so whichever this plugin build fires works.
+        $input.off('inputpicker.select').on('inputpicker.select', function (e, row) {
+            deliver(row);
+            $(this).inputpicker('hide');
+        });
+        $input.off('change.ipk').on('change.ipk', function () { deliver(pickedRow($input, cfg)); });
+    }
 
     // Select Despatch Data (Purchase / Inter Transfer toggle)
     function openStockPicker() { $('#pickerOverlay, #stockPicker').fadeIn(120); loadStock(); }
@@ -414,10 +450,10 @@
         var mode = $('#SOURCE_MODE').val();
         $.getJSON('@Url.Action("GetDespatchData", "AWREntry")', { awrType: awrType, mode: mode }, function (data) {
             data = data || [];
-            var html = '<table><thead><tr><th></th><th>Inv No</th><th>Mark</th><th>Grade</th><th>Pack Date</th><th style="text-align:right;">Bag/Chest</th><th style="text-align:right;">Net Wt</th></tr></thead><tbody>';
+            var html = '<table><thead><tr><th></th><th>Inv No</th><th>Mark</th><th>Grade</th><th>Pack Date</th><th class="num" style="text-align:right;">Bag/Chest</th><th class="num" style="text-align:right;">Net Wt</th></tr></thead><tbody>';
             data.forEach(function (r, i) {
                 html += '<tr data-i="' + i + '"><td><input type="checkbox" class="stockChk" /></td><td>' + (r.invno || '') + '</td><td>' + (r.markDescn || r.mark || '') + '</td>' +
-                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td style="text-align:right;">' + round2(r.bagChest).toFixed(2) + '</td><td style="text-align:right;">' + round2(r.netWt).toFixed(2) + '</td></tr>';
+                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td class="num" style="text-align:right;">' + fmtCount(r.bagChest) + '</td><td class="num" style="text-align:right;">' + round3(r.netWt).toFixed(3) + '</td></tr>';
             });
             html += '</tbody></table>';
             if (!data.length) {
@@ -462,7 +498,9 @@
         var payload = { T_AWR: validRows.map(function (r) {
             return {
                 ID: r.ID || 0,
-                UNIT: '@unit',
+                // The Unit picked on the list (new) / the record's own Unit (edit) -- stored as-is;
+                // the server checks it against the user's linked units.
+                UNIT: $('#UNIT_disp').val(),
                 TRAN_TYPE: $('#AWR_TYPE').val(),
                 DOCNO: '@docno',
                 AWR_NO: $('#AWR_NO').val(),
@@ -475,7 +513,7 @@
                 BAG_RCVD: num(r.BAG_RCVD), NET_RCVD: num(r.NET_RCVD), GROSS_RCVD: num(r.GROSS_RCVD),
                 GP_NO: r.GP_NO, GP_DATE: r.GP_DATE
             };
-        }) };
+        }), IsNew: !IS_EDIT };
 
         $.ajax({
             url: '@Url.Action("Save", "AWREntry")', type: 'POST', contentType: 'application/json', data: JSON.stringify(payload)
@@ -489,6 +527,15 @@
     });
 
     renderGrid();
+
+    // View mode (list page "View" button): runs after the first renderGrid() has built every grid
+    // row, then disables the header fields, the whole grid and the Save / row buttons.
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
+    if (IS_VIEW) {
+        $('.accordion-container :input').prop('disabled', true);
+        $('#btnSave').prop('disabled', true).css({ opacity: .4, cursor: 'not-allowed' });
+        $('#btnSelectStock, #btnAddRow, #btnRemoveRows').css({ opacity: .4, 'pointer-events': 'none' });
+    }
 </script>
 </body>
 </html>

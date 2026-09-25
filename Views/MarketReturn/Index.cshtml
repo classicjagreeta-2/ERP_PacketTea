@@ -32,6 +32,7 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <style>
         .table.table-sm td, .table.table-sm th { padding: 0.6rem; }
         tbody div { overflow: unset !important; height: auto !important; max-height: none !important; }
@@ -47,13 +48,32 @@
         th.sortable .sort-arrows { margin-left: 6px; white-space: nowrap; }
         th.sortable .sort-arrows i { font-size: 12px; color: rgba(255,255,255,.45); vertical-align: middle; }
         th.sortable .sort-arrows i.on { color: #fff; }
-        tr.new-entry-row td { background-color: #eef3ff; vertical-align: middle; }
-        tr.new-entry-row select { border: 1px solid #ccc; border-radius: 4px; padding: 4px 6px; width: 100%; }
-        tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
-        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: #404e68; }
+        table.main-table td .row-expand-btn { font-size: 12px; line-height: 1.3; }
         table.detail-sub-table { width: 100%; border-collapse: collapse; }
         table.detail-sub-table th, table.detail-sub-table td { border: 1px solid #ddd; padding: 6px; white-space: nowrap; }
         table.detail-sub-table thead th { background-color: #404e68; color: #fff; font-weight: bold; }
+        /* LIST badge at the right end of the toolbar -- same look as AWR / Packing / Master / Final Blend Entry. */
+        .list-badge { display: inline-block; background: #2c3958; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .05em; padding: 5px 10px; margin: 0 10px; border-radius: 4px; }
+        /* Chunked list (same behaviour as ERP_Inventory's Purchase Order list): fixed-height
+           scroll box with a sticky header; the next chunk of rows loads when the box is
+           scrolled to the bottom -- see Scripts/list-infinite-scroll.js. */
+        #tableScroll { max-height: calc(100vh - 380px); min-height: 240px; overflow: auto; }
+        .dataTables_info { padding: 10px 20px 0; color: #6b7280; font-size: 12.5px; }
+        /* "New" inline row -- pick Unit + Type here first, then the pencil icon (enabled only once
+           both are picked) opens the Market Return window with both locked in. Same pattern as
+           AWR / Packing / Master / Final Blend Entry's list. */
+        tr.new-entry-row td { background: #eef3ff; vertical-align: middle; }
+        tr.new-entry-row input.new-row-pick { border: 1px solid #dde2ea; border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; box-sizing: border-box; }
+        /* jquery.inputpicker wraps each input in a div with inline overflow:auto; inside the
+           narrow cell the input + arrow overflow it and native scrollbars (the stray arrows)
+           blow the row up. Clip it instead. */
+        tr.new-entry-row .inputpicker-overflow-hidden, tr.new-entry-row .inputpicker-div { overflow: hidden !important; height: auto !important; max-width: 100%; }
+        /* Unit / Type fields must not collapse to the squeezed cell width: fixed floor for the
+           field and for its dropdown panel (the panel hangs off <body>, so target it by id). */
+        tr.new-entry-row input.new-row-pick { min-width: 240px; }
+        #inputpicker-wrapped-list { min-width: 300px; }
+        tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
+        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: #404e68; }
     </style>
 </head>
 <body>
@@ -62,12 +82,37 @@
         <div class="action-btns">
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
-                <li><a href="javascript:void(0)" id="btnNew"><i class="fa fa-plus"></i> New</a></li>
-                <li><a href="javascript:void(0)" id="editBtn"><i class="fa fa-pencil"></i> Edit</a></li>
-                <li><a href="javascript:void(0)" id="viewBtn"><i class="fa fa-eye"></i> View</a></li>
-                <li><a href="javascript:void(0)" id="deleteBtn"><i class="fa fa-trash-o"></i> Delete</a></li>
+                <li>
+                    <a href="javascript:void(0)" id="btnNew"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-plus"></i> New
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="editBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-pencil"></i> Edit
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="deleteBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Delete ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-trash-o"></i> Delete
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="viewBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.View ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-eye"></i> View
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="linesBtn" title="Show the ticked row's lines">
+                        <i class="fa fa-list"></i> Lines
+                    </a>
+                </li>
                 <li style="margin-left:auto">
-                    <label class="btn btn-inverse pull-right" style="margin: 10px;">LIST</label>
+                    <span class="list-badge">LIST</span>
                 </li>
             </ul>
         </div>
@@ -82,77 +127,27 @@
             </div>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive" id="tableScroll">
             <table class="border main-table" id="mretuTable">
                 <thead>
                     <tr>
                         <th style="width:26px;"></th>
                         <th style="width:26px;"></th>
+                        <th>Unit</th>
                         @SortTh("DOCNO", "Doc No")
                         @SortTh("DOCDT", "Date")
                         <th>Bill No</th>
                         <th>Bill Date</th>
                         @SortTh("PARTY", "Party")
                         <th>Vehicle No</th>
-                        <th>Unit</th>
                         <th style="text-align:right;">Total Qty</th>
                         <th style="text-align:right;">Total Amount</th>
                         <th>e-Invoice</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @if (Model != null && Model.Count > 0)
-                    {
-                        var rowIndex = 0;
-                        foreach (var row in Model)
-                        {
-                            rowIndex++;
-                            var detailId = "rowDetail" + rowIndex;
-                            <tr>
-                                <td><input type="checkbox" class="row-check" value="@row.docno" data-unit="@row.unit" /></td>
-                                <td style="text-align:center;">
-                                    <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show item lines" style="cursor:pointer;"></i>
-                                </td>
-                                <td><a href="@Url.Action("InsertOrUpdate", "MarketReturn", new { docno = row.docno, unit = row.unit })">@row.docno</a></td>
-                                <td>@(row.docdt?.ToString("dd/MM/yyyy"))</td>
-                                <td>@row.blno</td>
-                                <td>@(row.bldt?.ToString("dd/MM/yyyy"))</td>
-                                <td>@row.partyName</td>
-                                <td>@row.veh</td>
-                                <td>@row.unit</td>
-                                <td class="text-right">@(row.totQty?.ToString("N2"))</td>
-                                <td class="text-right">@(row.totAmt?.ToString("N2"))</td>
-                                <td>@(string.IsNullOrEmpty(row.irn) ? "" : "Generated")</td>
-                            </tr>
-                            <tr class="row-detail" id="@detailId" style="display:none;" data-docno="@row.docno" data-unit="@row.unit">
-                                <td colspan="12" style="background:#f8f9fc;padding:10px 12px;">
-                                    <div style="overflow-x:auto;">
-                                        <table class="detail-sub-table">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width:34px;">Sl</th>
-                                                    <th>Item</th>
-                                                    <th>MRP</th>
-                                                    <th>Mfg Date</th>
-                                                    <th>Batch No</th>
-                                                    <th style="text-align:right;">Return Qty</th>
-                                                    <th style="text-align:right;">Shortage</th>
-                                                    <th style="text-align:right;">Breakage</th>
-                                                    <th style="text-align:right;">Leakage</th>
-                                                    <th style="text-align:right;">Rate</th>
-                                                    <th style="text-align:right;">Amount</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="detail-items-body">
-                                                <tr><td colspan="12" style="text-align:center;color:#666;">Loading...</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
+                <tbody id="listBody">
+                    @Html.Partial("_ListRows", Model)
+                    @if (Model == null || Model.Count == 0)
                     {
                         <tr><td colspan="12" style="text-align:center;">No records found</td></tr>
                     }
@@ -162,18 +157,14 @@
         @{
             int pageSize = (int)ViewBag.PageSize;
             int rowCount = (int)ViewBag.RowCount;
-            int currentPage = (int)ViewBag.Page;
-            int pageCount = pageSize > 0 ? (int)Math.Ceiling(rowCount / (double)pageSize) : 1;
         }
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;flex-wrap:wrap;gap:8px;">
-            <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-                <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
-                <span style="color:#666;font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
-                <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
-            </div>
-        </div>
+        <div id="listLoading" style="display:none;text-align:center;padding:8px 0 0;color:#6b7280;font-size:12.5px;">Loading...</div>
+        <div class="dataTables_info">Showing <span id="shownCount">@(Model?.Count ?? 0)</span> of @rowCount</div>
     </div>
+
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
+    <script src="~/Scripts/list-new-row-pickers.js"></script>
+    <script src="~/Scripts/list-infinite-scroll.js"></script>
 
     <script>
         // TEMPORARY diagnostic -- shows which Oracle schema (x-database header, see
@@ -188,29 +179,37 @@
             var searchTimer;
             $('#searchInput').on('input', function () {
                 clearTimeout(searchTimer);
-                searchTimer = setTimeout(function () { reload(1); }, 400);
+                searchTimer = setTimeout(function () { reload(); }, 400);
             });
 
+            // A search / header-sort click reloads the page from the first chunk; the current sort
+            // travels with every further chunk (initInfiniteList's `extra`) so they stay in order.
             var SORT_BY = '@(ViewBag.SortBy ?? "")', SORT_DIR = '@(ViewBag.SortDir ?? "")';
-            function reload(page, sortBy, sortDir) {
+            function reload(sortBy, sortDir) {
                 var by = (sortBy === undefined) ? SORT_BY : sortBy;
                 var dir = (sortDir === undefined) ? SORT_DIR : sortDir;
                 window.location.href = '@Url.Action("Index", "MarketReturn")'
                     + '?searchString=' + encodeURIComponent($('#searchInput').val())
-                    + '&page=' + (page || 1)
                     + '&sortBy=' + encodeURIComponent(by || '')
                     + '&sortDir=' + encodeURIComponent(dir || '');
             }
 
             $('#mretuTable').on('click', 'thead th.sortable', function () {
-                reload(1, $(this).data('sort'), $(this).data('dir'));
+                reload($(this).data('sort'), $(this).data('dir'));
             });
 
-            $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
-            $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
+            // Chunked loading: the first chunk is rendered with the page, further chunks are
+            // appended as the list is scrolled to the bottom (Scripts/list-infinite-scroll.js).
+            initInfiniteList({
+                scroll: '#tableScroll', body: '#listBody', loading: '#listLoading', count: '#shownCount',
+                url: '@Url.Action("Index", "MarketReturn")',
+                search: $('#searchInput').val(), pageSize: @pageSize, total: @rowCount, startPage: 1,
+                extra: { sortBy: SORT_BY, sortDir: SORT_DIR }
+            });
 
-            // "+" toggle -- item lines sub-grid, re-fetched every open (same pattern as
-            // Master Blend Entry's Index.cshtml).
+            // "+" toggle -- item lines sub-grid, re-fetched every open via GetRowDetail (the API's
+            // lean GetRowLines) instead of trusting what was rendered at page load. Delegated so
+            // rows appended by later chunks work.
             function openDetail($btn) {
                 var $detail = $('#' + $btn.data('target'));
                 $detail.show();
@@ -238,10 +237,10 @@
                             '<td>' + (d.mrp || '') + '</td>',
                             '<td>' + mfgDate + '</td>',
                             '<td>' + (d.batchno || '') + '</td>',
-                            '<td style="text-align:right;">' + Number(d.mretu || 0).toFixed(2) + '</td>',
-                            '<td style="text-align:right;">' + Number(d.sht || 0).toFixed(2) + '</td>',
-                            '<td style="text-align:right;">' + Number(d.bkg || 0).toFixed(2) + '</td>',
-                            '<td style="text-align:right;">' + Number(d.lkg || 0).toFixed(2) + '</td>',
+                            '<td style="text-align:right;">' + Number(d.mretu || 0).toFixed(3) + '</td>',
+                            '<td style="text-align:right;">' + Number(d.sht || 0).toFixed(3) + '</td>',
+                            '<td style="text-align:right;">' + Number(d.bkg || 0).toFixed(3) + '</td>',
+                            '<td style="text-align:right;">' + Number(d.lkg || 0).toFixed(3) + '</td>',
                             '<td style="text-align:right;">' + Number(d.rate || 0).toFixed(2) + '</td>',
                             '<td style="text-align:right;">' + Number(d.amt || 0).toFixed(2) + '</td>'
                         ).appendTo($body);
@@ -259,39 +258,42 @@
                 if ($('#' + $btn.data('target')).is(':visible')) closeDetail($btn); else openDetail($btn);
             });
 
-            // "New" inline row -- pick Unit + Type here first (Type is a fixed single
-            // option, Market Return has no real "type" axis, shown purely for UI
-            // consistency with Master Blend Entry's Unit+Type "New" row).
+            // "New" inline row -- pick Unit + Type here first (Type is a fixed single option, Market
+            // Return has no real "type" axis, shown purely for UI consistency with the other Blend /
+            // AWR lists). Unit + Type are inputpicker dropdowns (searchable by Code and Name) over the
+            // user's permitted units / types, initialised right after the row is inserted -- see
+            // initNewRowPickers(). (The shared script keys the type box as #newRowPacketType, so it
+            // keeps that id here.)
             var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
             var TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(types));
 
             function buildNewRow() {
-                var unitOpts = '<option value="">Select Unit</option>' +
-                    UNIT_LIST.map(function (u) { return '<option value="' + u.CODE + '">' + u.CODE + ' - ' + (u.NAME || '') + '</option>'; }).join('');
-                var typeOpts = Object.keys(TYPES).map(function (k) { return '<option value="' + k + '">' + TYPES[k] + ' (' + k + ')</option>'; }).join('');
                 return '<tr id="newUnitRow" class="new-entry-row">' +
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Market Return"></i></td>' +
-                    '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
-                    '<td colspan="2"><select id="newRowType">' + typeOpts + '</select></td>' +
+                    // Unit picker spans 3 columns (Doc No / Date / Bill No) so the "CODE - Name" text isn't
+                    // clipped; the table's own columns are untouched.
+                    '<td colspan="3"><input type="text" id="newRowUnit" class="new-row-pick" placeholder="Select Unit" autocomplete="off" /></td>' +
+                    '<td colspan="2"><input type="text" id="newRowPacketType" class="new-row-pick" placeholder="Select Type" autocomplete="off" /></td>' +
                     '<td colspan="5"></td>' +
                     '</tr>';
             }
 
             function refreshGoNewState() {
-                var ready = !!$('#newRowUnit').val() && !!$('#newRowType').val();
+                var ready = !!$('#newRowUnit').val() && !!$('#newRowPacketType').val();
                 $('.go-new').toggleClass('is-ready', ready);
             }
 
             $('#btnNew').on('click', function () {
                 if ($('#newUnitRow').length) return;
-                $('#mretuTable tbody').prepend(buildNewRow());
+                $('#listBody').prepend(buildNewRow());
+                initNewRowPickers({ units: UNIT_LIST, types: TYPES });   // also pre-selects a single Unit
                 refreshGoNewState();
             });
 
-            $('#mretuTable').on('change', '#newRowUnit, #newRowType', refreshGoNewState);
+            $('#mretuTable').on('change', '#newRowUnit, #newRowPacketType', refreshGoNewState);
 
             $('#mretuTable').on('click', '.go-new', function () {
-                var unit = $('#newRowUnit').val(), type = $('#newRowType').val();
+                var unit = $('#newRowUnit').val(), type = $('#newRowPacketType').val();
                 if (!unit) { alert('Please select Unit first'); return; }
                 if (!type) { alert('Please select Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "MarketReturn")'
@@ -306,29 +308,50 @@
                 return $c;
             }
 
+            // Toolbar buttons act on the ticked row. The row's Unit travels with Edit/View/Delete/"+":
+            // a Doc No repeats across units, so the document is identified by Doc No + Unit.
+            function goEdit(docno, unit) {
+                window.location.href = '@Url.Action("InsertOrUpdate", "MarketReturn")'
+                    + '?docno=' + encodeURIComponent(docno) + '&unit=' + encodeURIComponent(unit || '');
+            }
+
+            function goView(docno, unit) {
+                window.location.href = '@Url.Action("InsertOrUpdate", "MarketReturn")'
+                    + '?docno=' + encodeURIComponent(docno) + '&unit=' + encodeURIComponent(unit || '') + '&view=true';
+            }
+
+            function doDelete(docno, unit) {
+                if (!confirm('Are you sure you want to delete Doc No ' + docno + ' ?')) return;
+
+                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "MarketReturn")' })
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: docno }))
+                    .append($('<input>', { type: 'hidden', name: 'unit', value: unit || '' }))
+                    .appendTo('body').submit();
+            }
+
             $('#editBtn').on('click', function () {
                 var $c = getSingleChecked('edit');
-                if (!$c) return;
-                window.location.href = '@Url.Action("InsertOrUpdate", "MarketReturn")'
-                    + '?docno=' + encodeURIComponent($c.val()) + '&unit=' + encodeURIComponent($c.data('unit'));
-            });
-
-            $('#viewBtn').on('click', function () {
-                var $c = getSingleChecked('view');
-                if (!$c) return;
-                window.location.href = '@Url.Action("InsertOrUpdate", "MarketReturn")'
-                    + '?docno=' + encodeURIComponent($c.val()) + '&unit=' + encodeURIComponent($c.data('unit')) + '&view=true';
+                if ($c) goEdit($c.val(), $c.data('unit'));
             });
 
             $('#deleteBtn').on('click', function () {
                 var $c = getSingleChecked('delete');
-                if (!$c) return;
-                if (!confirm('Are you sure you want to delete Doc No ' + $c.val() + ' ?')) return;
+                if ($c) doDelete($c.val(), $c.data('unit'));
+            });
 
-                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "MarketReturn")' })
-                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
-                    .append($('<input>', { type: 'hidden', name: 'unit', value: $c.data('unit') }))
-                    .appendTo('body').submit();
+            $('#viewBtn').on('click', function () {
+                var $c = getSingleChecked('view');
+                if ($c) goView($c.val(), $c.data('unit'));
+            });
+
+            // Lines: open the ticked row's "+" expand panel (its item lines) and scroll it into view.
+            $('#linesBtn').on('click', function () {
+                var $c = getSingleChecked('view its lines');
+                if (!$c) return;
+                var $btn = $c.closest('tr').find('.row-expand-btn');
+                if ($btn.hasClass('fa-plus')) $btn.trigger('click');
+                var $detail = $('#' + $btn.data('target'));
+                if ($detail.length && $detail[0].scrollIntoView) $detail[0].scrollIntoView({ block: 'nearest' });
             });
         });
     </script>

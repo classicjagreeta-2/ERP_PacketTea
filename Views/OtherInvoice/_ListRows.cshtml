@@ -1,0 +1,91 @@
+@* Table rows for the Other Invoice / Debit Note / Credit Note list (ViewBag.Tran 1 / 2 / 3). Rendered by
+   Index.cshtml for the first chunk and returned on its own (Request.IsAjaxRequest) for every further
+   chunk the list's infinite scroll asks for -- see Scripts/list-infinite-scroll.js and
+   OtherInvoiceController.List. ViewBag.RowOffset keeps the "+" expand ids unique across chunks.
+   Every row carries its own Unit (a Doc No repeats across units), so Edit / View / Delete / "+"
+   identify the document by Year + Unit + Type + Doc No. *@
+@model List<Finance.Controllers.TEA.InvDocRow>
+@{
+    string tran = (string)ViewBag.Tran ?? "1";
+    bool isNote = tran != "1";
+    var docTypes = (Dictionary<string, string>)ViewBag.DocTypes ?? new Dictionary<string, string>();
+    Func<decimal?, string> N2 = v => (v ?? 0m).ToString("N2");
+    var rowIndex = (int?)ViewBag.RowOffset ?? 0;
+    // Doc No is a link into Edit mode only for users holding the Edit right (AEDV) -- UX only:
+    // OtherInvoiceController.InsertOrUpdate re-checks the right, the Unit and the back-date window.
+    var canEdit = (ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false;
+}
+@if (Model != null)
+{
+    foreach (var row in Model)
+    {
+        rowIndex++;
+        var detailId = "rowDetail" + rowIndex;
+        <tr class="data-row">
+            <td>
+                <input type="checkbox" class="row-check"
+                       value="@row.docno"
+                       data-docyear="@row.docYear"
+                       data-unit="@row.unit"
+                       data-doctype="@row.doctype"
+                       data-irn="@(string.IsNullOrEmpty(row.irn) ? "" : "Y")" />
+            </td>
+            <td style="text-align:center;">
+                <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show item lines" style="cursor:pointer;"></i>
+            </td>
+            <td>@row.unit</td>
+            <td>
+                @if (canEdit)
+                {
+                    <a href="@Url.Action("InsertOrUpdate", "OtherInvoice", new { tran, docYear = row.docYear, unit = row.unit, doctype = row.doctype, docno = row.docno })">@row.docno</a>
+                }
+                else
+                {
+                    @row.docno
+                }
+            </td>
+            <td>@(row.docdt?.ToString("dd/MM/yyyy"))</td>
+            <td title="@(docTypes.ContainsKey(row.doctype ?? "") ? docTypes[row.doctype] : "")">@row.doctype</td>
+            <td title="@row.pcd">@row.partyName</td>
+            <td>@row.contractNo</td>
+            <td>@(isNote ? row.contractDate?.ToString("dd/MM/yyyy") : row.vehNo)</td>
+            <td class="num">@N2(row.taxableAmt)</td>
+            <td class="num">@N2(row.gstAmt)</td>
+            <td class="num">@N2(row.tcsAmt)</td>
+            <td class="num">@N2(row.roundOff)</td>
+            <td class="num">@N2(row.totalAmt)</td>
+            <td>@(string.IsNullOrEmpty(row.irn) ? "" : "Yes")</td>
+        </tr>
+        <tr class="row-detail" id="@detailId" style="display:none;"
+            data-docyear="@row.docYear" data-unit="@row.unit" data-doctype="@row.doctype" data-docno="@row.docno">
+            <td colspan="15" style="background:#f8f9fc;padding:10px 12px;">
+                <div style="overflow-x:auto;">
+                    <table class="detail-sub-table">
+                        <thead>
+                            <tr>
+                                <th style="width:34px;">Sl</th>
+                                <th>Item</th>
+                                <th>Description</th>
+                                <th>HSN</th>
+                                <th class="num">Qty</th>
+                                <th>UOM</th>
+                                <th class="num">Rate</th>
+                                <th class="num">Amount</th>
+                                <th>GST Code</th>
+                                <th class="num">CGST</th>
+                                <th class="num">SGST</th>
+                                <th class="num">IGST</th>
+                                <th class="num">Cess</th>
+                                <th class="num">TCS</th>
+                                <th class="num">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="detail-items-body">
+                            <tr><td colspan="15" style="text-align:center;color:#666;">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    }
+}

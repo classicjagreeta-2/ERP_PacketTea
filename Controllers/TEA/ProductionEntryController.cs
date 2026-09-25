@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using PacketTea;
 using PacketTea.Models;
 using PacketTea.Models.PT;
 using PacketTea.Utility;
@@ -41,24 +42,46 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> Index(string type, string unit, string searchString, int? page = 1, int pageSize = 15, string sortBy = "", string sortDir = "")
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
-            ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
+            ViewBag.Permission = AEDV.ForScreen(sdsd, "ProductionEntry");
             ViewBag.CurrentFilter = searchString;
             ViewBag.SortBy = sortBy;
             ViewBag.SortDir = sortDir;
             ViewBag.PageSize = pageSize;
-            ViewBag.Page = page ?? 1;
             ViewBag.Type = type;
             ViewBag.Unit = unit;
-            ViewBag.Types = await GetAllowedTypesAsync();
-            ViewBag.UnitList = await GetUnitsForUserAsync();
+            // The Types the user has rights to and the Units they are linked to -- independent
+            // lookups, so run them side by side.
+            var typesTask = GetAllowedTypesAsync();
+            var unitsTask = GetUnitsForUserAsync();
+            await Task.WhenAll(typesTask, unitsTask);
+            ViewBag.Types = typesTask.Result;
+            var userUnits = unitsTask.Result;
+            ViewBag.UnitList = userUnits;
+            // Only the Units the user is linked to: the one asked for (if permitted) else every one of
+            // them, comma-separated (API GetByPage parses it) -- never an unfiltered blank `unit`.
+            var unitFilter = Uri.EscapeDataString(UnitScope.ListFilter(unit, userUnits));
+
+            // Chunked list: a full page view always starts at the first chunk; further chunks
+            // arrive as AJAX calls (with the same sort) and return just the table rows.
+            var isChunkRequest = Request.IsAjaxRequest();
+            var pageNo = isChunkRequest ? Math.Max(page ?? 1, 1) : 1;
+            ViewBag.Page = pageNo;
+            ViewBag.RowOffset = (pageNo - 1) * pageSize;
 
             var response = await Services.SalesGetAsync<PageModel<dynamic>>(
-                $"/api/ProductionEntry/GetByPage?type={type}&unit={unit}&search={searchString}&page={page}&pageSize={pageSize}&sortBy={sortBy}&sortDir={sortDir}");
+                $"/api/ProductionEntry/GetByPage?type={Uri.EscapeDataString(type ?? "")}&unit={unitFilter}&search={Uri.EscapeDataString(searchString ?? "")}&page={pageNo}&pageSize={pageSize}&sortBy={Uri.EscapeDataString(sortBy ?? "")}&sortDir={Uri.EscapeDataString(sortDir ?? "")}");
 
             var json = response?.Data != null ? JsonConvert.SerializeObject(response.Data) : null;
             var wrapper = json != null ? JsonConvert.DeserializeObject<GetByPageResult>(json) : null;
             var list = wrapper?.value?.results ?? new List<ProdDocRow>();
             ViewBag.RowCount = wrapper?.value?.rowCount ?? 0;
+
+            if (isChunkRequest)
+            {
+                // A failed chunk must not leave a toast queued for the next full page load; an
+                // empty response tells the list's scroll loader to stop.
+                return PartialView("_ListRows", (response?.IsSuccessStatusCode ?? false) ? list : new List<ProdDocRow>());
+            }
 
             if (!response?.IsSuccessStatusCode ?? false)
             {
@@ -74,15 +97,61 @@ namespace Finance.Controllers.TEA
         private class GetByPageValue { public List<ProdDocRow> results { get; set; } public int rowCount { get; set; } }
 
         // GET: ProductionEntry/InsertOrUpdate
+        // `unit` is the Unit picked in the list's "New" row (new entry) or the row's own Unit for
+        // Edit / View (a Doc No repeats across units).
         public async Task<ActionResult> InsertOrUpdate(string docno = "", string type = "", string unit = "", bool view = false)
         {
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            var permission = AEDV.ForScreen(sdsd, "ProductionEntry");
+            ViewBag.Permission = permission;
+
+            // `view` is set by the list's View button -- same fetch as Edit, but the form renders
+            // read-only. It only applies to an existing record and needs the View right.
+            view = view && !string.IsNullOrEmpty(docno);
+            if (view && !(permission?.View ?? false))
+            {
+                TempData["toastrError"] = "You do not have permission to view this entry.";
+                return RedirectToAction("Index", new { type });
+            }
+            ViewBag.IsView = view;
+
+            bool isNewEntry = string.IsNullOrEmpty(docno);
+
+            // The list page's New button already looks disabled without the Add right, but this
+            // URL is reachable directly -- block it here too (enforce rights server-side).
+            if (isNewEntry && !(permission?.Add ?? false))
+            {
+                TempData["toastrError"] = "You do not have permission to add a new entry.";
+                return RedirectToAction("Index", new { type });
+            }
+
             var allowedTypes = await GetAllowedTypesAsync();
             ViewBag.Types = allowedTypes;
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit);
-            ViewBag.IsView = view;
+
+            // Doc Date picker's lower bound -- the later of the financial-year start and the AEDV
+            // back-date allowance (Aday for a new entry, Eday while editing). Save() is the actual
+            // enforcement point; this just steers the date picker.
+            DateTime? fyStartDate = null;
+            if (TryGetFinancialYear(out var fyFrom, out var fyTo))
+            {
+                fyStartDate = fyFrom;
+                ViewBag.FyStart = fyFrom.ToString("yyyy-MM-dd");
+                ViewBag.FyEnd = fyTo.ToString("yyyy-MM-dd");
+            }
+            var backDateFloor = (permission ?? new AEDV()).MinDocDate(isNewEntry);
+            var effectiveMin = fyStartDate.HasValue && fyStartDate.Value > backDateFloor ? fyStartDate.Value : backDateFloor;
+            ViewBag.MinDocDate = effectiveMin.ToString("yyyy-MM-dd");
 
             if (string.IsNullOrEmpty(docno))
             {
+                // A Unit passed in must be one the user is linked to (Save re-checks it too).
+                if (!string.IsNullOrEmpty(unit) && !UnitScope.IsAllowed(unit, await GetUnitsForUserAsync()))
+                {
+                    TempData["toastrError"] = $"You do not have permission for Unit {unit}.";
+                    return RedirectToAction("Index", new { type });
+                }
+
                 var effectiveType = !string.IsNullOrEmpty(type) ? type : allowedTypes.Keys.FirstOrDefault() ?? "PT";
                 var model = new T_PROD_DATA
                 {
@@ -103,7 +172,11 @@ namespace Finance.Controllers.TEA
                 return View(model);
             }
 
-            var response = await Services.SalesGetAsync<dynamic>($"/api/ProductionEntry/GetByDocNo?docno={docno}&unit={unit}");
+            // The record must belong to a Unit the user is linked to -- checked alongside the load,
+            // against the row's own Unit (or the one the list passed).
+            var unitsTask = GetUnitsForUserAsync();
+            var response = await Services.SalesGetAsync<dynamic>($"/api/ProductionEntry/GetByDocNo?docno={Uri.EscapeDataString(docno)}&unit={Uri.EscapeDataString(unit ?? "")}");
+            var userUnits = await unitsTask;
             if (!response.IsSuccessStatusCode || response.Data == null)
             {
                 TempData["toastrError"] = response.Message ?? "Record not found.";
@@ -114,6 +187,26 @@ namespace Finance.Controllers.TEA
             var wrapper = JsonConvert.DeserializeObject<GetByDocNoResult>(json);
 
             var editModel = new T_PROD_DATA { T_PROD = wrapper.row ?? new T_PROD() };
+            var recordUnit = !string.IsNullOrEmpty(editModel.T_PROD.UNIT) ? editModel.T_PROD.UNIT : unit;
+            if (!UnitScope.IsAllowed(recordUnit, userUnits))
+            {
+                TempData["toastrError"] = $"You do not have permission for Unit {recordUnit}.";
+                return RedirectToAction("Index", new { type });
+            }
+
+            // Block opening Edit outright when the user has no Edit right, or the record's own Doc
+            // Date has fallen outside the Eday back-date window -- View bypasses this (read-only
+            // regardless of the Edit/back-date policy).
+            if (!view)
+            {
+                var editErr = AEDV.CheckAddEdit(permission, false, editModel.T_PROD.DATE_ORA ?? DateTime.Today);
+                if (editErr != null)
+                {
+                    TempData["toastrError"] = editErr;
+                    return RedirectToAction("Index", new { type });
+                }
+            }
+
             ViewBag.IsEdit = true;
             ViewBag.NewUnit = editModel.T_PROD.UNIT;
             ViewBag.NewType = type;
@@ -121,6 +214,22 @@ namespace Finance.Controllers.TEA
         }
 
         private class GetByDocNoResult { public T_PROD row { get; set; } }
+
+        // GET: ProductionEntry/GetRowDetail (AJAX, fired by the Index list's "+" toggle)
+        // Uses the API's lean GetRowLines ({ rows: [...] } only); the row's own Unit is passed
+        // (a Doc No repeats across units).
+        [HttpGet]
+        public async Task<ActionResult> GetRowDetail(string docno = "", string unit = "")
+        {
+            var r = await Services.SalesGetAsync<dynamic>(
+                $"/api/ProductionEntry/GetRowLines?docno={Uri.EscapeDataString(docno ?? "")}&unit={Uri.EscapeDataString(unit ?? "")}");
+            if (!r.IsSuccessStatusCode || r.Data == null)
+                return JsonExact(new { success = false, message = r.Message ?? "Record not found." });
+
+            var obj = JObject.FromObject(r.Data);
+            obj["success"] = true;
+            return JsonExact(obj);
+        }
 
         // POST: ProductionEntry/Save
         // Validation mirrors VB frmProduction Command1_Click + its field Validate events.
@@ -132,6 +241,24 @@ namespace Finance.Controllers.TEA
             var p = model?.T_PROD;
             if (p == null)
                 return Json(new { success = false, message = "Nothing to save." });
+
+            // Server-side AEDV Add/Edit + back-date enforcement -- the date picker's `min`
+            // (see InsertOrUpdate) only steers well-behaved clients; this is the actual gate.
+            // `IsNew` comes from the client (IsNew: !IS_EDIT); a blank Doc No means new otherwise.
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            var permission = AEDV.ForScreen(sdsd, "ProductionEntry");
+            bool isNew = model.IsNew ?? string.IsNullOrEmpty(p.DOCNO);
+            var permErr = AEDV.CheckAddEdit(permission, isNew, p.DATE_ORA ?? DateTime.Today);
+            if (permErr != null)
+                return Json(new { success = false, message = permErr });
+
+            // The Unit posted from the entry screen (the one picked on the list for a NEW record,
+            // the record's own for an edit) must be one the user is linked to.
+            var postedUnit = (p.UNIT ?? "").Trim();
+            if (postedUnit.Length == 0)
+                return Json(new { success = false, message = "Select a specific unit before saving a Production entry." });
+            if (!UnitScope.IsAllowed(postedUnit, await GetUnitsForUserAsync()))
+                return Json(new { success = false, message = $"You do not have permission for Unit {postedUnit}." });
 
             p.LOCA = CurrentLoca;
             p.ITCD = (p.ITCD ?? "").Trim();
@@ -157,7 +284,24 @@ namespace Finance.Controllers.TEA
         [HttpPost]
         public async Task<ActionResult> Delete(string docno, string type, string unit)
         {
-            var response = await Services.SalesPostAsync<dynamic>($"/api/ProductionEntry/Delete?docno={docno}&unit={unit}", new { });
+            var sdsd = (List<AEDV>)Session["User_AEDV"];
+            var permission = AEDV.ForScreen(sdsd, "ProductionEntry");
+            if (!(permission?.Delete ?? false))
+            {
+                TempData["toastrError"] = "You do not have permission to delete this entry.";
+                return RedirectToAction("Index", new { type });
+            }
+
+            // The row's Unit (a Doc No repeats across units) must be one the user is linked to.
+            if (!UnitScope.IsAllowed(unit, await GetUnitsForUserAsync()))
+            {
+                TempData["toastrError"] = string.IsNullOrWhiteSpace(unit)
+                    ? "Select a specific unit to delete a Production entry."
+                    : $"You do not have permission for Unit {unit}.";
+                return RedirectToAction("Index", new { type });
+            }
+
+            var response = await Services.SalesPostAsync<dynamic>($"/api/ProductionEntry/Delete?docno={Uri.EscapeDataString(docno ?? "")}&unit={Uri.EscapeDataString(unit ?? "")}", new { });
 
             TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");
@@ -328,11 +472,20 @@ namespace Finance.Controllers.TEA
             return JsonExact(r.Data);
         }
 
+        // Item picker endpoint for jquery.inputpicker (Root UI convention -- see CLAUDE.md's
+        // "Lookup pickers" rule): the plugin's own (q, limit, ..., p) contract and { data, count }
+        // response. The API matches `q` against both columns the dropdown shows (Code, Name). It
+        // has no paging of its own, so `count` is just what came back -- one page. A failed call
+        // keeps the session-expired / error surfacing (the entry screen's Item validation also
+        // reads this endpoint, and must not mistake a failure for "Invalid Item").
         [HttpGet]
-        public async Task<ActionResult> GetItemMaster(string search = "")
+        public async Task<ActionResult> GetItemMaster(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var r = await Services.SalesGetAsync<dynamic>($"/api/ProductionEntry/GetItemMaster?search={search}&pageSize=50");
-            return JsonExactOrSessionExpired(r);
+            if (string.IsNullOrEmpty(q)) q = value;
+            var r = await Services.SalesGetAsync<dynamic>($"/api/ProductionEntry/GetItemMaster?search={Uri.EscapeDataString((q ?? "").Trim())}&pageSize={(limit > 0 ? limit : 50)}");
+            if (!r.IsSuccessStatusCode || r.Data == null) return JsonExactOrSessionExpired(r);
+            var arr = JToken.FromObject(r.Data) as JArray ?? new JArray();
+            return JsonExact(new { data = arr, count = arr.Count });
         }
     }
 

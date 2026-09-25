@@ -23,6 +23,10 @@ namespace PacketTea.Models.PT
         public string REM2 { get; set; }
         public string REM3 { get; set; }
         public string REM4 { get; set; }
+        // Sent by the entry screen (`!IS_EDIT`) so Save can apply the AEDV Add/Edit + back-date
+        // check to the right mode. MVC-only: the API's PT_NOTE_DATA has no such member and
+        // ignores it when the payload is forwarded.
+        public bool? IsNew { get; set; }
         public List<PT_NOTE_LINE> LINES { get; set; } = new List<PT_NOTE_LINE>();
     }
 

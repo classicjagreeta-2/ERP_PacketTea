@@ -14,15 +14,30 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <!-- Root UI lookup convention (CLAUDE.md "Lookup pickers"): Party / Pur Centre / Grade / Mark are
+         jquery.inputpicker dropdowns, the same widget PacketTeaPurchaseEntry / Packing Entry use. -->
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <script src="~/libraries/assetspo/js/custom.js"></script>
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <style>
+        .inputpicker-wrapped-list .inputpicker-active td,
+        .inputpicker-wrapped-list .inputpicker-active th { background: #404e68 !important; color: #fff !important; font-weight: bold; }
+        .inputpicker-wrapped-list { min-width: max-content !important; }
+        .inputpicker-wrapped-list table { width: max-content !important; }
         input[readonly], input:disabled, select:disabled { background-color: #f3f4f7; color: #555; }
         .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         .accordion-container.main-accordion { height: auto; overflow-y: visible; }
         #gridTable th, #gridTable td { white-space: nowrap; }
         #gridTable td input { min-width: 70px; width: 90px; }
         #gridTable td input.f-inv { width: 80px; }
-        #gridTable td input.f-grade, #gridTable td input.f-mark { width: 120px; }
+        /* Grade / Mark cells: the code box is itself the inputpicker dropdown; the picked name shows beside it. */
+        #gridTable td.col-lk { min-width: 260px; }
+        #gridTable td.col-lk input.f-grade, #gridTable td.col-lk input.f-mark { width: 90px; min-width: 90px; }
+        #gridTable .lk-name { display: inline-block; max-width: 170px; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; margin-left: 6px; color: #555; }
+        /* The plugin wraps a picked cell's input in a div with inline "overflow:auto; height:100%"; inside a
+           table cell that can sprout scrollbars, so keep the wrapper exactly the size of its input. */
+        #gridTable .inputpicker-div { overflow: hidden !important; height: auto !important; }
+        #gridTable .inputpicker-overflow-hidden { overflow: hidden; }
         #gridTable td input.f-date { width: 125px; }
         #gridTable td.num, #gridTable th.num, #gridTable tfoot td { text-align: right; }
         input.num { text-align: right; }
@@ -105,11 +120,12 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Doc Date <span>(*)</span></label>
-                                <input type="date" id="DOCDT" />
+                                <input type="date" id="DOCDT" min="@ViewBag.MinDocDate" />
                             </div>
                             <div class="form-col-20">
                                 <label>Party Code <span>(*)</span></label>
-                                <input type="text" id="PCD" class="picker-input" readonly placeholder="Click to select" />
+                                @* inputpicker dropdown (attached on click while the head is unlocked; readonly in Edit / View) *@
+                                <input type="text" id="PCD" data-picker="party" placeholder="Click to select" autocomplete="off" />
                             </div>
                             <div class="form-col-40">
                                 <label>Party Name</label>
@@ -130,7 +146,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Pur Centre <span>(*)</span></label>
-                                <input type="text" id="SALE_CENTRE" readonly />
+                                <input type="text" id="SALE_CENTRE" data-picker="centre" readonly autocomplete="off" />
                             </div>
                             <div class="form-col-20">
                                 <label>Pur Centre Name</label>
@@ -301,6 +317,17 @@
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function r2(v) { v = num(v); var s = v < 0 ? -1 : 1; return s * Math.round(Math.abs(v) * 100 + 1e-7) / 100; }
     function f2(v) { return r2(v).toFixed(2); }
+    // Qty / weights: 3 decimals (own helpers so a 3 dp value is never squeezed through r2).
+    function r3(v) { v = num(v); var s = v < 0 ? -1 : 1; return s * Math.round(Math.abs(v) * 1000 + 1e-7) / 1000; }
+    function f3(v) { return r3(v).toFixed(3); }
+    // Whole-number / count fields (Bags): no forced decimals; only float noise is trimmed.
+    function rc(v) { return Math.round(num(v) * 1e6) / 1e6; }
+    function fc(v) { return String(rc(v)); }
+    // Per-column decimals: 0 = plain count, 2 = amount / rate / %, 3 = qty / weight.
+    var COL_DP = { BAG_CHEST: 0, NET_WT: 3, TNET_WT: 3, TGROSS_WT: 3, GROSS: 3, TARE: 3, BILL_QTY: 3, SAMPLE_QTY: 3, OTHER_QTY: 3,
+                   RATE: 2, AMT: 2, CGST_RT: 2, CGST_AMT: 2, SGST_RT: 2, SGST_AMT: 2, IGST_RT: 2, IGST_AMT: 2, TOT_AMT: 2 };
+    function rcol(col, v) { var dp = COL_DP[col]; return dp === 3 ? r3(v) : dp === 0 ? rc(v) : r2(v); }
+    function fcol(col, v) { var dp = COL_DP[col]; return dp === 3 ? f3(v) : dp === 0 ? fc(v) : f2(v); }
     function iso(d) { return d ? String(d).substring(0, 10) : ''; }
     function dmy(d) { d = iso(d); return d ? d.substring(8, 10) + '/' + d.substring(5, 7) + '/' + d.substring(0, 4) : ''; }
     function esc(s) { return $('<div>').text(s == null ? '' : s).html(); }
@@ -314,10 +341,10 @@
         $('#appAlertOverlay, #appAlertBox').fadeIn(120);
         setTimeout(function () { $('#appAlertOk').focus(); }, 150);
     }
-    function showConfirm(message, onYes) {
+    function showConfirm(message, onYes, onNo) {
         $('#appAlertTitle').text('Confirm');
         $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').show().off('click').on('click', closeAlert);
+        $('#appAlertCancel').show().off('click').on('click', function () { closeAlert(); if (onNo) onNo(); });
         $('#appAlertOk').off('click').on('click', function () { closeAlert(); onYes(); });
         $('#appAlertOverlay, #appAlertBox').fadeIn(120);
     }
@@ -330,11 +357,16 @@
         showAlert((x && x.responseJSON && x.responseJSON.message) || fallback || 'Could not load data. Please try again.');
     }
 
-    // Numeric-only inputs: digits and one decimal point, at most 2 decimals, right aligned.
+    // Numeric-only inputs: digits and one decimal point, at most 2 decimals (3 for qty / weights,
+    // uncapped for the Bags count), right aligned.
     function sanitizeNum(el) {
         var v = el.value, clean = v.replace(/[^0-9.]/g, '');
+        var dp = COL_DP[$(el).data('col')]; if (dp === undefined) dp = 2;
         var dot = clean.indexOf('.');
-        if (dot >= 0) clean = clean.substring(0, dot + 1) + clean.substring(dot + 1).replace(/\./g, '').substring(0, 2);
+        if (dot >= 0) {
+            var frac = clean.substring(dot + 1).replace(/\./g, '');
+            clean = clean.substring(0, dot + 1) + (dp === 0 ? frac : frac.substring(0, dp));
+        }
         if (clean !== v) el.value = clean;
     }
     $(document).on('keypress', 'input.num:not([readonly])', function (e) {
@@ -347,7 +379,14 @@
     // ---------------------------------------------------------------- state
     var FY_START = iso(H.FY_START), FY_END = iso(H.FY_END);
     var TODAY = iso(H.TODAY) || new Date().toISOString().substring(0, 10);
+    // Unit + Type are locked (read-only #UNIT_disp / #TYPE_disp): a NEW note carries the ones picked on
+    // the list's "New" row (server-checked against the user's units), an edit the note's own. UNIT is
+    // what Save posts -- see payload().
     var UNIT = H.UNIT || '', TYPE = H.SALE_TYPE || '';
+    // Doc Date lower bound from the AEDV back-date window (ViewBag.MinDocDate = later of the FY start
+    // and today - Aday); Save re-checks it server-side.
+    var MIN_DOC = '@ViewBag.MinDocDate';
+    var curParty = H.PCD || '';   // the party the bill / lines currently belong to (the picker overwrites #PCD before we can compare)
     var RATES = {};          // grade -> {CGST_RT, SGST_RT, IGST_RT} for the current party + centre
     var rows = [], seq = 0;
 
@@ -375,6 +414,7 @@
         var maxDt = TODAY < FY_END ? TODAY : FY_END;
         var minDt = FY_START;
         if (H.LAST_DOCDT && iso(H.LAST_DOCDT) > minDt) minDt = iso(H.LAST_DOCDT);
+        if (MIN_DOC && MIN_DOC > minDt) minDt = MIN_DOC;
         $('#DOCDT').attr('min', minDt).attr('max', maxDt).val(maxDt < minDt ? minDt : maxDt);
     }
 
@@ -382,12 +422,14 @@
         var manual = lastYr();
         var headLocked = IS_EDIT || IS_VIEW;
         $('#LAST_YR').prop('disabled', headLocked);
-        $('#PCD').toggleClass('picker-input', !headLocked);
+        $('#PCD').prop('readonly', headLocked);   // unlocked: the inputpicker dropdown attaches on click
         $('#BLNO').prop('readonly', headLocked || !manual).toggleClass('picker-input', !headLocked && !manual)
                   .attr('placeholder', headLocked ? '' : manual ? 'Type Bill No' : 'Click to select');
         $('#BLDT').prop('readonly', headLocked || !manual);
+        // Pur Centre is keyed only for a bill typed by hand (For Before Last Year); otherwise it comes from the bill.
         var centreEditable = !IS_VIEW && manual;
-        $('#SALE_CENTRE').toggleClass('picker-input', centreEditable).attr('placeholder', centreEditable ? 'Click to select' : '');
+        if (!centreEditable) dropPicker($('#SALE_CENTRE'));
+        $('#SALE_CENTRE').prop('readonly', !centreEditable).attr('placeholder', centreEditable ? 'Click to select' : '');
         $('#btnSelectItems').toggleClass('is-disabled', IS_VIEW || manual || IS_EDIT);
         $('#btnAddLine').toggleClass('is-disabled', IS_VIEW || !manual);
         $('#btnRemoveRows').toggleClass('is-disabled', IS_VIEW);
@@ -405,7 +447,7 @@
             GROSS: 0, TARE: 0
         }, src || {});
         ['BAG_CHEST', 'NET_WT', 'TNET_WT', 'TGROSS_WT', 'BILL_QTY', 'SAMPLE_QTY', 'OTHER_QTY', 'RATE', 'AMT',
-         'CGST_RT', 'CGST_AMT', 'SGST_RT', 'SGST_AMT', 'IGST_RT', 'IGST_AMT', 'TOT_AMT', 'GROSS', 'TARE'].forEach(function (k) { r[k] = num(r[k]); });
+         'CGST_RT', 'CGST_AMT', 'SGST_RT', 'SGST_AMT', 'IGST_RT', 'IGST_AMT', 'TOT_AMT', 'GROSS', 'TARE'].forEach(function (k) { r[k] = rcol(k, r[k]); });
         if (!r.GROSS && r.NET_WT) { r.GROSS = r.NET_WT; r.TARE = 0; }
         r.PACK_DATE = iso(r.PACK_DATE);
         r._cid = ++seq;
@@ -415,7 +457,7 @@
     // VB6 PICK_RATE result for the row's grade -> GST amounts and total.
     function applyGst(r) {
         var rt = RATES[r.GRADE];
-        if (rt) { r.CGST_RT = num(rt.CGST_RT); r.SGST_RT = num(rt.SGST_RT); r.IGST_RT = num(rt.IGST_RT); }
+        if (rt) { r.CGST_RT = r2(rt.CGST_RT); r.SGST_RT = r2(rt.SGST_RT); r.IGST_RT = r2(rt.IGST_RT); }
         r.CGST_AMT = r2(r.AMT * r.CGST_RT / 100);
         r.SGST_AMT = r2(r.AMT * r.SGST_RT / 100);
         r.IGST_AMT = r2(r.AMT * r.IGST_RT / 100);
@@ -428,18 +470,18 @@
         if (field === 'NET_WT') { r.GROSS = r.NET_WT; r.TARE = 0; field = 'BAG_CHEST'; }
         if (field === 'BILL_QTY') {
             r.TNET_WT = r.BILL_QTY; r.TGROSS_WT = r.BILL_QTY;
-            if (mode !== 'A') r.BILL_QTY = r2(r.TNET_WT - (r.SAMPLE_QTY + r.OTHER_QTY));
+            if (mode !== 'A') r.BILL_QTY = r3(r.TNET_WT - (r.SAMPLE_QTY + r.OTHER_QTY));
             r.AMT = r2(r.BILL_QTY * r.RATE);
         } else if (field === 'BAG_CHEST' || field === 'RATE' || field === 'SAMPLE_QTY' || field === 'OTHER_QTY') {
             if (field === 'BAG_CHEST' && r.GROSS > 0) {
-                r.TGROSS_WT = r2(r.GROSS * r.BAG_CHEST);
-                r.TNET_WT = r2((r.GROSS - r.TARE) * r.BAG_CHEST);
+                r.TGROSS_WT = r3(r.GROSS * r.BAG_CHEST);
+                r.TNET_WT = r3((r.GROSS - r.TARE) * r.BAG_CHEST);
                 r.BILL_QTY = r.TNET_WT; r.SAMPLE_QTY = 0; r.OTHER_QTY = 0;
             }
             if (r.BILL_QTY === 0) {
                 r.AMT = r2((r.SAMPLE_QTY + r.OTHER_QTY) * r.RATE);
             } else {
-                if (mode !== 'A') r.BILL_QTY = r2(r.TNET_WT - (r.SAMPLE_QTY + r.OTHER_QTY));
+                if (mode !== 'A') r.BILL_QTY = r3(r.TNET_WT - (r.SAMPLE_QTY + r.OTHER_QTY));
                 r.AMT = r2(r.BILL_QTY * r.RATE);
             }
         }
@@ -453,7 +495,7 @@
         return ['BAG_CHEST', 'BILL_QTY', 'SAMPLE_QTY', 'OTHER_QTY', 'RATE', 'AMT'].indexOf(col) >= 0;
     }
     function numInput(r, col) {
-        return '<input type="text" inputmode="decimal" class="num f-' + col + '" data-col="' + col + '" value="' + f2(r[col]) + '"' + (editable(col) ? '' : ' readonly tabindex="-1"') + ' />';
+        return '<input type="text" inputmode="decimal" class="num f-' + col + '" data-col="' + col + '" value="' + fcol(col, r[col]) + '"' + (editable(col) ? '' : ' readonly tabindex="-1"') + ' />';
     }
 
     function renderGrid() {
@@ -465,8 +507,14 @@
             tr.append('<td>' + r.SRLNO + '</td>');
             tr.append('<td><input type="text" class="f-inv" data-col="INVNO" maxlength="10" value="' + esc(r.INVNO) + '"' + (editable('INVNO') ? '' : ' readonly tabindex="-1"') + ' /></td>');
             tr.append('<td><input type="date" class="f-date" data-col="PACK_DATE" value="' + esc(r.PACK_DATE) + '"' + (editable('PACK_DATE') ? '' : ' readonly tabindex="-1"') + ' /></td>');
-            tr.append('<td><input type="text" class="f-grade' + (editable('GRADE') ? ' pick' : '') + '" data-col="GRADE" readonly title="' + esc(r.GRADE) + '" value="' + esc(r.GRADE_NAME || r.GRADE) + '" placeholder="' + (editable('GRADE') ? 'Click' : '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-mark' + (editable('MARK') ? ' pick' : '') + '" data-col="MARK" readonly title="' + esc(r.MARK) + '" value="' + esc(r.MARK_NAME || r.MARK) + '" placeholder="' + (editable('MARK') ? 'Click' : '') + '" /></td>');
+            // Grade / Mark: the code box is itself the inputpicker dropdown (only for a hand-typed bill);
+            // the picked name is shown beside it. Otherwise the code is shown read-only, as loaded.
+            tr.append('<td class="col-lk"><input type="text" class="pk f-grade" data-col="GRADE" value="' + esc(r.GRADE) + '"' +
+                (editable('GRADE') ? ' placeholder="Code" autocomplete="off"' : ' readonly tabindex="-1"') + ' />' +
+                '<span class="lk-name f-grade-name" title="' + esc(r.GRADE_NAME) + '">' + esc(r.GRADE_NAME) + '</span></td>');
+            tr.append('<td class="col-lk"><input type="text" class="pk f-mark" data-col="MARK" value="' + esc(r.MARK) + '"' +
+                (editable('MARK') ? ' placeholder="Code" autocomplete="off"' : ' readonly tabindex="-1"') + ' />' +
+                '<span class="lk-name f-mark-name" title="' + esc(r.MARK_NAME) + '">' + esc(r.MARK_NAME) + '</span></td>');
             ['BAG_CHEST', 'NET_WT', 'TNET_WT', 'TGROSS_WT', 'BILL_QTY', 'SAMPLE_QTY', 'OTHER_QTY', 'RATE', 'AMT'].forEach(function (c) {
                 tr.append('<td class="num">' + numInput(r, c) + '</td>');
             });
@@ -484,7 +532,7 @@
         var $tr = $('#gridBody tr[data-cid="' + r._cid + '"]');
         NUM_COLS.forEach(function (c) {
             var el = $tr.find('input[data-col="' + c + '"]')[0];
-            if (el && el !== skipEl) el.value = f2(r[c]);
+            if (el && el !== skipEl) el.value = fcol(c, r[c]);
         });
         ['CGST_RT', 'CGST_AMT', 'SGST_RT', 'SGST_AMT', 'IGST_RT', 'IGST_AMT', 'TOT_AMT'].forEach(function (c) { $tr.find('.c-' + c).text(f2(r[c])); });
         refreshTotals();
@@ -493,7 +541,7 @@
     function refreshTotals() {
         var t = { BAG_CHEST: 0, TNET_WT: 0, BILL_QTY: 0, AMT: 0, CGST_AMT: 0, SGST_AMT: 0, IGST_AMT: 0, TOT_AMT: 0 };
         rows.forEach(function (r) { Object.keys(t).forEach(function (k) { t[k] += num(r[k]); }); });
-        $('#ftBag').text(f2(t.BAG_CHEST)); $('#ftTNet').text(f2(t.TNET_WT)); $('#ftQty').text(f2(t.BILL_QTY));
+        $('#ftBag').text(fc(t.BAG_CHEST)); $('#ftTNet').text(f3(t.TNET_WT)); $('#ftQty').text(f3(t.BILL_QTY));
         $('#ftAmt').text(f2(t.AMT)); $('#ftCgst').text(f2(t.CGST_AMT)); $('#ftSgst').text(f2(t.SGST_AMT));
         $('#ftIgst').text(f2(t.IGST_AMT)); $('#ftTot').text(f2(t.TOT_AMT));
         $('#TOTAL_disp').val(f2(t.TOT_AMT));
@@ -504,9 +552,9 @@
     $('#gridBody').on('change', 'input.num', function () {
         var r = findRow($(this).closest('tr').data('cid')); if (!r) return;
         var col = $(this).data('col');
-        r[col] = r2(this.value);
+        r[col] = rcol(col, this.value);
         onEdit(r, col);
-        this.value = f2(r[col]);
+        this.value = fcol(col, r[col]);
         refreshRow(r, this);
     });
     $('#gridBody').on('focus', 'input.num:not([readonly])', function () { var el = this; setTimeout(function () { el.select(); }, 0); });
@@ -518,7 +566,7 @@
         var r = findRow($(this).closest('tr').data('cid')); if (r) r.PACK_DATE = this.value;
     });
     // Enter moves to the next editable cell, as in the VB6 grid.
-    $('#gridBody').on('keydown', 'input', function (e) {
+    $('#gridBody').on('keydown', 'input:not(.pk)', function (e) {   // .pk = inputpicker boxes: Enter picks a row there
         if (e.which !== 13) return;
         e.preventDefault();
         $(this).trigger('change');
@@ -527,13 +575,22 @@
         if (i >= 0 && i < $all.length - 1) $all.eq(i + 1).focus();
     });
 
-    $('#gridBody').on('click', 'input.pick', function () {
-        var $inp = $(this), r = findRow($inp.closest('tr').data('cid')); if (!r) return;
+    // Grade / Mark (hand-typed bills only): the row's own code box is the dropdown -- clicking / focusing
+    // it opens the inputpicker anchored right under it. The plugin clones the input it is attached to
+    // (classes included), so the clone (.inputpicker-input) must not match here or a second picker would
+    // be attached inside the first.
+    $('#gridBody').on('click focus', 'input.pk:not([readonly]):not(.inputpicker-input)', function () {
+        var $inp = $(this), $tr = $inp.closest('tr'), r = findRow($tr.data('cid')); if (!r) return;
         var col = $inp.data('col');
-        openPicker(col === 'GRADE' ? 'grade' : 'mark', function (row) {
-            if (col === 'GRADE') { r.GRADE = row.CODE; r.GRADE_NAME = row.NAME; fetchRates([r.GRADE], function () { applyGst(r); refreshRow(r); }); }
-            else { r.MARK = row.CODE; r.MARK_NAME = row.NAME; }
-            $inp.val(row.NAME || row.CODE).attr('title', row.CODE);
+        openLookup(col === 'GRADE' ? 'grade' : 'mark', $inp, function (row) {
+            if (col === 'GRADE') {
+                r.GRADE = row.CODE; r.GRADE_NAME = row.NAME || '';
+                $tr.find('.f-grade-name').text(r.GRADE_NAME).attr('title', r.GRADE_NAME);
+                fetchRates([r.GRADE], function () { applyGst(r); refreshRow(r); });
+            } else {
+                r.MARK = row.CODE; r.MARK_NAME = row.NAME || '';
+                $tr.find('.f-mark-name').text(r.MARK_NAME).attr('title', r.MARK_NAME);
+            }
         });
     });
 
@@ -568,18 +625,104 @@
     }
 
     // ---------------------------------------------------------------- lookups
+    // Simple code/name lookups -- Party, Pur Centre, Grade, Mark -- are jquery.inputpicker dropdowns
+    // (Root UI convention, CLAUDE.md "Lookup pickers"): anchored under the field, paged, and searched
+    // server-side on EVERY column shown (the MVC picker actions take (q, limit, ..., p) and reply
+    // { data, count }). The first field is the value written to the box.
+    var LOOKUPS = {
+        party: { url: URL.party, fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'CITY', text: 'City' },
+                                          { name: 'STATE_CODE', text: 'State' }, { name: 'GST_NO', text: 'GST No' }, { name: 'PAN_NO', text: 'PAN No' }] },
+        centre: { url: URL.centre, fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'CITY', text: 'City' },
+                                            { name: 'STATE_CODE', text: 'State' }, { name: 'GST_NO', text: 'GST No' }] },
+        grade: { url: URL.grade, fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Grade' }, { name: 'HSN_CODE', text: 'HSN Code' }] },
+        mark: { url: URL.mark, fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Mark' }, { name: 'GARDEN', text: 'Garden' }, { name: 'COST_CENTRE', text: 'Cost Centre' }] }
+    };
+
+    // The row the user picked, looked up in the data the dropdown last loaded. This copy of the plugin
+    // writes the picked value into the original input and fires "change" on it; it does not hand the
+    // row to a select handler, so read it back by the picked value.
+    function pickedRow($input, cfg) {
+        var key = cfg.fields[0].name, v = String($input.val() == null ? '' : $input.val()), data = [];
+        try { data = $input.inputpicker('data') || []; } catch (e) { data = []; }
+        for (var i = 0; i < data.length; i++) { if (String(data[i][key]) === v) return data[i]; }
+        return null;
+    }
+
+    // Open the dropdown AND refresh its rows. The plugin loads url-backed data asynchronously and only
+    // re-renders the list on a keystroke, so showing it right after init (before the first response
+    // lands) displayed "No results" -- the keyup makes it fetch and render the rows.
+    function showPickerList($orig) {
+        $orig.inputpicker('show');
+        $orig.next('.inputpicker-overflow-hidden').find('input').trigger($.Event('keyup', { keyCode: 0 }));
+    }
+
+    // Show `code` in an inputpicker-backed box after it was set from code (the plugin only refreshes
+    // its visible clone on a pick).
+    function setPickerText($orig, code) {
+        $orig.val(code);
+        $orig.next('.inputpicker-overflow-hidden').find('input.inputpicker-input').val(code);
+    }
+    // Detach the dropdown again (Pur Centre stops being keyable once "For Before Last Year" is off).
+    function dropPicker($orig) {
+        if (!$orig.hasClass('inputpicker-original')) return;
+        try { $orig.inputpicker('destroy'); } catch (e) { }
+        $orig.next('.inputpicker-overflow-hidden').remove();
+        $orig.removeClass('inputpicker-original').css({ position: '', top: '' });
+        $('.inputpicker-wrapped-list').remove();
+    }
+
+    function openLookup(key, $input, onSelect) {
+        var cfg = LOOKUPS[key];
+        $('.inputpicker-wrapped-list').remove();
+
+        // This plugin never sets $.data('inputpicker'); the class it puts on the original input is the
+        // "already initialised" test (otherwise every click re-wraps the field and drops what the user
+        // has typed). Showing is deferred a tick: called from a click, the click's own bubbling up to the
+        // plugin's document-level "outside click" handler would otherwise hide it straight away.
+        if ($input.hasClass('inputpicker-original')) {
+            setTimeout(function () { showPickerList($input); }, 0);
+            return;
+        }
+
+        $input.inputpicker({
+            url: cfg.url,
+            fields: cfg.fields,
+            fieldText: cfg.fields[0].name,
+            fieldValue: cfg.fields[0].name,
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+            width: 'auto',
+            urlDelay: 0.2      // seconds (the plugin multiplies by 1000): one request per pause in typing, not per keystroke
+        });
+        setTimeout(function () { showPickerList($input); }, 0);
+
+        function deliver(row) { if (row && onSelect) onSelect(row); }
+        // Both hooks call the same idempotent handler, so whichever this plugin build fires works.
+        $input.off('inputpicker.select').on('inputpicker.select', function (e, row) {
+            deliver(row);
+            $(this).inputpicker('hide');
+        });
+        $input.off('change.ipk').on('change.ipk', function () { deliver(pickedRow($input, cfg)); });
+    }
+
+    // Bill No (composite: depends on party / unit / type) and the item list stay bespoke popups.
     var PICKERS = {
-        party: { title: 'Select Party', url: URL.party, cols: [['CODE', 'Code'], ['NAME', 'Name'], ['CITY', 'City'], ['STATE_CODE', 'State'], ['GST_NO', 'GST No'], ['PAN_NO', 'PAN No']] },
-        bill: { title: 'Select Bill No.', url: URL.bills, cols: [['BLNO', 'Bill No'], ['BLDT', 'Bill Date', 'date'], ['SALE_CENTRE_NAME', 'Pur Centre'], ['LINES', 'Lines', 'int'], ['QTY', 'Qty', 'num'], ['AMOUNT', 'Amount', 'num']],
-                params: function () { return { pcd: $('#PCD').val(), unit: UNIT, type: TYPE }; } },
-        centre: { title: 'Select Pur Centre', url: URL.centre, cols: [['CODE', 'Code'], ['NAME', 'Name'], ['CITY', 'City'], ['STATE_CODE', 'State'], ['GST_NO', 'GST No']] },
-        grade: { title: 'Select Grade', url: URL.grade, cols: [['CODE', 'Code'], ['NAME', 'Grade'], ['HSN_CODE', 'HSN Code']] },
-        mark: { title: 'Select Mark', url: URL.mark, cols: [['CODE', 'Code'], ['NAME', 'Mark'], ['GARDEN', 'Garden'], ['COST_CENTRE', 'Cost Centre']] }
+        bill: { title: 'Select Bill No.', url: URL.bills, cols: [['BLNO', 'Bill No'], ['BLDT', 'Bill Date', 'date'], ['SALE_CENTRE_NAME', 'Pur Centre'], ['LINES', 'Lines', 'int'], ['QTY', 'Qty', 'qty'], ['AMOUNT', 'Amount', 'num']],
+                params: function () { return { pcd: $('#PCD').val(), unit: UNIT, type: TYPE }; } }
     };
     var active = null, pickXhr = null, pickSeq = 0, pickTimer = null;
+    function isNumKind(k) { return k === 'num' || k === 'qty' || k === 'cnt' || k === 'int'; }
     function cell(v, kind) {
         if (kind === 'date') return '<td>' + esc(dmy(v)) + '</td>';
-        if (kind === 'num') return '<td class="num">' + f2(v) + '</td>';
+        if (kind === 'num') return '<td class="num">' + f2(v) + '</td>';       // 2 dp: amount / rate
+        if (kind === 'qty') return '<td class="num">' + f3(v) + '</td>';       // 3 dp: qty / weight
+        if (kind === 'cnt') return '<td class="num">' + fc(v) + '</td>';       // count (bags): no forced decimals
         if (kind === 'int') return '<td class="num">' + esc(v) + '</td>';
         return '<td>' + esc(v) + '</td>';
     }
@@ -602,7 +745,7 @@
                 if (!active || mySeq !== pickSeq) return;
                 data = data || [];
                 active.rows = data; active.idx = data.length ? 0 : -1;
-                var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th' + (c[2] === 'num' || c[2] === 'int' ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+                var html = '<table><thead><tr>' + cfg.cols.map(function (c) { return '<th' + (isNumKind(c[2]) ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
                 data.forEach(function (row, i) {
                     html += '<tr data-i="' + i + '"' + (i === 0 ? ' class="is-active"' : '') + '>' + cfg.cols.map(function (c) { return cell(row[c[0]], c[2]); }).join('') + '</tr>';
                 });
@@ -637,19 +780,24 @@
         if ($tr[0]) $tr[0].scrollIntoView({ block: 'nearest' });
     });
 
-    // Party (VB6 text_PARTY): changing it invalidates the bill and its lines.
-    $('#PCD').on('click', function () {
+    // Party (VB6 text_PARTY): changing it invalidates the bill and its lines. The plugin has already
+    // written the picked code into #PCD by the time this runs, so the party the bill belongs to is
+    // tracked in curParty (a declined change puts the old code back).
+    function onPartyPick(p) {
+        if (p.CODE === curParty) return;
+        var apply = function () {
+            curParty = p.CODE;
+            $('#PCD').val(p.CODE); $('#PCD_disp').val(p.NAME || '');
+            if (!p.STATE_CODE) showAlert('State Code of ' + p.CODE + ' is blank ! Set it in the party master before saving.');
+            if (!lastYr()) { $('#BLNO').val(''); $('#BLDT').val(''); $('#SALE_CENTRE').val(''); $('#SALE_CENTRE_disp').val(''); rows = []; }
+            reRateAll();
+        };
+        if (rows.length && !lastYr()) showConfirm('Changing the party clears the selected bill and its items. Continue?', apply, function () { setPickerText($('#PCD'), curParty); });
+        else apply();
+    }
+    $('#PCD').on('click focus', function () {
         if (IS_EDIT || IS_VIEW) return;
-        openPicker('party', function (p) {
-            if (p.CODE === $('#PCD').val()) return;
-            var apply = function () {
-                $('#PCD').val(p.CODE); $('#PCD_disp').val(p.NAME || '');
-                if (!p.STATE_CODE) showAlert('State Code of ' + p.CODE + ' is blank ! Set it in the party master before saving.');
-                if (!lastYr()) { $('#BLNO').val(''); $('#BLDT').val(''); $('#SALE_CENTRE').val(''); $('#SALE_CENTRE_disp').val(''); rows = []; }
-                reRateAll();
-            };
-            if (rows.length && !lastYr()) showConfirm('Changing the party clears the selected bill and its items. Continue?', apply); else apply();
-        });
+        openLookup('party', $(this), onPartyPick);
     });
 
     // Bill (VB6 txtSelBillNo): pick, then its items open for selection.
@@ -670,10 +818,10 @@
     });
 
     // Pur Centre is keyed only for a bill typed by hand.
-    $('#SALE_CENTRE').on('click', function () {
+    $('#SALE_CENTRE').on('click focus', function () {
         if (IS_VIEW || !lastYr()) return;
-        openPicker('centre', function (c) {
-            $('#SALE_CENTRE').val(c.CODE); $('#SALE_CENTRE_disp').val(c.NAME || '');
+        openLookup('centre', $(this), function (c) {
+            $('#SALE_CENTRE_disp').val(c.NAME || '');
             reRateAll();
         });
     });
@@ -714,15 +862,15 @@
     }
     function closeItems() { $('#pickerOverlay, #itemPicker').fadeOut(120); }
     var ITEM_COLS = [['INVNO', 'Inv No'], ['PACK_DATE', 'Pack Date', 'date'], ['MARK_NAME', 'Mark'], ['GRADE_NAME', 'Grade'],
-                     ['BAG_CHEST', 'Bag', 'num'], ['NET_WT', 'Net Weight', 'num'], ['BILL_QTY', 'Qty', 'num'], ['RATE', 'Rate', 'num'], ['AMT', 'Amount', 'num']];
+                     ['BAG_CHEST', 'Bag', 'cnt'], ['NET_WT', 'Net Weight', 'qty'], ['BILL_QTY', 'Qty', 'qty'], ['RATE', 'Rate', 'num'], ['AMT', 'Amount', 'num']];
     function itemText(d) {
-        return ITEM_COLS.map(function (c) { return c[2] === 'date' ? dmy(d[c[0]]) : c[2] === 'num' ? f2(d[c[0]]) : (d[c[0]] || ''); })
+        return ITEM_COLS.map(function (c) { return c[2] === 'date' ? dmy(d[c[0]]) : c[2] === 'num' ? f2(d[c[0]]) : c[2] === 'qty' ? f3(d[c[0]]) : c[2] === 'cnt' ? fc(d[c[0]]) : (d[c[0]] || ''); })
                         .concat([d.GRADE || '', d.MARK || '']).join(' ').toUpperCase();
     }
     function renderItems() {
         var term = $.trim($('#itemSearch').val()).toUpperCase();
         var shown = items.filter(function (d) { return !term || itemText(d).indexOf(term) >= 0; });
-        var html = '<table><thead><tr><th style="width:30px;">SEL</th>' + ITEM_COLS.map(function (c) { return '<th' + (c[2] === 'num' ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+        var html = '<table><thead><tr><th style="width:30px;">SEL</th>' + ITEM_COLS.map(function (c) { return '<th' + (isNumKind(c[2]) ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
         shown.forEach(function (d) {
             html += '<tr data-i="' + d._i + '"><td><input type="checkbox" class="itemChk"' + (d._sel ? ' checked' : '') + ' /></td>' +
                 ITEM_COLS.map(function (c) { return cell(d[c[0]], c[2]); }).join('') + '</tr>';
@@ -755,7 +903,9 @@
     // ---------------------------------------------------------------- save
     function payload() {
         return {
-            TRAN_CODE: TRAN, UNIT: UNIT, SALE_TYPE: TYPE,
+            // UNIT / SALE_TYPE: the locked Unit + Type (see state above). IsNew lets the server apply the
+            // AEDV Add / Edit right and back-date window (TeaPurchaseNoteController.Save).
+            TRAN_CODE: TRAN, UNIT: UNIT, SALE_TYPE: TYPE, IsNew: !IS_EDIT,
             DOCNO: $('#DOCNO').val() || null, DOCDT: $('#DOCDT').val() || null,
             PCD: $('#PCD').val(), BLNO: $.trim($('#BLNO').val()), BLDT: $('#BLDT').val() || null,
             SALE_CENTRE: $('#SALE_CENTRE').val(), QTY_RETURN: adjMode(),
@@ -764,8 +914,8 @@
             LINES: rows.map(function (r) {
                 return {
                     INVNO: r.INVNO, PACK_DATE: r.PACK_DATE || null, GRADE: r.GRADE, MARK: r.MARK,
-                    BAG_CHEST: r2(r.BAG_CHEST), NET_WT: r2(r.NET_WT), TNET_WT: r2(r.TNET_WT), TGROSS_WT: r2(r.TGROSS_WT),
-                    BILL_QTY: r2(r.BILL_QTY), SAMPLE_QTY: r2(r.SAMPLE_QTY), OTHER_QTY: r2(r.OTHER_QTY), RATE: r2(r.RATE), AMT: r2(r.AMT)
+                    BAG_CHEST: rc(r.BAG_CHEST), NET_WT: r3(r.NET_WT), TNET_WT: r3(r.TNET_WT), TGROSS_WT: r3(r.TGROSS_WT),
+                    BILL_QTY: r3(r.BILL_QTY), SAMPLE_QTY: r3(r.SAMPLE_QTY), OTHER_QTY: r3(r.OTHER_QTY), RATE: r2(r.RATE), AMT: r2(r.AMT)
                 };
             })
         };

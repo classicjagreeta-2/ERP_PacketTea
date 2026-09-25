@@ -18,8 +18,23 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <!-- Root UI lookup convention (see CLAUDE.md's "lookup pickers" rule) -- the same
+         jquery.inputpicker include AWR Entry / Packing use, replacing this screen's earlier
+         bespoke centered-modal Party / Transporter / Item picker. (The Bill No help stays a modal:
+         it is a composite bill-selection dialog, deliberately not converted.) -->
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <script src="~/libraries/assetspo/js/custom.js"></script>
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <style>
+        .inputpicker-wrapped-list .inputpicker-active td,
+        .inputpicker-wrapped-list .inputpicker-active th { background: #404e68 !important; color: #fff !important; font-weight: bold; }
+        .inputpicker-wrapped-list { min-width: max-content !important; }
+        .inputpicker-wrapped-list table { width: max-content !important; }
+        /* The plugin wraps a picked cell's input in a div with inline "overflow:auto; height:100%"; inside a
+           table cell that can sprout scrollbars, so keep the wrapper exactly the size of its input. */
+        #gridTable .inputpicker-div { overflow: hidden !important; height: auto !important; }
+        #gridTable .inputpicker-overflow-hidden { overflow: hidden; }
+        #gridTable td.col-item { min-width: 130px; }
         input[readonly] { background-color: #f3f4f7; color: #555; }
         .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         #gridTable th, #gridTable td { white-space: nowrap; }
@@ -124,7 +139,8 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Date <span>(*)</span></label>
-                                <input type="date" id="DATE_ORA" value="@(head.DATE_ORA?.ToString("yyyy-MM-dd"))" />
+                                <input type="date" id="DATE_ORA" value="@(head.DATE_ORA?.ToString("yyyy-MM-dd"))"
+                                       min="@ViewBag.MinDocDate" />
                             </div>
                             <div class="form-col-20">
                                 <label>Party <span>(*)</span></label>
@@ -223,7 +239,7 @@
                                 <thead>
                                     <tr>
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
-                                        <th style="width:30px;">Sl</th>
+                                        <th style="width:30px;text-align:right;">Sl</th>
                                         <th>Item <span style="color:red;">(*)</span></th>
                                         <th>MRP <span style="color:red;">(*)</span></th>
                                         <th style="width:110px;">Mfg Date <span style="color:red;">(*)</span></th>
@@ -257,9 +273,9 @@
                                     <tr class="total">
                                         <td colspan="6" style="text-align:right;">Total</td>
                                         <td id="ftMretu" style="text-align:right;"></td>
-                                        <td></td><td id="ftWeight" style="text-align:right;"></td>
+                                        <td id="ftGross" style="text-align:right;"></td><td id="ftWeight" style="text-align:right;"></td>
                                         <td></td><td></td><td></td><td></td>
-                                        <td></td><td></td><td></td>
+                                        <td></td><td></td><td></td><td></td>
                                         <td id="ftAmt" style="text-align:right;"></td>
                                         <td colspan="9"></td>
                                     </tr>
@@ -324,12 +340,17 @@
     $('#pickerOverlay, #genericPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
 
     var IS_EDIT = $('#isEdit').val() === '1';
+    // View mode (list page "View" button) / e-Invoice lock: the whole form is read-only.
+    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
+    var IRN_LOCKED = @Html.Raw(irnLocked ? "true" : "false");
     var DOCNO = @Html.Raw(JsonConvert.SerializeObject(head.DOCNO ?? ""));
     var UNIT = @Html.Raw(JsonConvert.SerializeObject(head.UNIT ?? ""));
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
+    // Qty / weights are 3 decimals (Amount / Rate / % / tax stay 2 decimals).
+    function round3(v) { return Math.round(num(v) * 1000) / 1000; }
 
-    var rows = @Html.Raw(JsonConvert.SerializeObject(Model.T_MRETU_DET));
+    var rows =@Html.Raw(JsonConvert.SerializeObject(Model.T_MRETU_DET));
     var rowSeq = 0;
 
     // A saved document's lines carry the FLAG the VB6 form wrote ('1' = Quantity,
@@ -392,9 +413,9 @@
         // PacketTea login unit (e.g. JSTI) the screen may have been opened with.
         if (h.unit && !IS_EDIT) { UNIT = h.unit; $('#UNIT_disp').val(h.unit); }
         $('#BLDT').val(h.bldt ? h.bldt.substring(0, 10) : '');
-        $('#PCD').val(h.pcd || ''); $('#PCD_disp').val(h.partyName || '');
+        setPickerValue('#PCD', h.pcd || ''); $('#PCD_disp').val(h.partyName || '');
         $('#VEH').val(h.veh || '');
-        $('#TPT').val(h.tpt || ''); $('#TPT_disp').val(h.tptName || '');
+        setPickerValue('#TPT', h.tpt || ''); $('#TPT_disp').val(h.tptName || '');
         $('#VTYPE').val(h.vtype || '').attr('title', h.vtypeName || '');
         $('#TRIP_NO').val(h.tripNo == null ? '' : h.tripNo);
         $('#TRIP_UNIT').val(h.tripUnit || '');
@@ -406,15 +427,15 @@
             var share = q > 0 ? Math.min(1, avail / q) : 0;
             var r = {
                 _cid: ++rowSeq, ITCD: l.itcd, ItemName: l.itemName, MRP: l.mrp, MFGDT: l.mfgdt, BATCHNO: l.batchno,
-                Mretu: avail,
-                WEIGHT: Math.round(Math.min(num(l.weight), num(l.availableWeight)) * 1000) / 1000,
-                GROSS_WEIGHT: Math.round(num(l.grossWeight) * share * 1000) / 1000,
+                Mretu: round3(avail),
+                WEIGHT: round3(Math.min(num(l.weight), num(l.availableWeight))),
+                GROSS_WEIGHT: round3(num(l.grossWeight) * share),
                 SHT: 0, BKG: 0, LKG: 0, PLCRCD: l.plcrcd || '', PLCRQTY: 0,
                 RATE: num(l.rate), DISC: num(l.disc), _discPct: num(l.disc), DISCOUNT: num(l.discount),
                 CSTCD: l.cstcd || '', FLAG: l.flag || '1',
                 GST_CODE: l.gstCode || '', CGST_RATE: num(l.cgstRate), SGST_RATE: num(l.sgstRate),
                 IGST_RATE: num(l.igstRate), GCESS_RATE: num(l.gcessRate),
-                _availQty: num(l.availableQty), _availWeight: num(l.availableWeight)
+                _availQty: round3(l.availableQty), _availWeight: round3(l.availableWeight)
             };
             // Bill discount is carried per unit of the amount basis, so a partial
             // return gets its proportional share of it.
@@ -429,7 +450,7 @@
     // Bill help (VB6 TEXT3_buttonclick) -- a party must be chosen first.
     $('#btnBillHelp').on('click', function () {
         if (!$('#PCD').val()) { showAlert('Select Party first', function () { $('#PCD').focus(); }); return; }
-        openPicker('bill', $('#BLNO'), function (row) {
+        openBillPicker(function (row) {
             $('#BLNO').val(row.BLNO);
             billRt = row.RT || '';
             loadBillLines(row.BLNO, yearBack(), function (ok) { if (ok) popLines(); });
@@ -456,8 +477,8 @@
                            : lineKey(b.itcd, b.mrp, null, b.batchno) === undated;
         });
         if (m) {
-            r._availQty = num(m.availableQty);
-            r._availWeight = num(m.availableWeight);
+            r._availQty = round3(m.availableQty);
+            r._availWeight = round3(m.availableWeight);
         } else {
             r._availQty = null;
             r._availWeight = null;
@@ -468,46 +489,51 @@
 
     function renderGrid() {
         var $tb = $('#gridBody').empty();
-        var totMretu = 0, totWeight = 0, totAmt = 0;
+        var totMretu = 0, totWeight = 0, totGross = 0, totAmt = 0;
         rows.forEach(function (r, idx) {
             r.SRLNO = idx + 1;
             totMretu += num(r.Mretu);
             totWeight += num(r.WEIGHT);
+            totGross += num(r.GROSS_WEIGHT);
             totAmt += num(r.AMT);
             var tr = $('<tr data-cid="' + r._cid + '"></tr>');
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
-            tr.append('<td>' + r.SRLNO + '</td>');
-            tr.append('<td><input type="text" class="f-item" data-picker-row="item" value="' + (r.ITCD || '') + '" placeholder="Code" title="' + (r.ItemName || '') + '" /></td>');
+            tr.append('<td style="text-align:right;">' + r.SRLNO + '</td>');
+            tr.append('<td class="col-item"><input type="text" class="f-item" data-picker-row="item" value="' + (r.ITCD || '') + '" placeholder="Code" title="' + (r.ItemName || '') + '" /></td>');
             tr.append('<td><input type="text" class="f-mrp" value="' + (r.MRP || '') + '" /></td>');
             tr.append('<td><input type="date" class="f-mfgdt" value="' + (r.MFGDT ? r.MFGDT.substring(0, 10) : '') + '" /></td>');
             tr.append('<td><input type="text" class="f-batchno" value="' + (r.BATCHNO || '') + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-mretu" value="' + round2(r.Mretu).toFixed(2) + '" /></td>');
-            tr.append('<td><input type="number" step="0.001" class="f-grosswt" value="' + (r.GROSS_WEIGHT || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.001" class="f-netwt" value="' + (r.WEIGHT || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-sht" value="' + (r.SHT || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-bkg" value="' + (r.BKG || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-lkg" value="' + (r.LKG || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-mretu" value="' + round3(r.Mretu).toFixed(3) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-grosswt" value="' + round3(r.GROSS_WEIGHT).toFixed(3) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-netwt" value="' + round3(r.WEIGHT).toFixed(3) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-sht" value="' + round3(r.SHT).toFixed(3) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-bkg" value="' + round3(r.BKG).toFixed(3) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-lkg" value="' + round3(r.LKG).toFixed(3) + '" /></td>');
             tr.append('<td><input type="text" class="f-plcrcd" value="' + (r.PLCRCD || '') + '" /></td>');
             tr.append('<td><input type="number" step="1" class="f-crqty" value="' + (r.PLCRQTY || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-discpct" value="' + (r._discPct || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-discpct" value="' + round2(r._discPct).toFixed(2) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-discount" value="' + round2(r.DISCOUNT).toFixed(2) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMT).toFixed(2) + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-gstcode" value="' + (r.GST_CODE || '') + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-cgstrate" value="' + (r.CGST_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-cgstrate" value="' + round2(r.CGST_RATE).toFixed(2) + '" readonly /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-cgstamt" value="' + round2(r.CGST_AMT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-sgstrate" value="' + (r.SGST_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-sgstrate" value="' + round2(r.SGST_RATE).toFixed(2) + '" readonly /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-sgstamt" value="' + round2(r.SGST_AMT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-igstrate" value="' + (r.IGST_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-igstrate" value="' + round2(r.IGST_RATE).toFixed(2) + '" readonly /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-igstamt" value="' + round2(r.IGST_AMT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-cessrate" value="' + (r.GCESS_RATE || 0) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.01" class="f-cessrate" value="' + round2(r.GCESS_RATE).toFixed(2) + '" readonly /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-cessamt" value="' + round2(r.GCESS_AMT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td class="f-avail" style="text-align:right;color:#666;">' + (r._availQty != null ? round2(r._availQty).toFixed(2) : '') + '</td>');
+            tr.append('<td class="f-avail" style="text-align:right;color:#666;">' + (r._availQty != null ? round3(r._availQty).toFixed(3) : '') + '</td>');
             $tb.append(tr);
         });
-        $('#ftMretu').text(round2(totMretu).toFixed(2));
-        $('#ftWeight').text(round2(totWeight).toFixed(3));
+        $('#ftMretu').text(round3(totMretu).toFixed(3));
+        $('#ftGross').text(round3(totGross).toFixed(3));
+        $('#ftWeight').text(round3(totWeight).toFixed(3));
         $('#ftAmt').text(round2(totAmt).toFixed(2));
+        // A read-only screen (View / IRN-locked) keeps freshly rendered rows disabled too -- the
+        // bill-lines cache reload re-renders the grid after the page-level lock below has run.
+        if (IS_VIEW || IRN_LOCKED) $('#gridBody :input').prop('disabled', true);
     }
 
     // VB6 poplines' arithmetic: Amount = rate x qty (or x net wt), discount kept
@@ -535,35 +561,35 @@
         r.MRP = $tr.find('.f-mrp').val();
         r.MFGDT = $tr.find('.f-mfgdt').val() || null;
         r.BATCHNO = ($tr.find('.f-batchno').val() || '').toUpperCase();
-        r.Mretu = num($tr.find('.f-mretu').val());
-        r.GROSS_WEIGHT = num($tr.find('.f-grosswt').val());
-        r.WEIGHT = num($tr.find('.f-netwt').val());
-        r.SHT = num($tr.find('.f-sht').val());
-        r.BKG = num($tr.find('.f-bkg').val());
-        r.LKG = num($tr.find('.f-lkg').val());
+        r.Mretu = round3($tr.find('.f-mretu').val());
+        r.GROSS_WEIGHT = round3($tr.find('.f-grosswt').val());
+        r.WEIGHT = round3($tr.find('.f-netwt').val());
+        r.SHT = round3($tr.find('.f-sht').val());
+        r.BKG = round3($tr.find('.f-bkg').val());
+        r.LKG = round3($tr.find('.f-lkg').val());
         r.PLCRCD = $tr.find('.f-plcrcd').val();
         r.PLCRQTY = num($tr.find('.f-crqty').val());
-        r.RATE = num($tr.find('.f-rate').val());
-        r._discPct = num($tr.find('.f-discpct').val());
+        r.RATE = round2($tr.find('.f-rate').val());
+        r._discPct = round2($tr.find('.f-discpct').val());
         r.DISC = r._discPct;
         if ($(this).hasClass('f-discpct')) r._discPerUnit = null; // user-set % replaces the bill's discount
         r.GST_CODE = ($tr.find('.f-gstcode').val() || '').toUpperCase();
 
         if ($(this).hasClass('f-item') || $(this).hasClass('f-mrp') || $(this).hasClass('f-mfgdt') || $(this).hasClass('f-batchno')) {
             capRow(r);
-            $tr.find('.f-avail').text(r._availQty != null ? round2(r._availQty).toFixed(2) : '');
+            $tr.find('.f-avail').text(r._availQty != null ? round3(r._availQty).toFixed(3) : '');
         }
         // Enforce the ceiling client-side too: a picked/typed row's Return Qty can be
         // edited DOWN freely but never back up past the bill line's remaining balance.
         if ($(this).hasClass('f-mretu') && r._availQty != null && num(r.Mretu) > r._availQty) {
             r.Mretu = r._availQty;
-            $tr.find('.f-mretu').val(round2(r.Mretu).toFixed(2));
-            showAlert('Return Qty for ' + (r.ITCD || 'this item') + ' cannot exceed the available billed quantity (' + round2(r._availQty).toFixed(2) + ').');
+            $tr.find('.f-mretu').val(round3(r.Mretu).toFixed(3));
+            showAlert('Return Qty for ' + (r.ITCD || 'this item') + ' cannot exceed the available billed quantity (' + round3(r._availQty).toFixed(3) + ').');
         }
         if ($(this).hasClass('f-netwt') && r._availWeight != null && num(r.WEIGHT) > r._availWeight) {
             r.WEIGHT = r._availWeight;
-            $tr.find('.f-netwt').val(round2(r.WEIGHT).toFixed(3));
-            showAlert('Net Weight for ' + (r.ITCD || 'this item') + ' cannot exceed the available billed weight (' + round2(r._availWeight).toFixed(3) + ').');
+            $tr.find('.f-netwt').val(round3(r.WEIGHT).toFixed(3));
+            showAlert('Net Weight for ' + (r.ITCD || 'this item') + ' cannot exceed the available billed weight (' + round3(r._availWeight).toFixed(3) + ').');
         }
 
         recalcRow(r);
@@ -574,9 +600,21 @@
         $tr.find('.f-igstamt').val(round2(r.IGST_AMT).toFixed(2));
         $tr.find('.f-cessamt').val(round2(r.GCESS_AMT).toFixed(2));
 
-        $('#ftMretu').text(round2(rows.reduce(function (s, x) { return s + num(x.Mretu); }, 0)).toFixed(2));
-        $('#ftWeight').text(round2(rows.reduce(function (s, x) { return s + num(x.WEIGHT); }, 0)).toFixed(3));
+        $('#ftMretu').text(round3(rows.reduce(function (s, x) { return s + num(x.Mretu); }, 0)).toFixed(3));
+        $('#ftGross').text(round3(rows.reduce(function (s, x) { return s + num(x.GROSS_WEIGHT); }, 0)).toFixed(3));
+        $('#ftWeight').text(round3(rows.reduce(function (s, x) { return s + num(x.WEIGHT); }, 0)).toFixed(3));
         $('#ftAmt').text(round2(rows.reduce(function (s, x) { return s + num(x.AMT); }, 0)).toFixed(2));
+    });
+
+    // Re-format an editable numeric cell once the user leaves it (not while typing),
+    // so what is shown is exactly what was calculated and will be posted.
+    var FIELD_DP = { 'f-mretu': 3, 'f-grosswt': 3, 'f-netwt': 3, 'f-sht': 3, 'f-bkg': 3, 'f-lkg': 3,
+                     'f-rate': 2, 'f-discpct': 2, 'f-discount': 2 };
+    $('#gridBody').on('blur', 'input[type=number]', function () {
+        var $i = $(this);
+        for (var cls in FIELD_DP) {
+            if ($i.hasClass(cls) && $i.val() !== '') { $i.val(num($i.val()).toFixed(FIELD_DP[cls])); return; }
+        }
     });
 
     $('input[name=OptFlag]').on('change', function () {
@@ -603,17 +641,118 @@
     });
 
     // =========================================================
-    // Generic single-select picker (Party/Transporter/row-level Item)
+    // Party / Transporter / row-level Item lookups -- jquery.inputpicker (Root UI convention: an
+    // anchored, paginated picker under the field itself -- see CLAUDE.md's "lookup pickers" rule).
+    // Replaces this screen's earlier bespoke centered-modal picker. The endpoints match the typed
+    // text against every column shown (Code and Name). Row-level Item anchors to that row's own
+    // text input. (The Bill No help below stays a modal: a composite bill-selection dialog.)
     // =========================================================
     var pickerConfig = {
-        party: { url: '@Url.Action("GetParty", "MarketReturn")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'PCD' },
-        transporter: { url: '@Url.Action("GetTransporter", "MarketReturn")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: 'TPT' },
-        item: { url: '@Url.Action("GetItemMaster", "MarketReturn")', cols: [['CODE', 'Code'], ['NAME', 'Name']], target: null },
-        bill: {
-            url: '@Url.Action("GetBillList", "MarketReturn")', target: null, title: 'Bill No',
-            cols: [['BLNO', 'Bill No'], ['BLDT', 'Bill Date'], ['VAT_NO', 'VAT No'], ['UNIT', 'Unit'], ['PCD', 'Party'], ['ACNAME', 'Name']],
-            params: function () { return { pcd: $('#PCD').val(), unit: UNIT, yearBack: yearBack() }; }
+        party: { url: '@Url.Action("GetParty", "MarketReturn")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'PCD' },
+        transporter: { url: '@Url.Action("GetTransporter", "MarketReturn")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'TPT' },
+        item: { url: '@Url.Action("GetItemMaster", "MarketReturn")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }] }
+    };
+
+    $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
+    // Row Item lookup: the row's own box is the dropdown. inputpicker clones the input it is attached
+    // to (classes included, "f-item") and shows the clone; the clone must NOT match here, or clicking
+    // it would attach a second picker inside the first.
+    $('#gridBody').on('click focus', '.f-item:not(.inputpicker-input)', function () {
+        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
+        if (!r) return;
+        openPicker('item', $(this), function (row) {
+            r.ITCD = row.CODE; r.ItemName = row.NAME || '';
+            $tr.find('.f-item').val(row.CODE).attr('title', row.NAME || '');
+            capRow(r);
+            $tr.find('.f-avail').text(r._availQty != null ? round3(r._availQty).toFixed(3) : '');
+        });
+    });
+
+    // Programmatic value for a field that may already be wrapped by inputpicker (Party / Transporter
+    // filled from the picked bill): set the original and the visible shadow input directly. Never
+    // trigger "change" for this -- the plugin would look the code up in its last-loaded rows and
+    // swap in the first row when it isn't there.
+    function setPickerValue(sel, code) {
+        var $o = $(sel);
+        $o.val(code);
+        if ($o.hasClass('inputpicker-original'))
+            $o.next('.inputpicker-overflow-hidden').find('input.inputpicker-input').val(code);
+    }
+
+    // The row the user picked, looked up in the data the dropdown last loaded. This copy of the
+    // plugin writes the picked value into the original input and fires "change" on it; it does
+    // not hand the row to a select handler, so read it back by the picked value.
+    function pickedRow($input, cfg) {
+        var key = cfg.fields[0].name, v = String($input.val() == null ? '' : $input.val()), data = [];
+        try { data = $input.inputpicker('data') || []; } catch (e) { data = []; }
+        for (var i = 0; i < data.length; i++) { if (String(data[i][key]) === v) return data[i]; }
+        return null;
+    }
+
+    // Open the dropdown AND refresh its rows. The plugin loads url-backed data asynchronously and
+    // only re-renders the list on a keystroke, so showing it right after init (before the first
+    // response lands) displayed "No results" -- the keyup makes it fetch and render the rows.
+    function showPickerList($orig) {
+        $orig.inputpicker('show');
+        $orig.next('.inputpicker-overflow-hidden').find('input').trigger($.Event('keyup', { keyCode: 0 }));
+    }
+
+    function openPicker(key, $input, onSelect) {
+        var cfg = pickerConfig[key];
+        $('.inputpicker-wrapped-list').remove();
+
+        // This plugin never sets $.data('inputpicker'); the class it puts on the original input
+        // is the "already initialised" test (otherwise every click re-wraps the field and drops
+        // whatever the user has typed).
+        // Showing is deferred a tick: called from a click, the click's own bubbling up to the
+        // plugin's document-level "outside click" handler would otherwise hide it straight away.
+        if ($input.hasClass('inputpicker-original')) {
+            setTimeout(function () { showPickerList($input); }, 0);
+            return;
         }
+
+        $input.inputpicker({
+            url: cfg.url,
+            fields: cfg.fields,
+            fieldText: cfg.fields[0].name,
+            fieldValue: cfg.fields[0].name,
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+            width: 'auto',
+            urlDelay: 0.2      // seconds (the plugin multiplies by 1000): one request per pause in typing, not per keystroke
+        });
+        setTimeout(function () { showPickerList($input); }, 0);
+
+        function deliver(row) {
+            if (!row) return;
+            if (onSelect) {
+                onSelect(row);
+            } else if (cfg.target) {
+                $('#' + cfg.target).val(row[cfg.fields[0].name]);
+                $('#' + cfg.target + '_disp').val(row[cfg.fields[1].name] || '');
+            }
+        }
+        // Both hooks call the same idempotent handler, so whichever this plugin build fires works.
+        $input.off('inputpicker.select').on('inputpicker.select', function (e, row) {
+            deliver(row);
+            $(this).inputpicker('hide');
+        });
+        $input.off('change.ipk').on('change.ipk', function () { deliver(pickedRow($input, cfg)); });
+    }
+
+    // =========================================================
+    // Bill No help -- composite bill-selection modal (deliberately NOT an inputpicker).
+    // =========================================================
+    var billConfig = {
+        url: '@Url.Action("GetBillList", "MarketReturn")', title: 'Bill No',
+        cols: [['BLNO', 'Bill No'], ['BLDT', 'Bill Date'], ['VAT_NO', 'VAT No'], ['UNIT', 'Unit'], ['PCD', 'Party'], ['ACNAME', 'Name']],
+        params: function () { return { pcd: $('#PCD').val(), unit: UNIT, yearBack: yearBack() }; }
     };
     function cellText(key, v) {
         if (v == null) return '';
@@ -624,21 +763,10 @@
     var pickerXhr = null;
     var pickerReqSeq = 0;
 
-    $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
-    $('#gridBody').on('click focus', '.f-item', function () {
-        var $tr = $(this).closest('tr'), r = findRow($tr.data('cid'));
-        openPicker('item', $(this), function (row) {
-            r.ITCD = row.CODE; r.ItemName = row.NAME || '';
-            $tr.find('.f-item').val(row.CODE).attr('title', row.NAME || '');
-            capRow(r);
-            $tr.find('.f-avail').text(r._availQty != null ? round2(r._availQty).toFixed(2) : '');
-        });
-    });
-
-    function openPicker(key, $input, onSelect) {
-        activePicker = { key: key, input: $input, onSelect: onSelect };
-        $('#pickerTitle').text('Select ' + (pickerConfig[key].title || key));
-        $('#genericPicker').toggleClass('wide', key === 'bill');
+    function openBillPicker(onSelect) {
+        activePicker = { onSelect: onSelect };
+        $('#pickerTitle').text('Select ' + billConfig.title);
+        $('#genericPicker').addClass('wide');
         $('#pickerSearch').val('');
         $('#pickerBody').empty().removeData('rows');
         $('#pickerOverlay, #genericPicker').fadeIn(120);
@@ -648,7 +776,7 @@
     function closePicker() { $('#pickerOverlay, .popup-box').fadeOut(120); }
 
     function loadPickerData(term) {
-        var cfg = pickerConfig[activePicker.key];
+        var cfg = billConfig;
         var myReq = ++pickerReqSeq;
         if (pickerXhr) { pickerXhr.abort(); }
         pickerXhr = $.getJSON(cfg.url, $.extend({ search: term }, cfg.params ? cfg.params() : {}), function (data) {
@@ -662,7 +790,7 @@
                 }).join('') + '</tr>';
             });
             html += '</tbody></table>';
-            if (!data.length && activePicker.key === 'bill') {
+            if (!data.length) {
                 html += '<p style="margin:10px 4px;color:#666;">No bills found for party ' + ($('#PCD').val() || '') +
                     (yearBack() === 1 ? ' in last year' : yearBack() === 2 ? ' in the year before last' : ' in this year') +
                     '. Try Last Year / Before Last Year, or check the Party.</p>';
@@ -675,16 +803,7 @@
     $('#pickerBody').on('click', 'tr[data-i]', function () {
         var data = $('#pickerBody').data('rows');
         var row = data[$(this).data('i')];
-        var cfg = pickerConfig[activePicker.key];
-
-        if (activePicker.onSelect) {
-            activePicker.onSelect(row);
-        } else if (cfg.target) {
-            var code = row[cfg.cols[0][0]] !== undefined ? row[cfg.cols[0][0]] : row[cfg.cols[0][0].toLowerCase()];
-            var name = row[cfg.cols[1][0]] !== undefined ? row[cfg.cols[1][0]] : row[cfg.cols[1][0].toLowerCase()];
-            $('#' + cfg.target).val(code);
-            $('#' + cfg.target + '_disp').val(name || '');
-        }
+        if (activePicker && activePicker.onSelect) activePicker.onSelect(row);
         closePicker();
     });
 
@@ -734,7 +853,9 @@
                 },
                 T_MRETU_DET: valid,
                 OptFlag: $('input[name=OptFlag]:checked').val(),
-                BillYearBack: yearBack()
+                BillYearBack: yearBack(),
+                // New vs edit -- the server applies the AEDV Add / Edit right and back-date window to it.
+                IsNew: !IS_EDIT
             };
 
             $.ajax({
@@ -770,8 +891,6 @@
     // =========================================================
     // View mode / IRN lock
     // =========================================================
-    var IS_VIEW = @Html.Raw(isView ? "true" : "false");
-    var IRN_LOCKED = @Html.Raw(irnLocked ? "true" : "false");
     if (IS_VIEW || IRN_LOCKED) {
         $('.accordion-container :input, #btnBillHelp, #btnAddRow, #btnRemoveRows')
             .prop('disabled', true);

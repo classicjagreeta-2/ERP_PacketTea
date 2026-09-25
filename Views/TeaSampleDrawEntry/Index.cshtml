@@ -3,7 +3,7 @@
 @{
     ViewBag.Title = "Tea Sample Draw Entry";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var awrTypes = (Dictionary<string, string>)ViewBag.AWRTypes;
+    var awrTypes = (Dictionary<string, string>)ViewBag.AWRTypes ?? new Dictionary<string, string>();
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
 }
 
@@ -31,29 +31,77 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <style>
-        .table.table-sm td, .table.table-sm th { padding: 0.6rem; }
-        tbody div { overflow: unset !important; height: auto !important; max-height: none !important; }
-        .btn-link { font-weight: 500; color: black; border-radius: 0; }
-        table.main-table th, table.main-table td {
-            padding: 6px; font-size: 12px; line-height: 1.3;
-            height: 30px; box-sizing: border-box; vertical-align: middle;
+        /* Same look as Packing / Master / Final Blend Entry's list -- see MasterBlendEntry's
+           Index.cshtml for the rationale behind these overrides. */
+        :root {
+            --mbe-navy: #2c3958; --mbe-accent: #3a7bd5; --mbe-border: #dde2ea;
+            --mbe-bg: #f4f6fa; --mbe-text: #2b2f38; --mbe-muted: #6b7280;
         }
+        body { background: var(--mbe-bg); }
+        .general-container { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(20,30,60,.08); padding-bottom: 18px; overflow: hidden; }
+
+        .action-btns, .action-btns ul { background: #fff; border: none; border-bottom: 1px solid var(--mbe-border); }
+        .action-btns ul { display: flex; align-items: center; margin: 0; padding: 6px 14px; list-style: none; }
+        .action-btns ul li { margin-right: 6px; border-right: none; }
+        .action-btns ul li a, .action-btns ul li button {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--mbe-text); background: transparent; border: none; cursor: pointer;
+            padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500;
+            text-decoration: none; transition: background .15s ease;
+        }
+        .action-btns ul li a:hover, .action-btns ul li button:hover:not(:disabled) { background: var(--mbe-bg); color: var(--mbe-text); }
+        .action-btns ul li button:disabled { opacity: .4; cursor: not-allowed; }
+        .list-badge { display: inline-block; background: var(--mbe-navy); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .05em; padding: 5px 10px; border-radius: 4px; }
+
+        .title-heading { padding: 18px 20px 14px; font-size: 20px; font-weight: 700; color: var(--mbe-text); }
+
+        #searchInput { border: 1px solid var(--mbe-border); border-radius: 6px; }
+
+        .table-responsive { padding: 0 20px; overflow-x: auto; }
+        /* Chunked list (same behaviour as ERP_Inventory's Purchase Order list): fixed-height
+           scroll box with a sticky header; the next chunk of rows loads when the box is
+           scrolled to the bottom -- see Scripts/list-infinite-scroll.js. */
+        #tableScroll { max-height: calc(100vh - 380px); min-height: 240px; overflow: auto; }
+        #tableScroll table.main-table thead th { position: sticky; top: 0; z-index: 3; }
+        table.main-table { width: 100%; border-collapse: collapse; font-size: 12px; font-family: Arial, Helvetica, sans-serif; }
+        table.main-table th, table.main-table td { border: 1px solid var(--mbe-border); padding: 6px 10px; line-height: 1.3; height: 30px; box-sizing: border-box; vertical-align: middle; }
+        table.main-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.main-table tbody tr:nth-child(even) { background: #f8f9fc; }
+        table.main-table tbody tr:hover { background: #eef3ff; }
         table.main-table td .row-expand-btn { font-size: 12px; line-height: 1.3; }
         table.main-table td .row-check { margin: 0; vertical-align: middle; }
+        .dataTables_info { padding: 10px 20px 0; color: var(--mbe-muted); font-size: 12.5px; }
+
+        /* Server-side sortable headers (Doc No / Doc Date). */
         .table-responsive thead th.sortable { cursor: pointer; user-select: none; }
         .table-responsive thead th.sortable:hover { background-color: #4b5b7a; }
         .table-responsive thead th.is-sorted { background-color: #4b5b7a; }
         th.sortable .sort-arrows { margin-left: 6px; white-space: nowrap; }
         th.sortable .sort-arrows i { font-size: 12px; color: rgba(255,255,255,.45); vertical-align: middle; }
         th.sortable .sort-arrows i.on { color: #fff; }
-        table.detail-sub-table { width: 100%; border-collapse: collapse; }
-        table.detail-sub-table th, table.detail-sub-table td { border: 1px solid #ddd; padding: 6px; white-space: nowrap; }
-        table.detail-sub-table thead th { background-color: #404e68; color: #fff; font-weight: bold; }
-        tr.new-entry-row td { background-color: #eef3ff; vertical-align: middle; }
-        tr.new-entry-row select { border: 1px solid #ccc; border-radius: 4px; padding: 4px 6px; width: 100%; }
+
+        table.detail-sub-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table.detail-sub-table th, table.detail-sub-table td { border: 1px solid var(--mbe-border); padding: 6px 8px; white-space: nowrap; }
+        table.detail-sub-table thead th { background: var(--mbe-navy); color: #fff; font-weight: 600; text-align: left; white-space: nowrap; }
+        table.detail-sub-table tbody tr:nth-child(even) { background: #fff; }
+
+        /* "New" inline row -- same pattern as Packing / Master / Final Blend Entry's list: pick
+           Unit + Type here first, then the pencil icon (enabled only once both are picked) opens
+           the Tea Sample Draw Entry window with both locked in. */
+        tr.new-entry-row td { background: #eef3ff; vertical-align: middle; }
+        tr.new-entry-row select, tr.new-entry-row input.new-row-pick { border: 1px solid var(--mbe-border); border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; box-sizing: border-box; }
+        /* jquery.inputpicker wraps each input in a div with inline overflow:auto; inside the
+           narrow cell the input + arrow overflow it and native scrollbars (the stray arrows)
+           blow the row up. Clip it instead. */
+        tr.new-entry-row .inputpicker-overflow-hidden, tr.new-entry-row .inputpicker-div { overflow: hidden !important; height: auto !important; max-width: 100%; }
+        /* Unit / Type fields must not collapse to the squeezed cell width: fixed floor for the
+           field and for its dropdown panel (the panel hangs off <body>, so target it by id). */
+        tr.new-entry-row input.new-row-pick { min-width: 240px; }
+        #inputpicker-wrapped-list { min-width: 300px; }
         tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
-        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: #404e68; }
+        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: var(--mbe-accent); }
     </style>
 </head>
 <body>
@@ -62,31 +110,57 @@
         <div class="action-btns">
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
-                <li><a href="javascript:void(0)" id="btnNew"><i class="fa fa-plus"></i> New</a></li>
-                <li><a href="javascript:void(0)" id="editBtn"><i class="fa fa-pencil"></i> Edit</a></li>
-                <li><a href="javascript:void(0)" id="viewBtn"><i class="fa fa-eye"></i> View</a></li>
-                <li><a href="javascript:void(0)" id="deleteBtn"><i class="fa fa-trash-o"></i> Delete</a></li>
-                <li><a href="javascript:void(0)" id="linesBtn"><i class="fa fa-list"></i> Lines</a></li>
-                <li style="margin-left:auto"><label class="btn btn-inverse pull-right" style="margin: 10px;">LIST</label></li>
+                <li>
+                    <a href="javascript:void(0)" id="btnNew"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-plus"></i> New
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="editBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-pencil"></i> Edit
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="deleteBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Delete ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-trash-o"></i> Delete
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="viewBtn"
+                       style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.View ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
+                        <i class="fa fa-eye"></i> View
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:void(0)" id="linesBtn" title="Show the ticked row's lines">
+                        <i class="fa fa-list"></i> Lines
+                    </a>
+                </li>
+                <li style="margin-left:auto">
+                    <span class="list-badge">LIST</span>
+                </li>
             </ul>
         </div>
 
         <div class="title-heading">Tea Sample Draw Entry</div>
 
-        <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
-            <div style="position: relative; width: 250px;">
+        <div style="display:flex;justify-content:flex-end;padding:0 20px;margin-bottom:15px;">
+            <div style="position:relative;width:280px;">
                 <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No"
-                       style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
-                <i class="fa fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333;"></i>
+                       style="width:100%;padding:8px 14px;box-sizing:border-box;" />
             </div>
         </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive" id="tableScroll">
             <table class="border main-table" id="drawTable">
                 <thead>
                     <tr>
                         <th style="width:26px;"></th>
                         <th style="width:26px;"></th>
+                        <th>Unit</th>
                         @SortTh("DOCNO", "Doc No")
                         @SortTh("DOCDT", "Doc Date")
                         <th>Sale Centre</th>
@@ -96,63 +170,11 @@
                         <th style="text-align:right;">Total Draw Qty</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @if (Model != null && Model.Count > 0)
+                <tbody id="listBody">
+                    @Html.Partial("_ListRows", Model)
+                    @if (Model == null || Model.Count == 0)
                     {
-                        var rowIndex = 0;
-                        foreach (var row in Model)
-                        {
-                            rowIndex++;
-                            var detailId = "rowDetail" + rowIndex;
-                            <tr>
-                                <td>
-                                    <input type="checkbox" class="row-check"
-                                           value="@row.docno"
-                                           data-docdt="@row.docdt?.ToString("yyyy-MM-dd")"
-                                           data-awrtype="@row.tranCode" />
-                                </td>
-                                <td style="text-align:center;">
-                                    <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show lines" style="cursor:pointer;"></i>
-                                </td>
-                                <td>
-                                    <a href="@Url.Action("InsertOrUpdate", "TeaSampleDrawEntry", new { docno = row.docno, docdt = row.docdt?.ToString("yyyy-MM-dd"), awrType = row.tranCode })">@row.docno</a>
-                                </td>
-                                <td>@(row.docdt?.ToString("dd/MM/yyyy"))</td>
-                                <td>@row.saleCentreName</td>
-                                <td>@row.brokerName</td>
-                                <td>@row.warehouse</td>
-                                <td class="text-right">@row.totalBagChest</td>
-                                <td class="text-right">@row.totalDrawQty</td>
-                            </tr>
-                            <tr class="row-detail" id="@detailId" style="display:none;"
-                                data-docno="@row.docno" data-docdt="@row.docdt?.ToString("yyyy-MM-dd")" data-awrtype="@row.tranCode">
-                                <td colspan="8" style="background:#f8f9fc;padding:10px 12px;">
-                                    <div style="overflow-x:auto;">
-                                        <table class="detail-sub-table">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width:34px;">Sl</th>
-                                                    <th>Mark</th>
-                                                    <th>Inv No</th>
-                                                    <th>AWR No</th>
-                                                    <th>Grade</th>
-                                                    <th style="text-align:right;">Bag/Chest</th>
-                                                    <th style="text-align:right;">Net Wt</th>
-                                                    <th style="text-align:right;">Draw Qty</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="detail-items-body">
-                                                <tr><td colspan="8" style="text-align:center;color:#666;">Loading...</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr><td colspan="8" style="text-align:center;">No records found</td></tr>
+                        <tr><td colspan="10" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -160,63 +182,67 @@
         @{
             int pageSize = (int)ViewBag.PageSize;
             int rowCount = (int)ViewBag.RowCount;
-            int currentPage = (int)ViewBag.Page;
-            int pageCount = pageSize > 0 ? (int)Math.Ceiling(rowCount / (double)pageSize) : 1;
         }
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;flex-wrap:wrap;gap:8px;">
-            <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-                <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
-                <span style="color:#666;font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
-                <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
-            </div>
-        </div>
+        <div id="listLoading" style="display:none;text-align:center;padding:8px 0 0;color:var(--mbe-muted);font-size:12.5px;">Loading...</div>
+        <div class="dataTables_info">Showing <span id="shownCount">@(Model?.Count ?? 0)</span> of @rowCount</div>
     </div>
 
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
+    <script src="~/Scripts/list-new-row-pickers.js"></script>
+    <script src="~/Scripts/list-infinite-scroll.js"></script>
     <script>
         $(function () {
+            var SORT_BY = '@(ViewBag.SortBy ?? "")', SORT_DIR = '@(ViewBag.SortDir ?? "")';
+
             var searchTimer;
             $('#searchInput').on('input', function () {
                 clearTimeout(searchTimer);
-                searchTimer = setTimeout(reload, 400);
+                searchTimer = setTimeout(function () { reload(); }, 400);
             });
 
-            var SORT_BY = '@(ViewBag.SortBy ?? "")', SORT_DIR = '@(ViewBag.SortDir ?? "")';
-            function reload(page, sortBy, sortDir) {
+            // Unit and Type are only picked in the "New" inline row, so the list shows every type
+            // for the units the user is linked to (see TeaSampleDrawEntryController.Index).
+            // Changing the search text or the sort reloads the list from the first chunk.
+            function reload(sortBy, sortDir) {
                 var by = (sortBy === undefined) ? SORT_BY : sortBy;
                 var dir = (sortDir === undefined) ? SORT_DIR : sortDir;
                 window.location.href = '@Url.Action("Index", "TeaSampleDrawEntry")'
                     + '?searchString=' + encodeURIComponent($('#searchInput').val())
-                    + '&page=' + (page || 1)
                     + '&sortBy=' + encodeURIComponent(by || '')
                     + '&sortDir=' + encodeURIComponent(dir || '');
             }
 
             $('#drawTable').on('click', 'thead th.sortable', function () {
-                reload(1, $(this).data('sort'), $(this).data('dir'));
+                reload($(this).data('sort'), $(this).data('dir'));
             });
-            $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
-            $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
 
+            // Chunked loading: the first chunk is rendered with the page, further chunks are
+            // appended as the list is scrolled to the bottom (Scripts/list-infinite-scroll.js);
+            // the current sort travels with every chunk.
+            initInfiniteList({
+                scroll: '#tableScroll', body: '#listBody', loading: '#listLoading', count: '#shownCount',
+                url: '@Url.Action("Index", "TeaSampleDrawEntry")',
+                search: $('#searchInput').val(), pageSize: @pageSize, total: @rowCount, startPage: 1,
+                extra: { sortBy: SORT_BY, sortDir: SORT_DIR }
+            });
+
+            // "+" toggle -- reveals the document's lines for that row. Every open re-fetches them
+            // via GetRowDetail (API GetRowLines) instead of trusting what was rendered at page load.
             function openDetail($btn) {
                 var $detail = $('#' + $btn.data('target'));
                 $detail.show();
                 $btn.removeClass('fa-plus').addClass('fa-minus');
                 var $body = $detail.find('.detail-items-body');
+                var msg = function (t) { return '<tr><td colspan="8" style="text-align:center;color:#666;">' + t + '</td></tr>'; };
                 $.get('@Url.Action("GetRowDetail", "TeaSampleDrawEntry")', {
-                    docno: $detail.data('docno'),
-                    docdt: $detail.data('docdt'),
-                    awrType: $detail.data('awrtype')
+                    docno: $detail.attr('data-docno'),
+                    docdt: $detail.attr('data-docdt'),
+                    awrType: $detail.attr('data-awrtype'),
+                    unit: $detail.attr('data-unit')
                 }).done(function (r) {
-                    if (!r || !r.success) {
-                        $body.html('<tr><td colspan="8" style="text-align:center;color:#666;">Unable to load lines.</td></tr>');
-                        return;
-                    }
+                    if (!r || !r.success) { $body.html(msg('Unable to load lines.')); return; }
                     var items = r.rows || [];
-                    if (items.length === 0) {
-                        $body.html('<tr><td colspan="8" style="text-align:center;color:#666;">No lines</td></tr>');
-                        return;
-                    }
+                    if (items.length === 0) { $body.html(msg('No lines')); return; }
                     $body.empty();
                     items.forEach(function (d, i) {
                         $('<tr>').append(
@@ -225,55 +251,58 @@
                             '<td>' + (d.invno || '') + '</td>',
                             '<td>' + (d.awrNo || '') + '</td>',
                             '<td>' + (d.gradeName || d.grade || '') + '</td>',
-                            '<td style="text-align:right;">' + (d.bagChest || 0) + '</td>',
-                            '<td style="text-align:right;">' + Number(d.netWt || 0).toFixed(2) + '</td>',
-                            '<td style="text-align:right;">' + Number(d.drawQty || 0).toFixed(2) + '</td>'
+                            '<td style="text-align:right;">' + Number(d.bagChest || 0) + '</td>',
+                            '<td style="text-align:right;">' + Number(d.netWt || 0).toFixed(3) + '</td>',
+                            '<td style="text-align:right;">' + Number(d.drawQty || 0).toFixed(3) + '</td>'
                         ).appendTo($body);
                     });
-                }).fail(function () {
-                    $body.html('<tr><td colspan="8" style="text-align:center;color:#666;">Unable to load lines.</td></tr>');
-                });
+                }).fail(function () { $body.html(msg('Unable to load lines.')); });
             }
             function closeDetail($btn) {
                 $('#' + $btn.data('target')).hide();
                 $btn.removeClass('fa-minus').addClass('fa-plus');
             }
+            // Delegated, so rows appended by later chunks work too.
             $('#drawTable').on('click', '.row-expand-btn', function () {
                 var $btn = $(this);
                 if ($('#' + $btn.data('target')).is(':visible')) closeDetail($btn); else openDetail($btn);
             });
-            $('#linesBtn').on('click', function () {
-                var $checked = $('.row-check:checked');
-                var $btns = $checked.length ? $checked.closest('tr').find('.row-expand-btn') : $('#drawTable .row-expand-btn');
-                var anyClosed = $btns.filter('.fa-plus').length > 0;
-                $btns.each(function () { anyClosed ? openDetail($(this)) : closeDetail($(this)); });
-            });
 
+            // "New" inline row -- see the CSS comment above; same pattern as Packing's list page
+            // (navigates in the same tab).
             var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
             var AWR_TYPES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(awrTypes));
+
             function buildNewRow() {
-                var unitOpts = '<option value="">Select Unit</option>' +
-                    UNIT_LIST.map(function (u) { return '<option value="' + u.CODE + '">' + u.CODE + ' - ' + (u.NAME || '') + '</option>'; }).join('');
-                var typeOpts = '<option value="">Select Type</option>' +
-                    Object.keys(AWR_TYPES).map(function (k) { return '<option value="' + k + '">' + AWR_TYPES[k] + ' (' + k + ')</option>'; }).join('');
+                // Unit + Type are inputpicker dropdowns (searchable by Code and Name) -- initialised
+                // right after the row is inserted, see initNewRowPickers(). The Type input's id is
+                // newRowPacketType because Scripts/list-new-row-pickers.js looks it up by that id.
                 return '<tr id="newTypeRow" class="new-entry-row">' +
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open Tea Sample Draw Entry"></i></td>' +
-                    '<td colspan="3"><select id="newRowUnit">' + unitOpts + '</select></td>' +
-                    '<td colspan="4"><select id="newRowAWRType">' + typeOpts + '</select></td>' +
+                    // Unit picker spans 3 columns (Doc No / Doc Date / Sale Centre) so the "CODE - Name" text isn't
+                    // clipped; the table's own columns are untouched.
+                    '<td colspan="3"><input type="text" id="newRowUnit" class="new-row-pick" placeholder="Select Unit" autocomplete="off" /></td>' +
+                    '<td colspan="2"><input type="text" id="newRowPacketType" class="new-row-pick" placeholder="Select Type" autocomplete="off" /></td>' +
+                    '<td colspan="3"></td>' +
                     '</tr>';
             }
+
             function refreshGoNewState() {
-                var ready = !!$('#newRowUnit').val() && !!$('#newRowAWRType').val();
+                var ready = !!$('#newRowUnit').val() && !!$('#newRowPacketType').val();
                 $('.go-new').toggleClass('is-ready', ready);
             }
+
             $('#btnNew').on('click', function () {
                 if ($('#newTypeRow').length) return;
-                $('#drawTable tbody').prepend(buildNewRow());
+                $('#listBody').prepend(buildNewRow());
+                initNewRowPickers({ units: UNIT_LIST, types: AWR_TYPES });   // also pre-selects a single Unit
                 refreshGoNewState();
             });
-            $('#drawTable').on('change', '#newRowUnit, #newRowAWRType', refreshGoNewState);
+
+            $('#drawTable').on('change', '#newRowUnit, #newRowPacketType', refreshGoNewState);
+
             $('#drawTable').on('click', '.go-new', function () {
-                var unit = $('#newRowUnit').val(), awrType = $('#newRowAWRType').val();
+                var unit = $('#newRowUnit').val(), awrType = $('#newRowPacketType').val();
                 if (!unit) { alert('Please select Unit first'); return; }
                 if (!awrType) { alert('Please select Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "TeaSampleDrawEntry")'
@@ -281,38 +310,67 @@
                     + '&awrType=' + encodeURIComponent(awrType);
             });
 
+            // Row selection is checkboxes -- Edit/Delete/View/Lines only make sense against
+            // exactly one row.
             function getSingleChecked(action) {
                 var $c = $('.row-check:checked');
                 if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
                 if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
                 return $c;
             }
+
+            // The row's Unit travels with Edit/View/Delete: a Doc No repeats across units, so the
+            // document is identified by Doc No + Date + Type + Unit.
+            function goEdit(docno, docdt, awrType, unit) {
+                window.location.href = '@Url.Action("InsertOrUpdate", "TeaSampleDrawEntry")'
+                    + '?docno=' + encodeURIComponent(docno)
+                    + '&docdt=' + encodeURIComponent(docdt)
+                    + '&awrType=' + encodeURIComponent(awrType)
+                    + '&unit=' + encodeURIComponent(unit || '');
+            }
+
+            function goView(docno, docdt, awrType, unit) {
+                window.location.href = '@Url.Action("InsertOrUpdate", "TeaSampleDrawEntry")'
+                    + '?docno=' + encodeURIComponent(docno)
+                    + '&docdt=' + encodeURIComponent(docdt)
+                    + '&awrType=' + encodeURIComponent(awrType)
+                    + '&unit=' + encodeURIComponent(unit || '')
+                    + '&view=true';
+            }
+
+            function doDelete(docno, docdt, awrType, unit) {
+                if (!confirm('Are you sure you want to delete Sample Draw Doc No ' + docno + ' ?')) return;
+                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "TeaSampleDrawEntry")' })
+                    .append($('<input>', { type: 'hidden', name: 'docno', value: docno }))
+                    .append($('<input>', { type: 'hidden', name: 'docdt', value: docdt }))
+                    .append($('<input>', { type: 'hidden', name: 'awrType', value: awrType }))
+                    .append($('<input>', { type: 'hidden', name: 'unit', value: unit || '' }))
+                    .appendTo('body').submit();
+            }
+
             $('#editBtn').on('click', function () {
                 var $c = getSingleChecked('edit');
-                if (!$c) return;
-                window.location.href = '@Url.Action("InsertOrUpdate", "TeaSampleDrawEntry")'
-                    + '?docno=' + encodeURIComponent($c.val())
-                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
-                    + '&awrType=' + encodeURIComponent($c.data('awrtype'));
+                if ($c) goEdit($c.val(), $c.data('docdt'), $c.data('awrtype'), $c.data('unit'));
             });
-            $('#viewBtn').on('click', function () {
-                var $c = getSingleChecked('view');
-                if (!$c) return;
-                window.location.href = '@Url.Action("InsertOrUpdate", "TeaSampleDrawEntry")'
-                    + '?docno=' + encodeURIComponent($c.val())
-                    + '&docdt=' + encodeURIComponent($c.data('docdt'))
-                    + '&awrType=' + encodeURIComponent($c.data('awrtype'))
-                    + '&view=true';
-            });
+
             $('#deleteBtn').on('click', function () {
                 var $c = getSingleChecked('delete');
+                if ($c) doDelete($c.val(), $c.data('docdt'), $c.data('awrtype'), $c.data('unit'));
+            });
+
+            $('#viewBtn').on('click', function () {
+                var $c = getSingleChecked('view');
+                if ($c) goView($c.val(), $c.data('docdt'), $c.data('awrtype'), $c.data('unit'));
+            });
+
+            // Lines: open the ticked row's "+" expand panel (the document's lines) and scroll it into view.
+            $('#linesBtn').on('click', function () {
+                var $c = getSingleChecked('view its lines');
                 if (!$c) return;
-                if (!confirm('Are you sure you want to delete Sample Draw Doc No ' + $c.val() + ' ?')) return;
-                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "TeaSampleDrawEntry")' })
-                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
-                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
-                    .append($('<input>', { type: 'hidden', name: 'awrType', value: $c.data('awrtype') }))
-                    .appendTo('body').submit();
+                var $btn = $c.closest('tr').find('.row-expand-btn');
+                if ($btn.hasClass('fa-plus')) $btn.trigger('click');
+                var $detail = $('#' + $btn.data('target'));
+                if ($detail.length && $detail[0].scrollIntoView) $detail[0].scrollIntoView({ block: 'nearest' });
             });
         });
     </script>

@@ -14,8 +14,21 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <!-- Root UI lookup convention (CLAUDE.md "Lookup pickers"): Party / Item / GST Code are
+         jquery.inputpicker dropdowns, the same widget Tea Purchase Note / Packing Entry use.
+         (Bill No and the Select Item bill-line list are composite pickers and stay as modals.) -->
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <script src="~/libraries/assetspo/js/custom.js"></script>
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <style>
+        .inputpicker-wrapped-list .inputpicker-active td,
+        .inputpicker-wrapped-list .inputpicker-active th { background: #404e68 !important; color: #fff !important; font-weight: bold; }
+        .inputpicker-wrapped-list { min-width: max-content !important; }
+        .inputpicker-wrapped-list table { width: max-content !important; }
+        /* The plugin wraps a picked cell's input in a div with inline "overflow:auto; height:100%"; inside a
+           table cell that can sprout scrollbars, so keep the wrapper exactly the size of its input. */
+        #gridTable .inputpicker-div { overflow: hidden !important; height: auto !important; }
+        #gridTable .inputpicker-overflow-hidden { overflow: hidden; }
         input[readonly], input:disabled, select:disabled { background-color: #f3f4f7; color: #555; }
         .accordion-container.compact-accordion { height: auto; overflow-y: visible; }
         .accordion-container.main-accordion { height: auto; overflow-y: visible; }
@@ -26,12 +39,12 @@
         #gridTable td input.f-batch { width: 100px; }
         #gridTable td input.f-date { width: 125px; }
         #gridTable td select.f-flag { width: 70px; min-width: 70px; }
-        #gridTable td select.f-gst { width: 110px; }
+        #gridTable td input.f-gst { width: 100px; min-width: 100px; }
         #gridTable td.item-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
         #gridTable td.num, #gridTable th.num, #gridTable tfoot td { text-align: right; }
-        input.num { text-align: right; }
+        input.num, #TOTAL_disp { text-align: right; }
+        #gridTable td.num input.num { text-align: right; }
         #gridTable td input[readonly] { cursor: default; }
-        #gridTable td input.pick { cursor: pointer; background: #fff; }
         .picker-input { cursor: pointer; }
         .chk-inline { display: inline-flex; gap: 6px; align-items: center; font-weight: normal; margin-top: 26px; }
         .total-box { font-weight: bold; text-align: right; }
@@ -107,11 +120,12 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Doc Date <span>(*)</span></label>
-                                <input type="date" id="DOCDT" />
+                                <input type="date" id="DOCDT" min="@ViewBag.MinDocDate" />
                             </div>
                             <div class="form-col-20">
                                 <label>Party Code <span>(*)</span></label>
-                                <input type="text" id="PCD" class="picker-input" readonly placeholder="Click to select" />
+                                @* inputpicker dropdown (attached on click while the head is unlocked; readonly in Edit / View) *@
+                                <input type="text" id="PCD" placeholder="Click to select" autocomplete="off" />
                             </div>
                             <div class="form-col-40">
                                 <label>Party Name</label>
@@ -184,7 +198,7 @@
                                 <thead>
                                     <tr>
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
-                                        <th style="width:30px;">Sl.</th>
+                                        <th class="num" style="width:30px;">Sl.</th>
                                         <th>Item <span style="color:red;">(*)</span></th>
                                         <th>Item Name</th>
                                         <th>MRP <span style="color:red;">(*)</span></th>
@@ -212,7 +226,7 @@
                                     <tr class="total">
                                         <td colspan="8" style="text-align:right;">Total</td>
                                         <td id="ftQty"></td>
-                                        <td></td>
+                                        <td id="ftGross"></td>
                                         <td id="ftWt"></td>
                                         <td></td>
                                         <td></td>
@@ -312,10 +326,10 @@
         $('#appAlertOverlay, #appAlertBox').fadeIn(120);
         setTimeout(function () { $('#appAlertOk').focus(); }, 150);
     }
-    function showConfirm(message, onYes) {
+    function showConfirm(message, onYes, onNo) {
         $('#appAlertTitle').text('Confirm');
         $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').show().off('click').on('click', closeAlert);
+        $('#appAlertCancel').show().off('click').on('click', function () { closeAlert(); if (onNo) onNo(); });
         $('#appAlertOk').off('click').on('click', function () { closeAlert(); onYes(); });
         $('#appAlertOverlay, #appAlertBox').fadeIn(120);
     }
@@ -347,7 +361,13 @@
     // ---------------------------------------------------------------- state
     var FY_START = iso(H.FY_START), FY_END = iso(H.FY_END);
     var TODAY = iso(H.TODAY) || new Date().toISOString().substring(0, 10);
+    // Unit is locked (read-only #UNIT_disp): a NEW note carries the one picked on the list's "New" row
+    // (server-checked against the user's units), an edit the note's own. UNIT is what Save posts.
     var UNIT = H.UNIT || '', UNIT_STATE = H.UNIT_STATE || '';
+    // Doc Date lower bound from the AEDV back-date window (ViewBag.MinDocDate = later of the FY start
+    // and today - Aday); Save re-checks it server-side.
+    var MIN_DOC = '@ViewBag.MinDocDate';
+    var curParty = H.PCD || '';   // the party the bill / lines currently belong to (the picker overwrites #PCD before we can compare)
     var PARTY = { STATE: H.PARTY_STATE || '', PAN: H.PARTY_PAN || '', TCS: H.PARTY_TCS || 'N' };
     var GST = {};            // GST_CODE -> rates (GSTMAS of the unit's location)
     var GST_LIST = [];
@@ -376,6 +396,7 @@
         var maxDt = TODAY < FY_END ? TODAY : FY_END;
         var minDt = FY_START;
         if (H.LAST_DOCDT && iso(H.LAST_DOCDT) > minDt) minDt = iso(H.LAST_DOCDT);
+        if (MIN_DOC && MIN_DOC > minDt) minDt = MIN_DOC;
         $('#DOCDT').attr('min', minDt).attr('max', maxDt).val(maxDt < minDt ? minDt : maxDt);
     }
     $('#FROM_DATE').val(iso(H.FROM_DATE) || $('#DOCDT').val());
@@ -384,7 +405,7 @@
     function applyModeUi() {
         var headLocked = IS_EDIT || IS_VIEW;
         $('#LAST_YR').prop('disabled', headLocked || !H.LAST_YR_EXISTS && !H.LAST_YR);
-        $('#PCD').toggleClass('picker-input', !headLocked);
+        $('#PCD').prop('readonly', headLocked);   // unlocked: the inputpicker dropdown attaches on click
         $('#BLNO').toggleClass('picker-input', !headLocked).attr('placeholder', headLocked ? '' : 'Click to select');
         $('#btnSelectItems').toggleClass('is-disabled', IS_VIEW);
         $('#btnAddLine').toggleClass('is-disabled', IS_VIEW);
@@ -398,8 +419,8 @@
     var NUM_COLS = ['QTY', 'GROSS_WEIGHT', 'WEIGHT', 'RATE', 'DISC', 'DISCOUNT'];
     var CALC_COLS = ['AMT', 'CGST_AMT', 'SGST_AMT', 'IGST_AMT', 'GCESS_AMT', 'TCS_AMT', 'TOT_AMT'];
     // Decimals keyed and shown per column; the API rounds to the same on save.
-    // Qty / Rate / money 2 dp; weights 3 dp as in VB6 (#0.000).
-    var DEC = { QTY: 2, RATE: 2, DISC: 2, DISCOUNT: 2, GROSS_WEIGHT: 3, WEIGHT: 3 };
+    // Rate / Disc % / Discount / money 2 dp; Qty and weights 3 dp (#0.000).
+    var DEC = { QTY: 3, RATE: 2, DISC: 2, DISCOUNT: 2, GROSS_WEIGHT: 3, WEIGHT: 3 };
 
     function newRow(src) {
         var r = $.extend({
@@ -444,15 +465,6 @@
         r.TOT_AMT = r2(taxable + gstAmt + r.TCS_AMT);
     }
 
-    function gstOptions(cur) {
-        var opts = '<option value="">--</option>';
-        GST_LIST.forEach(function (g) {
-            opts += '<option value="' + esc(g.CODE) + '"' + (g.CODE === cur ? ' selected' : '') + ' title="' + esc(g.NAME) + '">' + esc(g.CODE) + '</option>';
-        });
-        if (cur && !GST[cur]) opts += '<option value="' + esc(cur) + '" selected>' + esc(cur) + '</option>';
-        return opts;
-    }
-
     function renderGrid() {
         var $tb = $('#gridBody').empty();
         var ro = IS_VIEW ? ' readonly tabindex="-1"' : '';
@@ -461,8 +473,11 @@
             var manual = r._manual && !IS_VIEW;
             var tr = $('<tr data-cid="' + r._cid + '"></tr>');
             tr.append('<td><input type="checkbox" class="rowChk" ' + (IS_VIEW ? 'disabled' : '') + ' /></td>');
-            tr.append('<td>' + r.SRLNO + '</td>');
-            tr.append('<td><input type="text" class="f-item' + (manual ? ' pick' : '') + '" readonly value="' + esc(r.ITCD) + '" placeholder="' + (manual ? 'Click' : '') + '" /></td>');
+            tr.append('<td class="num">' + r.SRLNO + '</td>');
+            // Item: for a hand-added line the code box is itself the inputpicker dropdown (anchored under
+            // the cell); a bill's line shows the code read-only, as loaded.
+            tr.append('<td><input type="text" class="pk f-item" data-col="ITCD" value="' + esc(r.ITCD) + '"' +
+                (manual ? ' placeholder="Click" autocomplete="off"' : ' readonly tabindex="-1"') + ' /></td>');
             tr.append('<td class="item-name" title="' + esc(r.IN_ORA) + '">' + esc(r.IN_ORA) + '</td>');
             tr.append('<td><input type="text" class="f-mrp" data-col="MRP" maxlength="4" value="' + esc(r.MRP) + '"' + (manual ? '' : ' readonly tabindex="-1"') + ' /></td>');
             tr.append('<td><input type="date" class="f-date" data-col="MFGDT" value="' + esc(r.MFGDT) + '"' + (manual ? '' : ' readonly tabindex="-1"') + ' /></td>');
@@ -472,7 +487,9 @@
                 tr.append('<td class="num"><input type="text" inputmode="decimal" class="num" data-col="' + c + '" data-dec="' + DEC[c] + '" value="' + fn(r[c], DEC[c]) + '"' + ro + ' /></td>');
             });
             tr.append('<td class="num c-AMT">' + f2(r.AMT) + '</td>');
-            tr.append('<td><select class="f-gst"' + (IS_VIEW ? ' disabled' : '') + '>' + gstOptions(r.GST_CODE) + '</select></td>');
+            // GST Code: the code box is the inputpicker dropdown (local data: the unit's GST master).
+            tr.append('<td><input type="text" class="pk f-gst" data-col="GST_CODE" value="' + esc(r.GST_CODE) + '"' +
+                (IS_VIEW ? ' readonly tabindex="-1"' : ' placeholder="GST" autocomplete="off"') + ' /></td>');
             ['CGST_AMT', 'SGST_AMT', 'IGST_AMT', 'GCESS_AMT', 'TCS_AMT', 'TOT_AMT'].forEach(function (c) {
                 tr.append('<td class="num c-' + c + '">' + f2(r[c]) + '</td>');
             });
@@ -493,9 +510,9 @@
     }
 
     function refreshTotals() {
-        var t = { QTY: 0, WEIGHT: 0, DISCOUNT: 0, AMT: 0, CGST_AMT: 0, SGST_AMT: 0, IGST_AMT: 0, GCESS_AMT: 0, TCS_AMT: 0, TOT_AMT: 0 };
+        var t = { QTY: 0, GROSS_WEIGHT: 0, WEIGHT: 0, DISCOUNT: 0, AMT: 0, CGST_AMT: 0, SGST_AMT: 0, IGST_AMT: 0, GCESS_AMT: 0, TCS_AMT: 0, TOT_AMT: 0 };
         rows.forEach(function (r) { Object.keys(t).forEach(function (k) { t[k] += num(r[k]); }); });
-        $('#ftQty').text(f2(t.QTY)); $('#ftWt').text(fn(t.WEIGHT, 3)); $('#ftDisc').text(f2(t.DISCOUNT)); $('#ftAmt').text(f2(t.AMT));
+        $('#ftQty').text(fn(t.QTY, 3)); $('#ftGross').text(fn(t.GROSS_WEIGHT, 3)); $('#ftWt').text(fn(t.WEIGHT, 3)); $('#ftDisc').text(f2(t.DISCOUNT)); $('#ftAmt').text(f2(t.AMT));
         $('#ftCgst').text(f2(t.CGST_AMT)); $('#ftSgst').text(f2(t.SGST_AMT)); $('#ftIgst').text(f2(t.IGST_AMT));
         $('#ftCess').text(f2(t.GCESS_AMT)); $('#ftTcs').text(f2(t.TCS_AMT)); $('#ftTot').text(f2(t.TOT_AMT));
         $('#TOTAL_disp').val(f2(t.TOT_AMT));
@@ -518,10 +535,6 @@
         var r = findRow($(this).closest('tr').data('cid')); if (!r) return;
         r.FLAG = this.value; calc(r); refreshRow(r);
     });
-    $('#gridBody').on('change', 'select.f-gst', function () {
-        var r = findRow($(this).closest('tr').data('cid')); if (!r) return;
-        r.GST_CODE = this.value; calc(r); refreshRow(r);
-    });
     $('#gridBody').on('change', 'input.f-mrp, input.f-batch', function () {
         var r = findRow($(this).closest('tr').data('cid')); if (!r) return;
         this.value = $.trim(this.value).toUpperCase();
@@ -530,8 +543,8 @@
     $('#gridBody').on('change', 'input.f-date', function () {
         var r = findRow($(this).closest('tr').data('cid')); if (r) r.MFGDT = this.value;
     });
-    // Enter moves to the next editable cell, as in the VB6 grid.
-    $('#gridBody').on('keydown', 'input', function (e) {
+    // Enter moves to the next editable cell, as in the VB6 grid. (.pk = inputpicker boxes: Enter picks a row there.)
+    $('#gridBody').on('keydown', 'input:not(.pk)', function (e) {
         if (e.which !== 13) return;
         e.preventDefault();
         $(this).trigger('change');
@@ -540,12 +553,21 @@
         if (i >= 0 && i < $all.length - 1) $all.eq(i + 1).focus();
     });
 
-    $('#gridBody').on('click', 'input.f-item.pick', function () {
-        var $inp = $(this), r = findRow($inp.closest('tr').data('cid')); if (!r) return;
-        openPicker('item', function (it) {
-            r.ITCD = it.CODE; r.IN_ORA = it.NAME || '';
-            renderGrid();
-        });
+    // Item (hand-added lines) / GST Code: the row's own code box is the dropdown -- clicking / focusing it
+    // opens the inputpicker anchored right under it. The plugin clones the input it is attached to
+    // (classes included), so the clone (.inputpicker-input) must not match here or a second picker would
+    // be attached inside the first.
+    $('#gridBody').on('click focus', 'input.pk:not([readonly]):not(.inputpicker-input)', function () {
+        if (IS_VIEW) return;
+        var $inp = $(this), $tr = $inp.closest('tr'), r = findRow($tr.data('cid')); if (!r) return;
+        if ($inp.hasClass('f-gst')) {
+            openLookup('gst', $inp, function (g) { r.GST_CODE = g.CODE; calc(r); refreshRow(r); });
+        } else {
+            openLookup('item', $inp, function (it) {
+                r.ITCD = it.CODE; r.IN_ORA = it.NAME || '';
+                $tr.find('td.item-name').text(r.IN_ORA).attr('title', r.IN_ORA);
+            });
+        }
     });
 
     $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
@@ -562,17 +584,108 @@
         if (!$('#PCD').val()) { showAlert('Select the Party first.'); return; }
         rows.push(newRow({ _manual: true, MFGDT: $('#BLDT').val(), GST_CODE: rows.length ? rows[rows.length - 1].GST_CODE : '' }));
         renderGrid();
-        $('#gridBody tr:last input.f-item').trigger('click');
+        $('#gridBody tr:last input.f-item').first().trigger('click');
     });
 
     // ---------------------------------------------------------------- lookups
+    // Simple code/name lookups -- Party, Item, GST Code -- are jquery.inputpicker dropdowns (Root UI
+    // convention, CLAUDE.md "Lookup pickers"): anchored under the field, paged, and searched on EVERY
+    // column shown (Party / Item: server-side -- the MVC picker actions take (q, limit, ..., p), reply
+    // { data, count } and the API matches q against every column; GST Code: the unit's whole GST master
+    // is loaded once, so the plugin filters it locally across all columns). The first field is the
+    // value written to the box. The locked Unit travels with every request (urlParam).
+    var LOOKUPS = {
+        party: { url: URL.party, fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'CITY', text: 'City' },
+                                          { name: 'STATE_CODE', text: 'State' }, { name: 'GST_NO', text: 'GST No' }, { name: 'PANNO', text: 'PAN No' }] },
+        item: { url: URL.item, fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'HSN_CODE', text: 'HSN Code' }, { name: 'UOM', text: 'UOM' }] },
+        gst: { local: true, fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Description' }, { name: 'CGST', text: 'CGST %' },
+                                     { name: 'SGST', text: 'SGST %' }, { name: 'IGST', text: 'IGST %' }, { name: 'CESS', text: 'Cess %' }, { name: 'TCS', text: 'TCS %' }] }
+    };
+    // GST master as picker rows (rates as plain text so a rate can be searched as displayed).
+    function gstPickerData() {
+        return GST_LIST.map(function (g) {
+            return { CODE: g.CODE, NAME: g.NAME || '', CGST: String(num(g.CGST_RATE)), SGST: String(num(g.SGST_RATE)), IGST: String(num(g.IGST_RATE)),
+                     CESS: String(num(g.GCESS_RATE)), TCS: String(num(g.TCS_RATE)) };
+        });
+    }
+
+    // The row the user picked, looked up in the data the dropdown last loaded. This copy of the plugin
+    // writes the picked value into the original input and fires "change" on it; it does not hand the
+    // row to a select handler, so read it back by the picked value.
+    function pickedRow($input, cfg) {
+        var key = cfg.fields[0].name, v = String($input.val() == null ? '' : $input.val()), data = [];
+        try { data = $input.inputpicker('data') || []; } catch (e) { data = []; }
+        for (var i = 0; i < data.length; i++) { if (String(data[i][key]) === v) return data[i]; }
+        return null;
+    }
+
+    // Open the dropdown AND refresh its rows. The plugin loads url-backed data asynchronously and only
+    // re-renders the list on a keystroke, so showing it right after init (before the first response
+    // lands) displayed "No results" -- the keyup makes it fetch and render the rows.
+    function showPickerList($orig, local) {
+        $orig.inputpicker('show');
+        if (!local) $orig.next('.inputpicker-overflow-hidden').find('input').trigger($.Event('keyup', { keyCode: 0 }));
+    }
+
+    // Show `code` in an inputpicker-backed box after it was set from code (the plugin only refreshes
+    // its visible clone on a pick).
+    function setPickerText($orig, code) {
+        $orig.val(code);
+        $orig.next('.inputpicker-overflow-hidden').find('input.inputpicker-input').val(code);
+    }
+
+    function openLookup(key, $input, onSelect) {
+        var cfg = LOOKUPS[key];
+        $('.inputpicker-wrapped-list').remove();
+
+        // This plugin never sets $.data('inputpicker'); the class it puts on the original input is the
+        // "already initialised" test (otherwise every click re-wraps the field and drops what the user
+        // has typed). Showing is deferred a tick: called from a click, the click's own bubbling up to the
+        // plugin's document-level "outside click" handler would otherwise hide it straight away.
+        if ($input.hasClass('inputpicker-original')) {
+            setTimeout(function () { showPickerList($input, cfg.local); }, 0);
+            return;
+        }
+
+        var opts = {
+            fields: cfg.fields,
+            fieldText: cfg.fields[0].name,
+            fieldValue: cfg.fields[0].name,
+            headShow: true,
+            filterOpen: true,   // no filterField => every field in `fields` is searched
+            autoOpen: true,
+            width: 'auto'
+        };
+        if (cfg.local) {
+            opts.data = gstPickerData();
+        } else {
+            $.extend(opts, {
+                url: cfg.url,
+                urlParam: { unit: UNIT },
+                pagination: true,
+                pageField: 'p',
+                pageLimitField: 'limit',
+                pageLimit: 10,
+                pageCountField: 'count',
+                urlDelay: 0.2      // seconds (the plugin multiplies by 1000): one request per pause in typing, not per keystroke
+            });
+        }
+        $input.inputpicker(opts);
+        setTimeout(function () { showPickerList($input, cfg.local); }, 0);
+
+        function deliver(row) { if (row && onSelect) onSelect(row); }
+        // Both hooks call the same idempotent handler, so whichever this plugin build fires works.
+        $input.off('inputpicker.select').on('inputpicker.select', function (e, row) {
+            deliver(row);
+            $(this).inputpicker('hide');
+        });
+        $input.off('change.ipk').on('change.ipk', function () { deliver(pickedRow($input, cfg)); });
+    }
+
+    // Bill No (composite: depends on party / unit / year) and the Select Item bill-line list stay bespoke popups.
     var PICKERS = {
-        party: { title: 'Select Party', url: URL.party, cols: [['CODE', 'Code'], ['NAME', 'Name'], ['CITY', 'City'], ['STATE_CODE', 'State'], ['GST_NO', 'GST No'], ['PANNO', 'PAN No']],
-                 params: function () { return { unit: UNIT }; } },
         bill: { title: 'Select Bill No.', url: URL.bills, cols: [['BLNO', 'Bill No'], ['BLDT', 'Bill Date', 'date'], ['RT', 'Type'], ['AMOUNT', 'Amount', 'num']],
-                params: function () { return { pcd: $('#PCD').val(), unit: UNIT, lastYear: lastYr() }; } },
-        item: { title: 'Select Item', url: URL.item, cols: [['CODE', 'Code'], ['NAME', 'Name'], ['HSN_CODE', 'HSN Code'], ['UOM', 'UOM']],
-                params: function () { return { unit: UNIT }; } }
+                params: function () { return { pcd: $('#PCD').val(), unit: UNIT, lastYear: lastYr() }; } }
     };
     var active = null, pickXhr = null, pickSeq = 0, pickTimer = null;
     function cell(v, kind) {
@@ -655,21 +768,26 @@
 
     function clearBill() { $('#BLNO').val(''); $('#BLDT').val(''); rows = []; }
 
-    // Party (VB6 text_PARTY): changing it invalidates the bill and its lines.
-    $('#PCD').on('click', function () {
+    // Party (VB6 text_PARTY): changing it invalidates the bill and its lines. The plugin has already
+    // written the picked code into #PCD by the time this runs, so the party the bill belongs to is
+    // tracked in curParty (a declined change puts the old code back).
+    function onPartyPick(p) {
+        if (p.CODE === curParty) return;
+        var apply = function () {
+            curParty = p.CODE;
+            $('#PCD').val(p.CODE); $('#PCD_disp').val(p.NAME || '');
+            PARTY = { STATE: p.STATE_CODE || '', PAN: p.PANNO || '', TCS: p.TCS_TAG || 'N' };
+            showParty();
+            if (!p.STATE_CODE) showAlert('State Code of ' + p.CODE + ' is blank ! Set it in the party master before saving.');
+            clearBill();
+            recalcAll();
+        };
+        if (rows.length) showConfirm('Changing the party clears the selected bill and its items. Continue?', apply, function () { setPickerText($('#PCD'), curParty); });
+        else apply();
+    }
+    $('#PCD').on('click focus', function () {
         if (IS_EDIT || IS_VIEW) return;
-        openPicker('party', function (p) {
-            if (p.CODE === $('#PCD').val()) return;
-            var apply = function () {
-                $('#PCD').val(p.CODE); $('#PCD_disp').val(p.NAME || '');
-                PARTY = { STATE: p.STATE_CODE || '', PAN: p.PANNO || '', TCS: p.TCS_TAG || 'N' };
-                showParty();
-                if (!p.STATE_CODE) showAlert('State Code of ' + p.CODE + ' is blank ! Set it in the party master before saving.');
-                clearBill();
-                recalcAll();
-            };
-            if (rows.length) showConfirm('Changing the party clears the selected bill and its items. Continue?', apply); else apply();
-        });
+        openLookup('party', $(this), onPartyPick);
     });
 
     // Bill (VB6 txtSelBillNo): pick, then its items open for selection.
@@ -724,7 +842,7 @@
     }
     function closeItems() { $('#pickerOverlay, #itemPicker').fadeOut(120); }
     var ITEM_COLS = [['ITCD', 'Item'], ['IN_ORA', 'Name'], ['MRP', 'MRP'], ['MFGDT', 'Mfg Date', 'date'], ['BATCHNO', 'Batch'],
-                     ['QTY', 'Qty', 'num'], ['WEIGHT', 'Net Wt', 'num3'], ['RATE', 'Rate', 'num'], ['AMT', 'Amount', 'num'], ['GST_CODE', 'GST']];
+                     ['QTY', 'Qty', 'num3'], ['WEIGHT', 'Net Wt', 'num3'], ['RATE', 'Rate', 'num'], ['AMT', 'Amount', 'num'], ['GST_CODE', 'GST']];
     // One bill's lines only (a few dozen at most), loaded once so ticks survive the
     // filter; the find box matches every column exactly as displayed.
     function itemText(d) {
@@ -733,7 +851,7 @@
     function renderItems() {
         var term = $.trim($('#itemSearch').val()).toUpperCase();
         var shown = items.filter(function (d) { return !term || itemText(d).indexOf(term) >= 0; });
-        var html = '<table><thead><tr><th style="width:30px;">SEL</th>' + ITEM_COLS.map(function (c) { return '<th' + (c[2] === 'num' || c[2] === 'num3' ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
+        var html = '<table><thead><tr><th style="width:30px;">SEL</th>' + ITEM_COLS.map(function (c) { return '<th' + (c[2] === 'num' || c[2] === 'num3' || c[2] === 'int' ? ' class="num"' : '') + '>' + c[1] + '</th>'; }).join('') + '</tr></thead><tbody>';
         shown.forEach(function (d) {
             html += '<tr data-i="' + d._i + '"><td><input type="checkbox" class="itemChk"' + (d._sel ? ' checked' : '') + ' /></td>' +
                 ITEM_COLS.map(function (c) { return cell(d[c[0]], c[2]); }).join('') + '</tr>';
@@ -774,7 +892,9 @@
     // ---------------------------------------------------------------- save
     function payload() {
         return {
-            TRAN_CODE: TRAN, UNIT: UNIT,
+            // UNIT: the locked Unit (see state above). IsNew lets the server apply the AEDV Add / Edit
+            // right and back-date window (PacketTeaNoteController.Save).
+            TRAN_CODE: TRAN, UNIT: UNIT, IsNew: !IS_EDIT,
             DOCNO: $('#DOCNO').val() || null, DOCDT: $('#DOCDT').val() || null,
             PCD: $('#PCD').val(), BLNO: $.trim($('#BLNO').val()), BLDT: $('#BLDT').val() || null,
             LAST_YR: lastYr(),

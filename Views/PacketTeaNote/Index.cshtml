@@ -7,7 +7,9 @@
     ViewBag.Title = tranName;
     Layout = "~/Views/Shared/_Layout.cshtml";
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
-    string curUnit = (string)(ViewBag.Unit ?? "");
+    // AEDV gating of the toolbar buttons (UX only -- the controller re-checks every right).
+    var perm = ViewBag.Permission as PacketTea.Helpers.AEDV;
+    Func<bool, string> denied = ok => ok ? "" : "pointer-events:none; opacity:0.5;";
 }
 
 @{
@@ -34,6 +36,7 @@
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+    <link href="~/Controllers/Test/assets/css/jquery.inputpicker.css" rel="stylesheet" />
     <style>
         .table.table-sm td, .table.table-sm th { padding: 0.6rem; }
         tbody div { overflow: unset !important; height: auto !important; max-height: none !important; }
@@ -53,13 +56,29 @@
         table.detail-sub-table { width: 100%; border-collapse: collapse; }
         table.detail-sub-table th, table.detail-sub-table td { border: 1px solid #ddd; padding: 6px; white-space: nowrap; }
         table.detail-sub-table thead th { background-color: #404e68; color: #fff; font-weight: bold; }
-        tr.new-entry-row td { background-color: #eef3ff; vertical-align: middle; }
-        tr.new-entry-row select { border: 1px solid #ccc; border-radius: 4px; padding: 4px 6px; width: 100%; }
-        tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
-        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: #404e68; }
         .list-filters { display: flex; justify-content: flex-end; gap: 10px; width: 100%; margin-bottom: 15px; flex-wrap: wrap; }
         .list-filters { align-items: center; }
-        .list-filters select { width: 220px !important; flex: 0 0 220px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; }
+        /* Right-aligned "LIST" badge of the standard list toolbar (same look as Packing Entry's). */
+        .list-badge { display: inline-block; background: #2c3958; color: #fff; font-size: 12px; font-weight: 700; letter-spacing: .05em; padding: 5px 10px; border-radius: 4px; margin: 6px 10px; }
+        /* Chunked list (same behaviour as ERP_Inventory's Purchase Order list): fixed-height
+           scroll box with a sticky header; the next chunk of rows loads when the box is
+           scrolled to the bottom -- see Scripts/list-infinite-scroll.js. */
+        #tableScroll { max-height: calc(100vh - 380px); min-height: 240px; overflow: auto; }
+        #tableScroll table.main-table thead th { position: sticky; top: 0; z-index: 3; }
+        /* "New" inline row -- pick Unit + Type here first, then the pencil icon (enabled only once
+           both are picked) opens the entry screen with the Unit locked in. Same pattern as Packing. */
+        tr.new-entry-row td { background-color: #eef3ff; vertical-align: middle; }
+        tr.new-entry-row input.new-row-pick { border: 1px solid #dde2ea; border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%; box-sizing: border-box; }
+        /* jquery.inputpicker wraps each input in a div with inline overflow:auto; inside the
+           narrow cell the input + arrow overflow it and native scrollbars (the stray arrows)
+           blow the row up. Clip it instead. */
+        tr.new-entry-row .inputpicker-overflow-hidden, tr.new-entry-row .inputpicker-div { overflow: hidden !important; height: auto !important; max-width: 100%; }
+        /* Unit / Type fields must not collapse to the squeezed cell width: fixed floor for the
+           field and for its dropdown panel (the panel hangs off <body>, so target it by id). */
+        tr.new-entry-row input.new-row-pick { min-width: 240px; }
+        #inputpicker-wrapped-list { min-width: 300px; }
+        tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
+        tr.new-entry-row .go-new.is-ready { cursor: pointer; color: #404e68; }
     </style>
 </head>
 <body>
@@ -68,25 +87,20 @@
         <div class="action-btns">
             <ul>
                 <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
-                <li><a href="javascript:void(0)" id="btnNew"><i class="fa fa-plus"></i> New</a></li>
-                <li><a href="javascript:void(0)" id="editBtn"><i class="fa fa-pencil"></i> Edit</a></li>
-                <li><a href="javascript:void(0)" id="viewBtn"><i class="fa fa-eye"></i> View</a></li>
-                <li><a href="javascript:void(0)" id="deleteBtn"><i class="fa fa-trash-o"></i> Delete</a></li>
-                <li><a href="javascript:void(0)" id="linesBtn"><i class="fa fa-list"></i> Lines</a></li>
-                <li style="margin-left:auto"><label class="btn btn-inverse pull-right" style="margin: 10px;">LIST</label></li>
+                <li><a href="javascript:void(0)" id="btnNew" style="@(denied(perm?.Add ?? false))"><i class="fa fa-plus"></i> New</a></li>
+                <li><a href="javascript:void(0)" id="editBtn" style="@(denied(perm?.Edit ?? false))"><i class="fa fa-pencil"></i> Edit</a></li>
+                <li><a href="javascript:void(0)" id="deleteBtn" style="@(denied(perm?.Delete ?? false))"><i class="fa fa-trash-o"></i> Delete</a></li>
+                <li><a href="javascript:void(0)" id="viewBtn" style="@(denied(perm?.View ?? false))"><i class="fa fa-eye"></i> View</a></li>
+                <li><a href="javascript:void(0)" id="linesBtn" title="Show the ticked row's lines"><i class="fa fa-list"></i> Lines</a></li>
+                <li style="margin-left:auto"><span class="list-badge">LIST</span></li>
             </ul>
         </div>
 
         <div class="title-heading">@tranName</div>
 
+        @* No Unit dropdown: the Unit is picked in the "New" row only; the list shows every Unit the
+           user is linked to (PacketTeaNoteController.List). *@
         <div class="list-filters">
-            <select id="unitFilter" title="Unit">
-                <option value="">All Units</option>
-                @foreach (var u in unitList)
-                {
-                    <option value="@u.CODE" selected="@(string.Equals(u.CODE, curUnit, StringComparison.OrdinalIgnoreCase))">@u.CODE - @u.NAME</option>
-                }
-            </select>
             <div style="position: relative; width: 280px;">
                 <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search any column (Doc No, Party, Bill, Date, Amount)"
                        style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
@@ -94,15 +108,16 @@
             </div>
         </div>
 
-        <div class="table-responsive">
+
+        <div class="table-responsive" id="tableScroll">
             <table class="border main-table" id="noteTable">
                 <thead>
                     <tr>
                         <th style="width:26px;"></th>
                         <th style="width:26px;"></th>
+                        @SortTh("UNIT", "Unit", false)
                         @SortTh("DOCNO", "Doc No", false)
                         @SortTh("DOCDT", "Doc Date", false)
-                        @SortTh("UNIT", "Unit", false)
                         @SortTh("PARTY", "Party", false)
                         @SortTh("BLNO", "Bill No", false)
                         <th>Bill Date</th>
@@ -110,60 +125,9 @@
                         @SortTh("TOTAL", "Total Amount", true)
                     </tr>
                 </thead>
-                <tbody>
-                    @if (Model != null && Model.Count > 0)
-                    {
-                        var rowIndex = 0;
-                        foreach (var row in Model)
-                        {
-                            rowIndex++;
-                            var detailId = "rowDetail" + rowIndex;
-                            var dt = row.DOCDT?.ToString("yyyy-MM-dd");
-                            <tr>
-                                <td>
-                                    <input type="checkbox" class="row-check" value="@row.DOCNO" data-docdt="@dt" data-unit="@row.UNIT" data-irn="@(string.IsNullOrEmpty(row.IRN) ? "" : "Y")" />
-                                </td>
-                                <td style="text-align:center;">
-                                    <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show lines" style="cursor:pointer;"></i>
-                                </td>
-                                <td><a href="@Url.Action("InsertOrUpdate", "PacketTeaNote", new { tran, unit = row.UNIT, docno = row.DOCNO, docdt = dt, view = true })">@row.DOCNO</a></td>
-                                <td>@(row.DOCDT?.ToString("dd/MM/yyyy"))</td>
-                                <td>@row.UNIT</td>
-                                <td>@row.PCD - @row.PARTY_NAME</td>
-                                <td>@row.BLNO</td>
-                                <td>@(row.BLDT?.ToString("dd/MM/yyyy"))</td>
-                                <td class="num">@((row.TAXABLE_AMT ?? 0).ToString("0.00"))</td>
-                                <td class="num">@((row.TOTAL_AMT ?? 0).ToString("0.00"))</td>
-                            </tr>
-                            <tr class="row-detail" id="@detailId" style="display:none;" data-docno="@row.DOCNO" data-docdt="@dt" data-unit="@row.UNIT">
-                                <td colspan="10" style="background:#f8f9fc;padding:10px 12px;">
-                                    <div style="overflow-x:auto;">
-                                        <table class="detail-sub-table">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width:34px;">Sl</th>
-                                                    <th>Item</th>
-                                                    <th>MRP</th>
-                                                    <th class="num">Qty</th>
-                                                    <th class="num">Net Wt</th>
-                                                    <th class="num">Rate</th>
-                                                    <th class="num">Amount</th>
-                                                    <th class="num">Discount</th>
-                                                    <th class="num">GST</th>
-                                                    <th class="num">TCS</th>
-                                                    <th class="num">Total</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="detail-items-body">
-                                                <tr><td colspan="11" style="text-align:center;color:#666;">Loading...</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
+                <tbody id="listBody">
+                    @Html.Partial("_ListRows", Model)
+                    @if (Model == null || Model.Count == 0)
                     {
                         <tr><td colspan="10" style="text-align:center;">No records found</td></tr>
                     }
@@ -173,19 +137,14 @@
         @{
             int pageSize = (int)ViewBag.PageSize;
             int rowCount = (int)ViewBag.RowCount;
-            int currentPage = (int)ViewBag.Page;
-            int pageCount = pageSize > 0 ? (int)Math.Ceiling(rowCount / (double)pageSize) : 1;
         }
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 0;flex-wrap:wrap;gap:8px;">
-            <div class="dataTables_info" style="padding:0;">Showing @(Model?.Count ?? 0) of @rowCount</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-                <button type="button" id="btnPrevPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage <= 1 ? "disabled" : "")>&laquo; Prev</button>
-                <span style="color:#666;font-size:12.5px;">Page @currentPage of @Math.Max(pageCount, 1)</span>
-                <button type="button" id="btnNextPage" class="btn-white" style="width:auto;padding:5px 14px;" @(currentPage >= pageCount ? "disabled" : "")>Next &raquo;</button>
-            </div>
-        </div>
+        <div id="listLoading" style="display:none;text-align:center;padding:8px 0 0;color:#666;font-size:12.5px;">Loading...</div>
+        <div class="dataTables_info" style="padding:10px 20px 0;">Showing <span id="shownCount">@(Model?.Count ?? 0)</span> of @rowCount</div>
     </div>
 
+    <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
+    <script src="~/Scripts/list-new-row-pickers.js"></script>
+    <script src="~/Scripts/list-infinite-scroll.js"></script>
     <script>
         $(function () {
             var TRAN = '@tran';
@@ -197,31 +156,39 @@
             var searchTimer;
             $('#searchInput').on('input', function () {
                 clearTimeout(searchTimer);
-                searchTimer = setTimeout(function () { reload(1); }, 400);
+                searchTimer = setTimeout(function () { reload(); }, 400);
             });
-            $('#unitFilter').on('change', function () { reload(1); });
 
+            // Search / sort reload the page from the first chunk (the Unit scope is applied
+            // server-side -- see PacketTeaNoteController.List).
             var SORT_BY = '@(ViewBag.SortBy ?? "")', SORT_DIR = '@(ViewBag.SortDir ?? "")';
-            function reload(page, sortBy, sortDir) {
+            function reload(sortBy, sortDir) {
                 var by = (sortBy === undefined) ? SORT_BY : sortBy;
                 var dir = (sortDir === undefined) ? SORT_DIR : sortDir;
                 window.location.href = '@Url.Action(listAction, "PacketTeaNote")'
                     + '?searchString=' + encodeURIComponent($('#searchInput').val())
-                    + '&unit=' + encodeURIComponent($('#unitFilter').val() || '')
-                    + '&page=' + (page || 1)
                     + '&sortBy=' + encodeURIComponent(by || '')
                     + '&sortDir=' + encodeURIComponent(dir || '');
             }
-            $('#noteTable').on('click', 'thead th.sortable', function () { reload(1, $(this).data('sort'), $(this).data('dir')); });
-            $('#btnPrevPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage - 1); });
-            $('#btnNextPage').on('click', function () { if (!$(this).is(':disabled')) reload(@currentPage + 1); });
+            $('#noteTable').on('click', 'thead th.sortable', function () { reload($(this).data('sort'), $(this).data('dir')); });
 
+            // Chunked loading: the first chunk is rendered with the page, further chunks are
+            // appended as the list is scrolled to the bottom (Scripts/list-infinite-scroll.js).
+            // Sorting is server-side, so each chunk request carries the current sort.
+            initInfiniteList({
+                scroll: '#tableScroll', body: '#listBody', loading: '#listLoading', count: '#shownCount',
+                url: '@Url.Action(listAction, "PacketTeaNote")',
+                search: $('#searchInput').val(), pageSize: @pageSize, total: @rowCount, startPage: 1,
+                extra: { sortBy: SORT_BY, sortDir: SORT_DIR }
+            });
+
+            // "+" expand row / Lines: the note's lines through the API's lean GetRowLines (one call).
             function openDetail($btn) {
                 var $detail = $('#' + $btn.data('target'));
                 $detail.show();
                 $btn.removeClass('fa-plus').addClass('fa-minus');
                 var $body = $detail.find('.detail-items-body');
-                $.get('@Url.Action("GetRowDetail", "PacketTeaNote")', {
+                $.get('@Url.Action("GetRowLines", "PacketTeaNote")', {
                     tran: TRAN, unit: $detail.data('unit'), docno: $detail.data('docno'), docdt: $detail.data('docdt')
                 }).done(function (r) {
                     var items = (r && r.lines) || [];
@@ -233,7 +200,7 @@
                             '<td>' + esc(d.SRLNO) + '</td>',
                             '<td>' + esc(d.ITCD) + (d.IN_ORA ? ' - ' + esc(d.IN_ORA) : '') + '</td>',
                             '<td>' + esc(d.MRP) + '</td>',
-                            '<td class="num">' + f2(d.QTY) + '</td>',
+                            '<td class="num">' + f3(d.QTY) + '</td>',
                             '<td class="num">' + f3(d.WEIGHT) + '</td>',
                             '<td class="num">' + f2(d.RATE) + '</td>',
                             '<td class="num">' + f2(d.AMT) + '</td>',
@@ -251,78 +218,75 @@
                 $('#' + $btn.data('target')).hide();
                 $btn.removeClass('fa-minus').addClass('fa-plus');
             }
+            // Delegated: rows appended by the infinite scroll need the handler too.
             $('#noteTable').on('click', '.row-expand-btn', function () {
                 var $btn = $(this);
                 if ($('#' + $btn.data('target')).is(':visible')) closeDetail($btn); else openDetail($btn);
             });
-            $('#linesBtn').on('click', function () {
-                var $checked = $('.row-check:checked');
-                var $btns = $checked.length ? $checked.closest('tr').find('.row-expand-btn') : $('#noteTable .row-expand-btn');
-                var anyClosed = $btns.filter('.fa-plus').length > 0;
-                $btns.each(function () { anyClosed ? openDetail($(this)) : closeDetail($(this)); });
-            });
 
-            // "New" row, same as the Master Blend Entry list: Unit (USER_SCHEMA_LINK, else the
-            // Sales manufacturing units) + Type. The menu fixes the note type (VB6 trn_credit_note:
-            // Debit Note = TRAN_CODE 34, Credit Note = 35), so Type offers that one value, preselected.
+            // "New" row, same as Tea Purchase Note / Packing: Unit (USER_SCHEMA_LINK, else the Sales
+            // manufacturing units) + Type. The menu fixes the note type (VB6 trn_credit_note: Debit
+            // Note = TRAN_CODE 34, Credit Note = 35), so Type offers that one value, preselected.
             var UNIT_LIST = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(unitList));
             var NOTE_TYPES = { '@tran': '@tranName' };
             function buildNewRow() {
-                var unitOpts = '<option value="">Select Unit</option>' +
-                    UNIT_LIST.map(function (u) { return '<option value="' + esc(u.CODE) + '">' + esc(u.CODE) + ' - ' + esc(u.NAME || '') + '</option>'; }).join('');
-                var typeOpts = '<option value="">Select Type</option>' +
-                    Object.keys(NOTE_TYPES).map(function (k) { return '<option value="' + esc(k) + '">' + esc(NOTE_TYPES[k]) + ' (' + esc(k) + ')</option>'; }).join('');
+                // Unit + Type are inputpicker dropdowns (searchable by Code and Name) -- initialised
+                // right after the row is inserted, see initNewRowPickers().
                 return '<tr id="newUnitRow" class="new-entry-row">' +
                     '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open @tranName"></i></td>' +
-                    '<td colspan="2"><select id="newRowUnit">' + unitOpts + '</select></td>' +
-                    '<td colspan="2"><select id="newRowType">' + typeOpts + '</select></td>' +
-                    '<td colspan="4"></td>' +
+                    // Unit picker spans 3 columns so the "CODE - Name" text isn't clipped; the table's own
+                    // columns are untouched.
+                    '<td colspan="3"><input type="text" id="newRowUnit" class="new-row-pick" placeholder="Select Unit" autocomplete="off" /></td>' +
+                    '<td colspan="2"><input type="text" id="newRowPacketType" class="new-row-pick" placeholder="Select Type" autocomplete="off" /></td>' +
+                    '<td colspan="3"></td>' +
                     '</tr>';
             }
-            function refreshGoNewState() { $('.go-new').toggleClass('is-ready', !!$('#newRowUnit').val() && !!$('#newRowType').val()); }
+            function refreshGoNewState() {
+                $('.go-new').toggleClass('is-ready', !!$('#newRowUnit').val() && !!$('#newRowPacketType').val());
+            }
             $('#btnNew').on('click', function () {
                 if ($('#newUnitRow').length) return;
                 if (!UNIT_LIST.length) { alert('No unit is available to you in the Sales unit master.'); return; }
-                $('#noteTable tbody').prepend(buildNewRow());
-                var cur = $('#unitFilter').val();
-                if (UNIT_LIST.length === 1) $('#newRowUnit').val(UNIT_LIST[0].CODE);
-                else if (cur) $('#newRowUnit').val(cur);
-                $('#newRowType').val(TRAN);
+                $('#listBody').prepend(buildNewRow());
+                $('#newRowPacketType').val(TRAN);   // fixed by the menu: preselected before the picker is attached
+                initNewRowPickers({ units: UNIT_LIST, types: NOTE_TYPES });   // also pre-selects a single Unit
                 refreshGoNewState();
             });
-            $('#noteTable').on('change', '#newRowUnit, #newRowType', refreshGoNewState);
+            $('#noteTable').on('change', '#newRowUnit, #newRowPacketType', refreshGoNewState);
             $('#noteTable').on('click', '.go-new', function () {
-                var unit = $('#newRowUnit').val();
+                var unit = $('#newRowUnit').val(), type = $('#newRowPacketType').val();
                 if (!unit) { alert('Please select Unit first'); return; }
-                var type = $('#newRowType').val();
                 if (!type) { alert('Please select Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "PacketTeaNote")'
                     + '?tran=' + encodeURIComponent(type) + '&unit=' + encodeURIComponent(unit);
             });
 
+            // Row selection is checkboxes -- Edit / Delete / View / Lines only make sense against
+            // exactly one row.
             function getSingleChecked(action) {
                 var $c = $('.row-check:checked');
                 if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
                 if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
                 return $c;
             }
-            function openDoc($c, view) {
+            // The row's Unit travels with Edit / View / Delete: a Doc No repeats across units, so the
+            // note is identified by Unit + Doc No + Date.
+            function goEdit($c) {
+                window.location.href = '@Url.Action("InsertOrUpdate", "PacketTeaNote")'
+                    + '?tran=' + TRAN
+                    + '&unit=' + encodeURIComponent($c.data('unit'))
+                    + '&docno=' + encodeURIComponent($c.val())
+                    + '&docdt=' + encodeURIComponent($c.data('docdt'));
+            }
+            function goView($c) {
                 window.location.href = '@Url.Action("InsertOrUpdate", "PacketTeaNote")'
                     + '?tran=' + TRAN
                     + '&unit=' + encodeURIComponent($c.data('unit'))
                     + '&docno=' + encodeURIComponent($c.val())
                     + '&docdt=' + encodeURIComponent($c.data('docdt'))
-                    + (view ? '&view=true' : '');
+                    + '&view=true';
             }
-            $('#editBtn').on('click', function () {
-                var $c = getSingleChecked('edit'); if (!$c) return;
-                if ($c.data('irn')) { alert('E-Invoice has been Generated for this, can\'t edit.'); return; }
-                openDoc($c, false);
-            });
-            $('#viewBtn').on('click', function () { var $c = getSingleChecked('view'); if ($c) openDoc($c, true); });
-            $('#deleteBtn').on('click', function () {
-                var $c = getSingleChecked('delete'); if (!$c) return;
-                if ($c.data('irn')) { alert('E-Invoice has been Generated for this, can\'t delete.'); return; }
+            function doDelete($c) {
                 if (!confirm('Are you sure to Cancel @tranName ' + $c.val() + ' ?\nIts accounts voucher will be removed too.')) return;
                 $('<form>', { method: 'POST', action: '@Url.Action("Delete", "PacketTeaNote")' })
                     .append($('<input>', { type: 'hidden', name: 'tran', value: TRAN }))
@@ -330,6 +294,27 @@
                     .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
                     .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
                     .appendTo('body').submit();
+            }
+
+            $('#editBtn').on('click', function () {
+                var $c = getSingleChecked('edit'); if (!$c) return;
+                if ($c.data('irn')) { alert('E-Invoice has been Generated for this, can\'t edit.'); return; }
+                goEdit($c);
+            });
+            $('#deleteBtn').on('click', function () {
+                var $c = getSingleChecked('delete'); if (!$c) return;
+                if ($c.data('irn')) { alert('E-Invoice has been Generated for this, can\'t delete.'); return; }
+                doDelete($c);
+            });
+            $('#viewBtn').on('click', function () { var $c = getSingleChecked('view'); if ($c) goView($c); });
+
+            // Lines: open the ticked row's "+" expand panel (its lines) and scroll it into view.
+            $('#linesBtn').on('click', function () {
+                var $c = getSingleChecked('view its lines'); if (!$c) return;
+                var $btn = $c.closest('tr').find('.row-expand-btn');
+                if ($btn.hasClass('fa-plus')) openDetail($btn);
+                var $detail = $('#' + $btn.data('target'));
+                if ($detail.length && $detail[0].scrollIntoView) $detail[0].scrollIntoView({ block: 'nearest' });
             });
         });
     </script>

@@ -1,0 +1,72 @@
+@* Table rows for the Packet Tea Debit / Credit Note list (tran 34 / 35, ViewBag.Tran). Rendered by
+   Index.cshtml for the first chunk and returned on its own (Request.IsAjaxRequest) for every further
+   chunk the list's infinite scroll asks for -- see Scripts/list-infinite-scroll.js and
+   PacketTeaNoteController.List. ViewBag.RowOffset keeps the "+" expand ids unique across chunks. *@
+@model List<Finance.Controllers.TEA.PtNoteRow>
+@{
+    string tran = (string)ViewBag.Tran;
+    var rowIndex = (int?)ViewBag.RowOffset ?? 0;
+    // The Doc No is a link into Edit mode only for users holding the Edit right (AEDV) -- UX only:
+    // PacketTeaNoteController.InsertOrUpdate re-checks the right and the back-date window server-side.
+    var canEdit = (ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false;
+}
+@if (Model != null)
+{
+    foreach (var row in Model)
+    {
+        rowIndex++;
+        var detailId = "rowDetail" + rowIndex;
+        var dt = row.DOCDT?.ToString("yyyy-MM-dd");
+        <tr class="data-row">
+            <td>
+                <input type="checkbox" class="row-check" value="@row.DOCNO" data-docdt="@dt" data-unit="@row.UNIT" data-irn="@(string.IsNullOrEmpty(row.IRN) ? "" : "Y")" />
+            </td>
+            <td style="text-align:center;">
+                <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show lines" style="cursor:pointer;"></i>
+            </td>
+            <td>@row.UNIT</td>
+            <td>
+                @if (canEdit)
+                {
+                    <a href="@Url.Action("InsertOrUpdate", "PacketTeaNote", new { tran, unit = row.UNIT, docno = row.DOCNO, docdt = dt })">@row.DOCNO</a>
+                }
+                else
+                {
+                    @row.DOCNO
+                }
+            </td>
+            <td>@(row.DOCDT?.ToString("dd/MM/yyyy"))</td>
+            <td>@row.PCD - @row.PARTY_NAME</td>
+            <td>@row.BLNO</td>
+            <td>@(row.BLDT?.ToString("dd/MM/yyyy"))</td>
+            <td class="num">@((row.TAXABLE_AMT ?? 0).ToString("0.00"))</td>
+            <td class="num">@((row.TOTAL_AMT ?? 0).ToString("0.00"))</td>
+        </tr>
+        <tr class="row-detail" id="@detailId" style="display:none;" data-docno="@row.DOCNO" data-docdt="@dt" data-unit="@row.UNIT">
+            <td colspan="10" style="background:#f8f9fc;padding:10px 12px;">
+                <div style="overflow-x:auto;">
+                    <table class="detail-sub-table">
+                        <thead>
+                            <tr>
+                                <th style="width:34px;">Sl</th>
+                                <th>Item</th>
+                                <th>MRP</th>
+                                <th class="num">Qty</th>
+                                <th class="num">Net Wt</th>
+                                <th class="num">Rate</th>
+                                <th class="num">Amount</th>
+                                <th class="num">Discount</th>
+                                <th class="num">GST</th>
+                                <th class="num">TCS</th>
+                                <th class="num">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="detail-items-body">
+                            <tr><td colspan="11" style="text-align:center;color:#666;">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+        </tr>
+    }
+}
