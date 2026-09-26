@@ -162,7 +162,7 @@
     </div>
 
     <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
-    <script src="~/Scripts/list-new-row-pickers.js"></script>
+    <script src="~/Scripts/list-new-row-pickers.js?v=@System.IO.File.GetLastWriteTimeUtc(Server.MapPath("~/Scripts/list-new-row-pickers.js")).Ticks"></script>
     <script src="~/Scripts/list-infinite-scroll.js"></script>
     <script>
         $(function () {
@@ -274,8 +274,9 @@
 
             $('#btnNew').on('click', function () {
                 if ($('#newUnitRow').length) return;
+                if (!UNIT_LIST.length) { alert('No unit is available to you (no Unit is linked to your user).'); return; }
                 $('#listBody').prepend(buildNewRow());
-                initNewRowPickers({ units: UNIT_LIST, types: AWR_TYPES });   // also pre-selects a single Unit
+                initNewRowPickers({ units: UNIT_LIST, types: AWR_TYPES, textField: 'CODE' });   // AWR keeps showing codes; also pre-selects a single Unit
                 refreshGoNewState();
             });
 

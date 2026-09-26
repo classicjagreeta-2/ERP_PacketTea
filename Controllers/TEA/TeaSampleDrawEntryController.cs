@@ -32,13 +32,14 @@ namespace Finance.Controllers.TEA
             !string.IsNullOrEmpty(CurrentUnit) ? CurrentUnit :
             (awrType != null && AWRTypeUnit.TryGetValue(awrType, out var u) ? u : "");
 
+        // { CODE: M_SALETYPE.DESCN } of the types the user holds rights to; AWRTypes' fixed
+        // names are only the fallback when the call fails.
         private async Task<Dictionary<string, string>> GetAllowedAWRTypesAsync()
         {
-            var response = await Services.GetAsync<List<string>>("/api/TeaSampleDraw/GetAllowedAWRTypes");
+            var response = await Services.GetAsync<Dictionary<string, string>>("/api/TeaSampleDraw/GetAllowedAWRTypes");
             if (!response.IsSuccessStatusCode || response.Data == null)
                 return AWRTypes;
-            return AWRTypes.Where(t => response.Data.Contains(t.Key))
-                            .ToDictionary(t => t.Key, t => t.Value);
+            return response.Data;
         }
 
         // User.UnitList for the PacketTea module (USER_SCHEMA_LINK) -- same as
@@ -121,6 +122,8 @@ namespace Finance.Controllers.TEA
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             var permission = AEDV.ForScreen(sdsd, "TeaSampleDrawEntry");
             ViewBag.Permission = permission;
+            // Names for the read-only Unit box (the Unit's description; the code is still what is saved).
+            ViewBag.UnitList = await GetUnitsForUserAsync();
 
             // `view` is set by the list's View button -- same fetch as Edit, but the form renders
             // read-only. It only applies to an existing record and needs the View right.

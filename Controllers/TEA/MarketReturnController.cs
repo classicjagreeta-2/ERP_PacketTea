@@ -98,6 +98,8 @@ namespace Finance.Controllers.TEA
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             var permission = AEDV.ForScreen(sdsd, "MarketReturn");
             ViewBag.Permission = permission;
+            // Names for the read-only Unit box (the Unit's description; the code is still what is saved).
+            ViewBag.UnitList = await GetUnitsForUserAsync();
 
             // `view` is set by the list's View button -- same fetch as Edit, but the form renders
             // read-only. It only applies to an existing record and needs the View right.

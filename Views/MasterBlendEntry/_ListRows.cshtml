@@ -24,7 +24,7 @@
             <td style="text-align:center;">
                 <button type="button" class="row-expand-btn" data-target="@detailId" title="Show more details">+</button>
             </td>
-            <td>@row.UNIT</td>
+            <td title="@row.UNIT">@PacketTea.UnitScope.Name(row.UNIT, ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>)</td>
             <td>@btLabel(row.BLEND_TYPE)</td>
             <td>@row.DOCNO</td>
             <td>@row.DOCDT.ToString("dd/MM/yyyy")</td>

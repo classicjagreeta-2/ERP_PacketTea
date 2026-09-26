@@ -428,5 +428,14 @@ namespace PacketTea
             if (allowed == null || allowed.Count == 0) return NoUnits;
             return string.Join(",", allowed.Select(u => (u.CODE ?? "").Trim()).Where(c => c.Length > 0));
         }
+
+        // A list row's Unit column shows the unit's name (from the same GetUnitsForUser list the
+        // controller put in ViewBag.UnitList); the code itself when the name isn't known.
+        public static string Name(string unit, IEnumerable<PacketTea.Models.PT.UnitOption> units)
+        {
+            if (string.IsNullOrWhiteSpace(unit)) return unit;
+            var name = units?.FirstOrDefault(u => string.Equals((u.CODE ?? "").Trim(), unit.Trim(), StringComparison.OrdinalIgnoreCase))?.NAME;
+            return string.IsNullOrWhiteSpace(name) ? unit : name.Trim();
+        }
     }
 }

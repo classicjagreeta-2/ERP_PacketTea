@@ -143,11 +143,12 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Unit</label>
-                                <input type="text" id="UNIT" value="@head.UNIT" readonly />
+                                <input type="hidden" id="UNIT" value="@head.UNIT" />
+                                <input type="text" id="UNIT_name" value="@PacketTea.UnitScope.Name(head.UNIT, ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>)" title="@head.UNIT" readonly />
                             </div>
                             <div class="form-col-40">
                                 <label>Type</label>
-                                <input type="text" id="DOCTYPE_disp" value="@(head.DOCTYPE)@(string.IsNullOrEmpty(typeName) ? "" : " - " + typeName)" readonly />
+                                <input type="text" id="DOCTYPE_disp" value="@(string.IsNullOrEmpty(typeName) ? head.DOCTYPE : typeName)" title="@head.DOCTYPE" readonly />
                             </div>
                         </div>
                     </div>

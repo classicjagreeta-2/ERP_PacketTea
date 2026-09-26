@@ -33,7 +33,7 @@
             <td style="text-align:center;">
                 <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show item lines" style="cursor:pointer;"></i>
             </td>
-            <td>@row.unit</td>
+            <td title="@row.unit">@PacketTea.UnitScope.Name(row.unit, ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>)</td>
             <td>
                 @if (canEdit)
                 {
@@ -45,7 +45,7 @@
                 }
             </td>
             <td>@(row.docdt?.ToString("dd/MM/yyyy"))</td>
-            <td title="@(docTypes.ContainsKey(row.doctype ?? "") ? docTypes[row.doctype] : "")">@row.doctype</td>
+            <td title="@row.doctype">@(docTypes.ContainsKey(row.doctype ?? "") ? docTypes[row.doctype] : row.doctype)</td>
             <td title="@row.pcd">@row.partyName</td>
             <td>@row.contractNo</td>
             <td>@(isNote ? row.contractDate?.ToString("dd/MM/yyyy") : row.vehNo)</td>

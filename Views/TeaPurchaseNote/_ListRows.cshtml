@@ -25,7 +25,7 @@
             <td style="text-align:center;">
                 <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show lines" style="cursor:pointer;"></i>
             </td>
-            <td>@row.UNIT</td>
+            <td title="@row.UNIT">@PacketTea.UnitScope.Name(row.UNIT, ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>)</td>
             <td>
                 @if (canView)
                 {
@@ -37,7 +37,7 @@
                 }
             </td>
             <td>@(row.DOCDT?.ToString("dd/MM/yyyy"))</td>
-            <td>@row.TYPE_NAME (@row.SALE_TYPE)</td>
+            <td title="@row.SALE_TYPE">@(string.IsNullOrWhiteSpace(row.TYPE_NAME) ? row.SALE_TYPE : row.TYPE_NAME)</td>
             <td>@row.PCD - @row.PARTY_NAME</td>
             <td>@row.BLNO</td>
             <td>@(row.BLDT?.ToString("dd/MM/yyyy"))</td>

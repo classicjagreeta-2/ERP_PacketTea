@@ -123,8 +123,10 @@ namespace Finance.Controllers.TEA
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             var permission = AEDV.ForScreen(sdsd, "FinalBlendEntry");
             ViewBag.Permission = permission;
+            // Names for the read-only Unit box (the Unit's description; the code is still what is saved).
+            ViewBag.UnitList = await GetUnitsForUserAsync();
 
-            ViewBag.BlendTypes = BlendTypes;
+            ViewBag.BlendTypes = await MasterBlendEntryController.GetBlendTypeNamesAsync();
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
             ViewBag.IsView = view;
 

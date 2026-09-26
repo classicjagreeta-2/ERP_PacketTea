@@ -67,14 +67,25 @@ namespace Finance.Controllers.TEA
         // -but-successful- response (user genuinely has zero rights rows) does filter down
         // to nothing, which is the point of the restriction. Shared (static) so Final Blend
         // Entry and Packing Entry offer exactly the same Packet Types.
+        // The API returns { CODE: M_SALETYPE.DESCN }, so the names shown are the table's own
+        // (renaming a type in M_SALETYPE shows up here); BlendTypes' fixed names are only the
+        // fallback when the call fails.
         internal static async Task<Dictionary<string, string>> GetAllowedBlendTypesAsync()
         {
-            var response = await Services.GetAsync<List<string>>("/api/TeaBlend/GetAllowedBlendTypes");
+            var response = await Services.GetAsync<Dictionary<string, string>>("/api/TeaBlend/GetAllowedBlendTypes");
             if (!response.IsSuccessStatusCode || response.Data == null)
                 return BlendTypes;
+            return response.Data;
+        }
 
-            return BlendTypes.Where(bt => response.Data.Contains(bt.Key))
-                              .ToDictionary(bt => bt.Key, bt => bt.Value);
+        // Every Blend Type for an entry screen's dropdown (an older record may carry a type the
+        // user no longer holds), named from M_SALETYPE.DESCN wherever the API returned one.
+        internal static async Task<Dictionary<string, string>> GetBlendTypeNamesAsync()
+        {
+            var names = new Dictionary<string, string>(BlendTypes);
+            foreach (var t in await GetAllowedBlendTypesAsync())
+                names[t.Key] = t.Value;
+            return names;
         }
 
         // User.UnitList for the PacketTea module (see JwtMiddleware.cs) -- backs the
@@ -162,8 +173,10 @@ namespace Finance.Controllers.TEA
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             var permission = AEDV.ForScreen(sdsd, "MasterBlendEntry");
             ViewBag.Permission = permission;
+            // Names for the read-only Unit box (the Unit's description; the code is still what is saved).
+            ViewBag.UnitList = await GetUnitsForUserAsync();
 
-            ViewBag.BlendTypes = BlendTypes;
+            ViewBag.BlendTypes = await GetBlendTypeNamesAsync();
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
             ViewBag.IsView = view;
 

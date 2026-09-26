@@ -109,14 +109,15 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Unit</label>
-                                <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                                <input type="hidden" id="UNIT_disp" value="@head.UNIT" />
+                                <input type="text" id="UNIT_name" value="@PacketTea.UnitScope.Name(head.UNIT, ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>)" title="@head.UNIT" readonly />
                             </div>
                             <div class="form-col-20">
                                 <label>Type <span>(*)</span></label>
                                 <select id="TYPE" disabled>
                                     @foreach (var t in types)
                                     {
-                                        <option value="@t.Key" selected="@(t.Key == newType)">@t.Value (@t.Key)</option>
+                                        <option value="@t.Key" selected="@(t.Key == newType)">@t.Value</option>
                                     }
                                 </select>
                             </div>
@@ -345,6 +346,8 @@
     var IRN_LOCKED = @Html.Raw(irnLocked ? "true" : "false");
     var DOCNO = @Html.Raw(JsonConvert.SerializeObject(head.DOCNO ?? ""));
     var UNIT = @Html.Raw(JsonConvert.SerializeObject(head.UNIT ?? ""));
+    // Unit code -> name, for the read-only Unit box when a bill switches the unit.
+    var UNIT_NAMES = @Html.Raw(JsonConvert.SerializeObject(((ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>) ?? new List<PacketTea.Models.PT.UnitOption>()).GroupBy(u => u.CODE).ToDictionary(g => g.Key ?? "", g => g.First().NAME ?? g.Key)));
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
     // Qty / weights are 3 decimals (Amount / Rate / % / tax stay 2 decimals).
@@ -411,7 +414,7 @@
         if (!h) return;
         // The return belongs to the bill's Sales unit (BTEA/BGCH/...), not the
         // PacketTea login unit (e.g. JSTI) the screen may have been opened with.
-        if (h.unit && !IS_EDIT) { UNIT = h.unit; $('#UNIT_disp').val(h.unit); }
+        if (h.unit && !IS_EDIT) { UNIT = h.unit; $('#UNIT_disp').val(h.unit); $('#UNIT_name').val(UNIT_NAMES[h.unit] || h.unit).attr('title', h.unit); }
         $('#BLDT').val(h.bldt ? h.bldt.substring(0, 10) : '');
         setPickerValue('#PCD', h.pcd || ''); $('#PCD_disp').val(h.partyName || '');
         $('#VEH').val(h.veh || '');

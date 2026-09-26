@@ -74,14 +74,15 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Unit</label>
-                                <input type="text" id="UNIT_disp" value="@head.UNIT" readonly />
+                                <input type="hidden" id="UNIT_disp" value="@head.UNIT" />
+                                <input type="text" id="UNIT_name" value="@PacketTea.UnitScope.Name(head.UNIT, ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>)" title="@head.UNIT" readonly />
                             </div>
                             <div class="form-col-20">
                                 <label>Type <span>(*)</span></label>
                                 <select id="TYPE" disabled>
                                     @foreach (var t in types)
                                     {
-                                        <option value="@t.Key" selected="@(t.Key == newType)">@t.Value (@t.Key)</option>
+                                        <option value="@t.Key" selected="@(t.Key == newType)">@t.Value</option>
                                     }
                                 </select>
                             </div>

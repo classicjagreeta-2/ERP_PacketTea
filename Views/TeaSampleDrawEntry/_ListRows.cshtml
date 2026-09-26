@@ -21,14 +21,14 @@
             <td>
                 <input type="checkbox" class="row-check"
                        value="@row.docno"
-                       data-docdt="@row.docdt?.ToString("yyyy-MM-dd")"
+                       data-docdt="@(row.docdt?.ToString("yyyy-MM-dd"))"
                        data-awrtype="@row.tranCode"
                        data-unit="@row.unit" />
             </td>
             <td style="text-align:center;">
                 <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show lines" style="cursor:pointer;"></i>
             </td>
-            <td>@row.unit</td>
+            <td title="@row.unit">@PacketTea.UnitScope.Name(row.unit, ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>)</td>
             <td>
                 @if (canEdit)
                 {
@@ -47,7 +47,7 @@
             <td style="text-align:right;">@row.totalDrawQty.ToString("0.000")</td>
         </tr>
         <tr class="row-detail" id="@detailId" style="display:none;"
-            data-docno="@row.docno" data-docdt="@row.docdt?.ToString("yyyy-MM-dd")" data-awrtype="@row.tranCode" data-unit="@row.unit">
+            data-docno="@row.docno" data-docdt="@(row.docdt?.ToString("yyyy-MM-dd"))" data-awrtype="@row.tranCode" data-unit="@row.unit">
             <td colspan="10" style="background:#f8f9fc;padding:10px 12px;">
                 <div style="overflow-x:auto;">
                     <table class="detail-sub-table">

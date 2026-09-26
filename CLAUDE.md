@@ -32,6 +32,39 @@ Established pattern, now used identically by all three controllers —
   (the fixed Blend-Type -> Unit table) is now only the fallback when no Unit
   was posted.
 
+**No fallback to "all units" (added 2026-09-25):** the allowed-Unit list is *only* what
+`USER_SCHEMA_LINK` grants the user. **A user with no `USER_SCHEMA_LINK` rows sees NO
+units** — the Unit dropdowns / "New" row pickers are empty, the list comes back empty
+(`UnitScope.ListFilter` sends `UnitScope.NoUnits`), and `Save` / Edit / View / Delete are
+rejected by `UnitScope.IsAllowed`. Never fall back to every unit, every Sales unit or every
+manufacturing unit when the grants are empty — neither in the API's `GetUnitsForUser`
+endpoints (`TeaBlend`, `TeaAWR`, `TeaSampleDraw`, `TeaPurchaseNote`, `MarketReturn`,
+`ProductionEntry`, `OtherInvoice`, `PacketTeaNote`) nor in the MVC controllers / views
+(the "New" row shows "No unit is available to you" instead). Applies to **every list and
+entry screen that has a Unit**, not just the Blend ones, and to any new screen. The one
+allowed *expansion* is Sales-schema screens (Production / Market Return-style, Other Invoice,
+Packet Tea Note): a grant naming a factory unit (e.g. `JSTI`) of the same company expands to
+that company's manufacturing units (`ReportUnitAccess.Resolve`) — still derived from the
+user's grants, never from "no grants".
+
+**Every list starts with the Unit column** (the user's permitted units only, per the rule
+above); the existing column sequence of a list is otherwise left as it is. The column shows
+the unit's **name** (code as the cell's tooltip) via `UnitScope.Name(row.UNIT, ViewBag.UnitList)`
+(2026-09-26) -- so every `GetUnitsForUser` endpoint must fill `NAME`. **Exception: AWR Entry**
+is deliberately left unchanged (Unit code, fixed type names) at the user's request.
+The same goes for the "New" row's Unit / Type pickers (`list-new-row-pickers.js` shows the
+Name, posts the Code; AWR passes `textField: 'CODE'`) and the entry screens' read-only Unit
+box (hidden `#UNIT_disp` / `#UNIT` keeps the code that is saved, visible `#UNIT_name` shows
+the name; `InsertOrUpdate` loads `ViewBag.UnitList` for it) and Type dropdown (description
+only, no "(code)" suffix).
+
+**Packet / Blend Type names come from `M_SALETYPE.DESCN`** (2026-09-26): the API's
+`TeaBlend/GetAllowedBlendTypes` and `TeaSampleDraw/GetAllowedAWRTypes` return `{ CODE: DESCN }`
+(shared `TeaBlendController.AllowedPacketTypes`). The MVC's fixed `BlendTypes` / `AWRTypes`
+dictionaries are only the fallback when that call fails. AWR Entry (`TeaAWR/GetAllowedAWRTypes`,
+`AWREntryController`) still returns codes only and uses the fixed `AWRTypes` names -- don't
+change it without asking.
+
 **Unit + Packet Type (Blend Type) scoping** (added 2026-09-24):
 - List `Index` actions take an optional `unit` and always send the API
   `UnitScope.ListFilter(unit, userUnits)` — the one unit asked for (if

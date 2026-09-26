@@ -154,6 +154,8 @@ namespace Finance.Controllers.TEA
 
             var permission = Permission;
             ViewBag.Permission = permission;
+            // Names for the read-only Unit box (the Unit's description; the code is still what is saved).
+            ViewBag.UnitList = await GetUnitsForUserAsync();
 
             bool isNew = string.IsNullOrEmpty(docno);
 

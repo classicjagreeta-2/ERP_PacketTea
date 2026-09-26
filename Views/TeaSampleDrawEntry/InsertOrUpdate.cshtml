@@ -87,14 +87,15 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Unit</label>
-                                <input type="text" id="UNIT_disp" value="@unit" readonly />
+                                <input type="hidden" id="UNIT_disp" value="@unit" />
+                                <input type="text" id="UNIT_name" value="@PacketTea.UnitScope.Name(unit, ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>)" title="@unit" readonly />
                             </div>
                             <div class="form-col-20">
                                 <label>Type <span>(*)</span></label>
                                 <select id="AWR_TYPE" @((isEdit || lockedFromList) ? "disabled" : "")>
                                     @foreach (var t in awrTypes)
                                     {
-                                        <option value="@t.Key" selected="@(t.Key == awrType)">@t.Value (@t.Key)</option>
+                                        <option value="@t.Key" selected="@(t.Key == awrType)">@t.Value</option>
                                     }
                                 </select>
                             </div>

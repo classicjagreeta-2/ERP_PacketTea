@@ -394,8 +394,8 @@
     function adjMode() { return $('input[name="QTY_RETURN"]:checked').val() || 'N'; }
 
     // ---------------------------------------------------------------- header
-    $('#UNIT_disp').val(UNIT + (H.UNIT_NAME ? ' - ' + H.UNIT_NAME : ''));
-    $('#TYPE_disp').val((H.TYPE_NAME || '') + ' (' + TYPE + ')');
+    $('#UNIT_disp').val(H.UNIT_NAME || UNIT).attr('title', UNIT);   // the Unit's description; UNIT (the code) is what is saved
+    $('#TYPE_disp').val(H.TYPE_NAME || TYPE).attr('title', TYPE);
     $('#DOCNO').val(H.DOCNO || '');
     $('#hdrDocNo').text(H.DOCNO || '');
     $('#JV_DOCNO').val(H.JV_DOCNO || '');
@@ -978,7 +978,10 @@
         // Edit: live rates for any further change; the saved figures stay as loaded.
         fetchRates(rows.map(function (r) { return r.GRADE; }));
     }
-    if (!IS_EDIT && !IS_VIEW) setTimeout(function () { $('#PCD').trigger('click'); }, 300);
+    // The Party dropdown opens only when the user clicks the Party box. (It used to pop open by itself
+    // 300 ms after load; a menu click in that moment left it open, mispositioned, over the side menu.)
+    // Leaving the page (e.g. a side-menu click) closes any dropdown still open.
+    $(window).on('beforeunload pagehide', function () { $('.inputpicker-wrapped-list').hide(); });
 })();
 </script>
 </body>
