@@ -11,6 +11,11 @@
     // AEDV gating of the toolbar buttons (UX only -- the controller re-checks every right).
     var perm = ViewBag.Permission as PacketTea.Helpers.AEDV;
     Func<bool, string> denied = ok => ok ? "" : "pointer-events:none; opacity:0.5;";
+    // A guard's redirect message (TempData["toastrError"]) is shown in the in-app Notice popup
+    // below, like the entry screen. Removed here -- the view renders before _Layout -- so
+    // _Notification doesn't also raise its red toastr for it.
+    var redirectError = TempData["toastrError"] as string;
+    TempData.Remove("toastrError");
 }
 
 @{
@@ -79,6 +84,9 @@
         #inputpicker-wrapped-list { min-width: 300px; }
         tr.new-entry-row .go-new { font-size: 15px; cursor: not-allowed; color: #aab2c0; }
         tr.new-entry-row .go-new.is-ready { cursor: pointer; color: #404e68; }
+        .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
+        .popup-box.alert-box .alert-message { max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
+        .popup-box.alert-box .alert-actions { display: flex; justify-content: flex-end; gap: 8px; }
     </style>
 </head>
 <body>
@@ -144,11 +152,44 @@
         <div class="dataTables_info" style="padding:10px 20px 0;">Showing <span id="shownCount">@(Model?.Count ?? 0)</span> of @rowCount</div>
     </div>
 
+    <div class="popup-overlay" id="appAlertOverlay"></div>
+    <div class="popup-box alert-box" id="appAlertBox">
+        <div class="popup-header"><h2 id="appAlertTitle">Notice</h2></div>
+        <div class="alert-message" id="appAlertMessage"></div>
+        <div class="alert-actions">
+            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
+        </div>
+    </div>
+
     <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <script src="~/Scripts/list-new-row-pickers.js?v=@System.IO.File.GetLastWriteTimeUtc(Server.MapPath("~/Scripts/list-new-row-pickers.js")).Ticks"></script>
     <script src="~/Scripts/list-infinite-scroll.js"></script>
     <script>
+        // In-app Notice/Confirm popup (same as the entry screen and Production Entry's list)
+        // instead of the toastr / the browser's native alert()/confirm() ("localhost says...").
+        $('#appAlertOverlay, #appAlertBox').appendTo(document.body);
+        function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
+        function showAlert(message) {
+            $('#appAlertTitle').text('Notice');
+            $('#appAlertMessage').text(message || '');
+            $('#appAlertCancel').hide();
+            $('#appAlertOk').off('click').on('click', closeAppAlert);
+            $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+            setTimeout(function () { $('#appAlertOk').focus(); }, 150);
+        }
+        function showConfirm(message, onYes) {
+            $('#appAlertTitle').text('Confirm');
+            $('#appAlertMessage').text(message || '');
+            $('#appAlertCancel').show().off('click').on('click', closeAppAlert);
+            $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); onYes(); });
+            $('#appAlertOverlay, #appAlertBox').fadeIn(120);
+        }
+
         $(function () {
+            var REDIRECT_ERROR = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(redirectError ?? "", new Newtonsoft.Json.JsonSerializerSettings { StringEscapeHandling = Newtonsoft.Json.StringEscapeHandling.EscapeHtml }));
+            if (REDIRECT_ERROR) showAlert(REDIRECT_ERROR);
+
             var TRAN = '@tran';
             function f2(v) { v = parseFloat(v); return (isNaN(v) ? 0 : v).toFixed(2); }
             function f3(v) { v = parseFloat(v); return (isNaN(v) ? 0 : v).toFixed(3); }
@@ -243,8 +284,8 @@
             }
             $('#btnNew').on('click', function () {
                 if ($('#newTypeRow').length) return;
-                if (!UNIT_LIST.length) { alert('No unit is available to you (no Unit is linked to your user).'); return; }
-                if (!Object.keys(TYPES).length) { alert('You have no rights to any purchase type.'); return; }
+                if (!UNIT_LIST.length) { showAlert('No unit is available to you (no Unit is linked to your user).'); return; }
+                if (!Object.keys(TYPES).length) { showAlert('You have no rights to any purchase type.'); return; }
                 $('#listBody').prepend(buildNewRow());
                 initNewRowPickers({ units: UNIT_LIST, types: TYPES });   // also pre-selects a single Unit
                 refreshGoNewState();
@@ -252,8 +293,8 @@
             $('#noteTable').on('change', '#newRowUnit, #newRowPacketType', refreshGoNewState);
             $('#noteTable').on('click', '.go-new', function () {
                 var unit = $('#newRowUnit').val(), type = $('#newRowPacketType').val();
-                if (!unit) { alert('Please select Unit first'); return; }
-                if (!type) { alert('Please select Type first'); return; }
+                if (!unit) { showAlert('Please select Unit first'); return; }
+                if (!type) { showAlert('Please select Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "TeaPurchaseNote")'
                     + '?tran=' + TRAN + '&unit=' + encodeURIComponent(unit) + '&type=' + encodeURIComponent(type);
             });
@@ -262,8 +303,8 @@
             // exactly one row.
             function getSingleChecked(action) {
                 var $c = $('.row-check:checked');
-                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
-                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
+                if ($c.length === 0) { showAlert('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { showAlert('Please select only one record to ' + action + '.'); return null; }
                 return $c;
             }
             // The row's Unit travels with Edit / View / Delete: a Doc No repeats across units, so the
@@ -284,23 +325,24 @@
                     + '&view=true';
             }
             function doDelete($c) {
-                if (!confirm('Are you sure to Cancel @tranName ' + $c.val() + ' ?\nIts accounts voucher will be removed too.')) return;
-                $('<form>', { method: 'POST', action: '@Url.Action("Delete", "TeaPurchaseNote")' })
-                    .append($('<input>', { type: 'hidden', name: 'tran', value: TRAN }))
-                    .append($('<input>', { type: 'hidden', name: 'unit', value: $c.data('unit') }))
-                    .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
-                    .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
-                    .appendTo('body').submit();
+                showConfirm('Are you sure to Cancel @tranName ' + $c.val() + ' ?\nIts accounts voucher will be removed too.', function () {
+                    $('<form>', { method: 'POST', action: '@Url.Action("Delete", "TeaPurchaseNote")' })
+                        .append($('<input>', { type: 'hidden', name: 'tran', value: TRAN }))
+                        .append($('<input>', { type: 'hidden', name: 'unit', value: $c.data('unit') }))
+                        .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
+                        .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
+                        .appendTo('body').submit();
+                });
             }
 
             $('#editBtn').on('click', function () {
                 var $c = getSingleChecked('edit'); if (!$c) return;
-                if ($c.data('irn')) { alert('E-Invoice has been Generated for this, can\'t edit.'); return; }
+                if ($c.data('irn')) { showAlert('E-Invoice has been Generated for this, can\'t edit.'); return; }
                 goEdit($c);
             });
             $('#deleteBtn').on('click', function () {
                 var $c = getSingleChecked('delete'); if (!$c) return;
-                if ($c.data('irn')) { alert('E-Invoice has been Generated for this, can\'t delete.'); return; }
+                if ($c.data('irn')) { showAlert('E-Invoice has been Generated for this, can\'t delete.'); return; }
                 doDelete($c);
             });
             $('#viewBtn').on('click', function () { var $c = getSingleChecked('view'); if ($c) goView($c); });
