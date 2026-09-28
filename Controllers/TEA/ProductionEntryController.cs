@@ -284,13 +284,14 @@ namespace Finance.Controllers.TEA
 
         // POST: ProductionEntry/Delete
         [HttpPost]
-        public async Task<ActionResult> Delete(string docno, string type, string unit)
+        public async Task<ActionResult> Delete(string docno, string type, string unit, string docdt = "")
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             var permission = AEDV.ForScreen(sdsd, "ProductionEntry");
-            if (!(permission?.Delete ?? false))
+            var delErr = AEDV.CheckDelete(permission, PacketTea.DateText.Parse(docdt));
+            if (delErr != null)
             {
-                TempData["toastrError"] = "You do not have permission to delete this entry.";
+                TempData["toastrError"] = delErr;
                 return RedirectToAction("Index", new { type });
             }
 

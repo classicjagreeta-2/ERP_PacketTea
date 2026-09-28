@@ -22,7 +22,7 @@ namespace PacketTea.Controllers.TEA
         {
             {
                 var sdsd = (List<AEDV>)Session["User_AEDV"];
-                ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
+                ViewBag.Permission = AEDV.ForScreen(sdsd, "PacketTeaPurchaseEntry");
                 ViewBag.CurrentSort = sortOrder;
                 ViewBag.NameSortParm = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
                 ViewBag.DateSortParm = sortOrder == "Date" ? "date_desc" : "Date";

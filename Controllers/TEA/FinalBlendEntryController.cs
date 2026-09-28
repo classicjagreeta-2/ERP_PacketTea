@@ -128,6 +128,13 @@ namespace Finance.Controllers.TEA
 
             ViewBag.BlendTypes = await MasterBlendEntryController.GetBlendTypeNamesAsync();
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
+            // View only applies to an existing record and needs the View right (as Packing).
+            view = view && !string.IsNullOrEmpty(docno);
+            if (view && !(permission?.View ?? false))
+            {
+                TempData["toastrError"] = "You do not have permission to view this entry.";
+                return RedirectToAction("Index", new { blendType });
+            }
             ViewBag.IsView = view;
 
             bool isNewEntry = string.IsNullOrEmpty(docno);
@@ -274,9 +281,10 @@ namespace Finance.Controllers.TEA
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             var permission = AEDV.ForScreen(sdsd, "FinalBlendEntry");
-            if (!(permission?.Delete ?? false))
+            var delErr = AEDV.CheckDelete(permission, PacketTea.DateText.Parse(docdt));
+            if (delErr != null)
             {
-                TempData["toastrError"] = "You do not have permission to delete this entry.";
+                TempData["toastrError"] = delErr;
                 return RedirectToAction("Index", new { blendType });
             }
 

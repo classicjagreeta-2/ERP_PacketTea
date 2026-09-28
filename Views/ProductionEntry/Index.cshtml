@@ -347,6 +347,7 @@
                     $('<form>', { method: 'POST', action: '@Url.Action("Delete", "ProductionEntry")' })
                         .append($('<input>', { type: 'hidden', name: 'docno', value: $c.val() }))
                         .append($('<input>', { type: 'hidden', name: 'unit', value: $c.data('unit') }))
+                        .append($('<input>', { type: 'hidden', name: 'docdt', value: $c.data('docdt') }))
                         .appendTo('body').submit();
                 });
             });

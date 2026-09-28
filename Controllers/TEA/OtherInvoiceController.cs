@@ -40,8 +40,7 @@ namespace Finance.Controllers.TEA
         private static string E(string s) => Uri.EscapeDataString(s ?? "");
 
         // AEDV Add/Edit/Delete/View + back-date rights (CLAUDE.md "AEDV" section): the screen's own
-        // "OtherInvoice" row of Session["User_AEDV"], falling back to / combined with the shared
-        // "PacketTeaPurchaseEntry" bucket like the other TEA screens (see AEDV.ForScreen).
+        // "OtherInvoice" row of Session["User_AEDV"] only (see AEDV.ForScreen).
         // One controller serves all three menus, so they share one permission.
         private const string Screen = "OtherInvoice";
         private AEDV Permission => AEDV.ForScreen((List<AEDV>)Session["User_AEDV"], Screen);
@@ -292,12 +291,13 @@ namespace Finance.Controllers.TEA
 
         // POST: OtherInvoice/Delete
         [HttpPost]
-        public async Task<ActionResult> Delete(string tran, string docYear, string unit, string doctype, string docno)
+        public async Task<ActionResult> Delete(string tran, string docYear, string unit, string doctype, string docno, string docdt = "")
         {
             tran = TranOf(tran);
-            if (!(Permission?.Delete ?? false))
+            var delErr = AEDV.CheckDelete(Permission, PacketTea.DateText.Parse(docdt));
+            if (delErr != null)
             {
-                TempData["toastrError"] = "You do not have permission to delete this entry.";
+                TempData["toastrError"] = delErr;
                 return RedirectToAction(TranActions[tran]);
             }
 

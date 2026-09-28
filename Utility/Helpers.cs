@@ -362,30 +362,31 @@ namespace PacketTea
                     ? (isNew ? "You do not have permission to add a new entry." : "You do not have permission to edit this entry.")
                     : permission.CheckAddEdit(isNew, docDate);
 
-            // Rights for a screen: its own row (Controller == screen) and the shared
-            // "PacketTeaPurchaseEntry" row this app's blend screens have always read, combined
-            // -- a letter held on either row counts, and the more generous back-date window
-            // wins. Lets a screen work whether or not the menu setup has provisioned a row of its
-            // own for it. Null only when the user has neither row.
-            public static AEDV ForScreen(List<AEDV> all, string controller, string sharedBucket = "PacketTeaPurchaseEntry")
+            // Null when the user may delete a document dated docDate, else the message to show:
+            // needs the D right, and the document's own date within Dday days of today (same
+            // back-date rule as Edit/Eday). A missing / unreadable date is rejected, not waved through.
+            public static string CheckDelete(AEDV permission, DateTime? docDate)
             {
-                var own = all?.FirstOrDefault(l => l.Controller == controller);
-                var shared = all?.FirstOrDefault(l => l.Controller == sharedBucket);
-                if (own == null) return shared;
-                if (shared == null || ReferenceEquals(own, shared)) return own;
+                if (!(permission?.Delete ?? false))
+                    return "You do not have permission to delete this entry.";
+                if (docDate == null)
+                    return "Doc Date is required to delete an entry.";
 
-                var letters = new string("AEDV".Where(c => own.Can(c) || shared.Can(c)).ToArray());
-                return new AEDV
-                {
-                    Autoid = own.Autoid, Id = own.Id, Name = own.Name, IndeXORA = own.IndeXORA,
-                    Pid = own.Pid, Ordercode = own.Ordercode, Perdotnetmenu = own.Perdotnetmenu,
-                    Atvdotnetmenu = own.Atvdotnetmenu, Controller = own.Controller,
-                    Aedv = letters,
-                    Aday = Math.Max(own.Aday, shared.Aday),
-                    Eday = Math.Max(own.Eday, shared.Eday),
-                    Dday = Math.Max(own.Dday, shared.Dday)
-                };
+                var minDate = DateTime.Today.AddDays(-permission.Dday);
+                return docDate.Value.Date < minDate
+                    ? $"Delete is not allowed. Only entries dated on or after {minDate:dd/MM/yyyy} ({permission.Dday} day(s) back) can be deleted."
+                    : null;
             }
+
+            // Rights for a screen = the user's USRACS row for the menu item whose VBMENU_DONE
+            // CONTROLLER is this screen -- only that row, as ERP_Payroll's
+            // BaseController.GetAEDVPermissionByController() does. (It used to be merged with the
+            // "PacketTeaPurchaseEntry" row, so a user with rights on Packet Tea Purchase got them
+            // on every screen even when that screen's own AEDV was blank.) Null when the user has
+            // no row for the screen = no rights.
+            public static AEDV ForScreen(List<AEDV> all, string controller) =>
+                all?.FirstOrDefault(l => string.Equals((l.Controller ?? "").Trim(), (controller ?? "").Trim(),
+                                                       StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -405,6 +406,13 @@ namespace PacketTea
                 ? d.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture)
                 : s;
         }
+
+        // The date in s (any of Formats), or null when blank / not a recognisable date.
+        public static DateTime? Parse(string s) =>
+            !string.IsNullOrWhiteSpace(s)
+            && DateTime.TryParseExact(s.Trim(), Formats, System.Globalization.CultureInfo.InvariantCulture,
+                   System.Globalization.DateTimeStyles.None, out var d)
+                ? d : (DateTime?)null;
     }
 
     // Unit scoping for the Blend screens (Master / Final / Packing) -- see CLAUDE.md's

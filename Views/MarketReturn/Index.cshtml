@@ -321,12 +321,13 @@
                     + '?docno=' + encodeURIComponent(docno) + '&unit=' + encodeURIComponent(unit || '') + '&view=true';
             }
 
-            function doDelete(docno, unit) {
+            function doDelete(docno, unit, docdt) {
                 if (!confirm('Are you sure you want to delete Doc No ' + docno + ' ?')) return;
 
                 $('<form>', { method: 'POST', action: '@Url.Action("Delete", "MarketReturn")' })
                     .append($('<input>', { type: 'hidden', name: 'docno', value: docno }))
                     .append($('<input>', { type: 'hidden', name: 'unit', value: unit || '' }))
+                    .append($('<input>', { type: 'hidden', name: 'docdt', value: docdt || '' }))
                     .appendTo('body').submit();
             }
 
@@ -337,7 +338,7 @@
 
             $('#deleteBtn').on('click', function () {
                 var $c = getSingleChecked('delete');
-                if ($c) doDelete($c.val(), $c.data('unit'));
+                if ($c) doDelete($c.val(), $c.data('unit'), $c.data('docdt'));
             });
 
             $('#viewBtn').on('click', function () {

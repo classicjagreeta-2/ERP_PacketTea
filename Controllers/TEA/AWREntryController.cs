@@ -325,9 +325,10 @@ namespace Finance.Controllers.TEA
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             var permission = AEDV.ForScreen(sdsd, "AWREntry");
-            if (!(permission?.Delete ?? false))
+            var delErr = AEDV.CheckDelete(permission, PacketTea.DateText.Parse(awrDate));
+            if (delErr != null)
             {
-                TempData["toastrError"] = "You do not have permission to delete this entry.";
+                TempData["toastrError"] = delErr;
                 return RedirectToAction("Index", new { awrType });
             }
 

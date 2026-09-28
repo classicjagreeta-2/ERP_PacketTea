@@ -103,8 +103,7 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> Index(string blendType, string searchString, int? page = 1, int pageSize = 15, string unit = "")
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
-            // Own "MasterBlendEntry" row plus the shared "PacketTeaPurchaseEntry" bucket the
-            // other TEA controllers use -- see AEDV.ForScreen.
+            // This screen's own "MasterBlendEntry" row only -- see AEDV.ForScreen.
             ViewBag.Permission = AEDV.ForScreen(sdsd, "MasterBlendEntry");
             ViewBag.CurrentFilter = searchString;
             ViewBag.PageSize = pageSize;
@@ -178,6 +177,13 @@ namespace Finance.Controllers.TEA
 
             ViewBag.BlendTypes = await GetBlendTypeNamesAsync();
             ViewBag.LockedFromList = string.IsNullOrEmpty(docno) && !string.IsNullOrEmpty(unit) && !string.IsNullOrEmpty(blendType);
+            // View only applies to an existing record and needs the View right (as Packing).
+            view = view && !string.IsNullOrEmpty(docno);
+            if (view && !(permission?.View ?? false))
+            {
+                TempData["toastrError"] = "You do not have permission to view this entry.";
+                return RedirectToAction("Index", new { blendType });
+            }
             ViewBag.IsView = view;
 
             bool isNewEntry = string.IsNullOrEmpty(docno);
@@ -327,9 +333,10 @@ namespace Finance.Controllers.TEA
         {
             var sdsd = (List<AEDV>)Session["User_AEDV"];
             var permission = AEDV.ForScreen(sdsd, "MasterBlendEntry");
-            if (!(permission?.Delete ?? false))
+            var delErr = AEDV.CheckDelete(permission, PacketTea.DateText.Parse(docdt));
+            if (delErr != null)
             {
-                TempData["toastrError"] = "You do not have permission to delete this entry.";
+                TempData["toastrError"] = delErr;
                 return RedirectToAction("Index", new { blendType });
             }
 

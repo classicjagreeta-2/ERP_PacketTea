@@ -17,7 +17,8 @@ namespace Finance.Controllers.TEA
         {
             {
                 var sdsd = (List<AEDV>)Session["User_AEDV"];
-                ViewBag.Permission = sdsd?.FirstOrDefault(l => l.Controller == "PacketTeaPurchaseEntry");
+                // This screen's own row (was the Packet Tea Purchase row) -- see AEDV.ForScreen.
+                ViewBag.Permission = AEDV.ForScreen(sdsd, "BlendEntry");
                 ViewBag.CurrentSort = sortOrder;
                 ViewBag.NameSortParm = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
                 ViewBag.DateSortParm = sortOrder == "Date" ? "date_desc" : "Date";

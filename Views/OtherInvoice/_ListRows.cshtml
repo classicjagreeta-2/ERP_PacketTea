@@ -28,6 +28,7 @@
                        data-docyear="@row.docYear"
                        data-unit="@row.unit"
                        data-doctype="@row.doctype"
+                       data-docdt="@(row.docdt?.ToString("yyyy-MM-dd"))"
                        data-irn="@(string.IsNullOrEmpty(row.irn) ? "" : "Y")" />
             </td>
             <td style="text-align:center;">

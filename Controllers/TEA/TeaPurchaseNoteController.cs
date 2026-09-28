@@ -300,9 +300,10 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> Delete(string tran, string unit, string docno, string docdt)
         {
             tran = TranOf(tran);
-            if (!(Permission?.Delete ?? false))
+            var delErr = AEDV.CheckDelete(Permission, PacketTea.DateText.Parse(docdt));
+            if (delErr != null)
             {
-                TempData["toastrError"] = "You do not have permission to delete this entry.";
+                TempData["toastrError"] = delErr;
                 return RedirectToAction(TranActions[tran]);
             }
 

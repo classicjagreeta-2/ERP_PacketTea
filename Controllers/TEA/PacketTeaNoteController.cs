@@ -21,8 +21,8 @@ namespace Finance.Controllers.TEA
     // (CLASSIC_CONTROL.SCHEMA_SALES, e.g. FIN_JSTIL2027), so every call goes through
     // Services.SalesGetAsync/SalesPostAsync like Other Invoice. Follows the project rules
     // (CLAUDE.md): Unit scoping (USER_SCHEMA_LINK via GetUnitsForUser), AEDV Add/Edit/Delete/View
-    // + back-date window (AEDV.ForScreen "PacketTeaNote", falling back to the shared
-    // "PacketTeaPurchaseEntry" row), chunked infinite-scroll list, Root UI (inputpicker) lookups.
+    // + back-date window (AEDV.ForScreen "PacketTeaNote" -- this screen's own row only),
+    // chunked infinite-scroll list, Root UI (inputpicker) lookups.
     public class PacketTeaNoteController : Controller
     {
         private static readonly Dictionary<string, string> TranNames = new Dictionary<string, string>
@@ -274,9 +274,10 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> Delete(string tran, string unit, string docno, string docdt)
         {
             tran = TranOf(tran);
-            if (!(Permission?.Delete ?? false))
+            var delErr = AEDV.CheckDelete(Permission, PacketTea.DateText.Parse(docdt));
+            if (delErr != null)
             {
-                TempData["toastrError"] = "You do not have permission to delete this entry.";
+                TempData["toastrError"] = delErr;
                 return RedirectToAction(TranActions[tran]);
             }
 
