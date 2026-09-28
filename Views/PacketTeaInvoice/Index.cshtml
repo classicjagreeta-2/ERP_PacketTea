@@ -114,6 +114,7 @@
                 <tr>
                     <th><input type="checkbox" class="checkbox-round" /></th>
                     <th></th>
+                    <th>Unit</th>
                     <th>Bill No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
                     <th>Bill Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
                     <th>Ship To Code & Description <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
@@ -395,7 +396,7 @@ function onLoadSuccess() {
                      <td class="text-center"> <i class="fa fa-pencil go-new" style="cursor:pointer;color:#black;" title="Go to New Entry"></i> </td>
                      <td></td>
                      <!-- Inputpicker -->
-                     <td> <input type="text" id="ListingUnitCode" class="form-control" placeholder="Select Unit" autocomplete="off" style="width:140px;" /></td>
+                     <td> <input type="text" id="ListingUnitCode" class="form-control" placeholder="Select Unit" autocomplete="off" style="width:280px;" /></td>
                      <td colspan="8"></td>
                     </tr>`;
          }
@@ -428,76 +429,44 @@ function onLoadSuccess() {
                      { name: 'CODE', text: 'CODE' },
                      { name: 'NAME', text: 'NAME' }
                  ],
-                 fieldText: 'CODE',
+                 // Shows the unit's Name in the box; the input's value (what is posted) stays the Code.
+                 fieldText: 'NAME',
                  fieldValue: 'CODE',
                  headShow: true,
+                 filterOpen: true,
                  autoOpen: true,
                  pagination: true,
                  pageField: 'p',
                  pageLimitField: 'limit',
                  pageLimit: 10,
                  pageCountField: 'count',
-                 width: '140px',
+                 width: '280px',
                  urlDelay: 1
              });
 
-             console.log('✅ Inputpicker initialized');
-
-             // ✅ Method 1: Try inputpicker.select event
-             $('#ListingUnitCode').on('inputpicker.select', function (e, item) {
-                 console.log('✅ inputpicker.select event fired!', item);
-                 if (item && item.CODE) {
-                     saveUnitData(item.CODE, item.LOCA);
-                 }
-             });
-
-             // ✅ Method 2: Listen to the 'change' event
+             // This plugin copy writes the picked Code into the (hidden) original input and fires
+             // 'change' -- read the picked row (with LOCA) back from the picker's own data.
              $('#ListingUnitCode').on('change', function () {
-                 var selectedCode = $(this).val();
-                 console.log('✅ change event fired, selectedCode:', selectedCode);
+                 var code = String($(this).val() || '');
+                 if (!code) { saveUnitData('', ''); return; }
 
-                 if (selectedCode) {
-                     // Fetch the full unit data including GLOCA
-                     fetchUnitByCode(selectedCode);
+                 var data = [];
+                 try { data = $(this).inputpicker('data') || []; } catch (e) { data = []; }
+                 for (var i = 0; i < data.length; i++) {
+                     if (String(data[i].CODE) === code) { saveUnitData(data[i].CODE, data[i].LOCA); return; }
                  }
+                 fetchUnitByCode(code);
              });
-             setTimeout(function() {
-                 $(document).off('click.unitpicker');
-                 $(document).on('click.unitpicker', '.inputpicker-list li, .inputpicker-item', function() {
-                     console.log('✅ Dropdown item clicked (backup method)');
-                     var selectedText = $(this).text().trim();
-                     console.log('   Clicked text:', selectedText);
-                     var code = selectedText.split(/[\s-]/)[0].trim();
-                     console.log('   Extracted CODE:', code);
-
-                     if (code) {
-                         setTimeout(function() {
-                             fetchUnitByCode(code);
-                         }, 100);
-                     }
-                 });
-             }, 500);
          }
          function fetchUnitByCode(code) {
-             console.log('🔍 Fetching unit data for CODE:', code);
-
              $.ajax({
                  url: '@Url.Action("GetUnit", "PacketTeaInvoice")',
-                 data: { q: code, limit: 1, p: 1 },
+                 data: { q: code, limit: 50, p: 1 },
                  method: 'GET',
-                 success: function(response) {
-                     console.log('✅ API response:', response);
-
-                     if (response.data && response.data.length > 0) {
-                         var unit = response.data[0];
-                         console.log('   Found unit:', unit);
-                         saveUnitData(unit.CODE, unit.LOCA);
-                     } else {
-                         console.warn('⚠️ No unit found for CODE:', code);
-                     }
-                 },
-                 error: function(err) {
-                     console.error('❌ Error fetching unit:', err);
+                 success: function (response) {
+                     var rows = (response && response.data) || [];
+                     var unit = rows.filter(function (u) { return String(u.CODE) === code; })[0];
+                     if (unit) saveUnitData(unit.CODE, unit.LOCA);
                  }
              });
          }

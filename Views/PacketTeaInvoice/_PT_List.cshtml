@@ -14,6 +14,7 @@
     <tr class="parent-row" data-id="@pt.id">
         <td> <input type="checkbox" class="row-check" value="@encryptedId" data-unit="@pt.unit" data-bldt="@pt.bldt" data-blno="@pt.blno" /> </td>
         <td><i class="fa fa-plus toggle-details" data-unit="@pt.unit" data-bldt="@pt.bldt" data-blno="@pt.blno" style="cursor:pointer"></i> </td>
+        <td title="@pt.unit">@PacketTea.UnitScope.Name(pt.unit, ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>)</td>
         <td><a href="@Url.Action("InsertOrUpdate", "PacketTeaInvoice")?id=@urlEncodedId" style="@inlineStyle"> @(pt.blno)</a></td>
         <td>@DateHelper.DateFormatter(pt.bldt)</td>
         <td>@(string.IsNullOrEmpty(pt.pcd) || string.IsNullOrEmpty(pt.delivery) ? " " : pt.pcd + " - " + pt.delivery)</td>

@@ -55,6 +55,12 @@ namespace PacketTea.Controllers.PacketTea
 
             var pagedList = new StaticPagedList<UNBL_HED>(list, pageNumber, pageSize, totalRows);
 
+            // Unit names for the list's Unit column (UnitScope.Name) -- the same Unit master
+            // the "New" row's picker (GetUnit) reads.
+            var unitResp = await Services.FinanceGetAsync<List<UNIT>>("/api/MasterUnit/GetAll");
+            ViewBag.UnitList = (unitResp?.Data ?? new List<UNIT>())
+                .Select(u => new UnitOption { CODE = u.CODE, NAME = u.NAME }).ToList();
+
             if (Request.IsAjaxRequest())
                 return PartialView("_PT_List", pagedList);
 
@@ -117,7 +123,8 @@ namespace PacketTea.Controllers.PacketTea
             // 🔍 Search filter
             if (!string.IsNullOrWhiteSpace(q))
             {
-                all = all.Where(x => (x.CODE != null && x.CODE.Contains(q)) || (x.NAME != null && x.NAME.Contains(q)) || (x.LOCA != null && x.LOCA.Contains(q))).ToList();
+                var s = q.Trim().ToUpperInvariant();
+                all = all.Where(x => (x.CODE ?? "").ToUpperInvariant().Contains(s) || (x.NAME ?? "").ToUpperInvariant().Contains(s) || (x.LOCA ?? "").ToUpperInvariant().Contains(s)).ToList();
             }
             var count = all.Count;
 
