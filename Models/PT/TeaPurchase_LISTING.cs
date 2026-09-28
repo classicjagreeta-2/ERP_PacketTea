@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -10,6 +11,13 @@ namespace PacketTea.Models.PT
         public string loca { get; set; }
         public string gloca { get; set; }
         public string unit { get; set; }
+
+        public string UNIT_DESC { get; set; }
+        //[JsonProperty("unit")]
+        //public string unit { get; set; }
+
+        //[JsonProperty("descn")]
+        //public string descn { get; set; }
         public string docno { get; set; }
         public DateTime? docdt { get; set; }
         public string sL_NO { get; set; }

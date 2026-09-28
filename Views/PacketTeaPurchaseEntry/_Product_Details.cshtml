@@ -324,13 +324,7 @@
                            class="form-control" 
                            maxlength="16"/>
                 </td>
-                @*<td style=" width:100px;">
-                    <input type="text"
-                           name="T_TEA_DETAIL[@(RowIndex + j)].DO_DT"
-                           value="@(det.DO_DT != null ? Convert.ToDateTime(det.DO_DT).ToString("dd/MM/yyyy") : "")"
-                           class="form-control dodate"
-                           style=" width:100px;" />
-                </td>*@
+     
                 <td style=" width:100px;">
                     <input type="text" name="T_TEA_DETAIL[@(RowIndex + j)].DO_DT"
                            value="@(det.DO_DT?.ToString("dd/MM/yyyy"))"
@@ -345,13 +339,13 @@
                            value="@det.ALLOCATION"
                            class="form-control allocation-code" />
                 </td>
-                <td style=" width:100px;">
+                <td style=" width:170px;">
                     <input type="text"
-                           name="T_TEA_DETAIL[@(RowIndex + j)].ALLOCATION"
-                           value="@det.ALLOCATION"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].ALLOCDESC"
+                           value="@det.ALLOCDESC"
                            readonly
                            tabindex="-1"
-                           class="form-control allocation-desc" style=" width:100px;" />
+                           class="form-control allocation-desc" style=" width:170px;" />
                 </td>
                 <!-- orgte type  -->
                 <td>
@@ -360,13 +354,13 @@
                            value="@det.ORGANIC_TEA_TYPE"
                            class="form-control orgte-code" />
                 </td>
-                <td style=" width:100px;">
+                <td style=" width:140px;">
                     <input type="text"
-                           name="T_TEA_DETAIL[@(RowIndex + j)].ORGANIC_TEA_TYPE"
-                           value="@det.ORGANIC_TEA_TYPE"
+                           name="T_TEA_DETAIL[@(RowIndex + j)].ORGANICDESC"
+                           value="@det.ORGANICDESC"
                            readonly
                            tabindex="-1"
-                           class="form-control orgte-desc" style=" width:100px;" />
+                           class="form-control orgte-desc" style=" width:140px;" />
                 </td>
             </tr>
         }

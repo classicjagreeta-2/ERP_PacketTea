@@ -1,6 +1,7 @@
 ﻿
 using Finance.Models.PT;
 using PacketTea.Models;
+using PacketTea.Models.Master;
 using PacketTea.Models.PT;
 using PagedList;
 using System;
@@ -57,6 +58,8 @@ namespace PacketTea.Controllers.TEA
 
 
 
+                
+                
                 var hoResponse = await Services.GetAsync<PageModel<TeaPurchase_LISTING>>($"/api/TeaPurchase/GetByPage?page={page}&pageSize={pageSize}&search={searchString}");
 
 
@@ -291,6 +294,53 @@ namespace PacketTea.Controllers.TEA
                 count = resp?.Data.rowCount ?? 0
             }, JsonRequestBehavior.AllowGet);
         }
+        public async Task<JsonResult> GetOrganicTeaType(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        {
+            if (string.IsNullOrEmpty(q))
+            {
+                q = value;
+            }
+
+            var resp = await Services.GetAsync<PageValue<M_ORGANIC_TEA_TYPE>>(
+                $"/api/TeaPurchase/GetOrganicTeaType?search={q}&page={p}&pageSize={limit}"
+            );
+
+            var data = resp?.Data.results;
+
+            return Json(new
+            {
+                data = data ?? new List<M_ORGANIC_TEA_TYPE>(),
+                count = resp?.Data.rowCount ?? 0
+            }, JsonRequestBehavior.AllowGet);
+        }
+        public async Task<JsonResult> GetAllocation(string q = "", int limit = 0, string doctype = "", string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        {
+            if (string.IsNullOrEmpty(q))
+            {
+                q = value;
+            }
+
+            var resp = await Services.GetAsync<PageValue<M_ALLOC_MAST>>(
+                $"/api/TeaPurchase/GetAllocation?PUR_TYPE={doctype}&search={q}&page={p}&pageSize={limit}"
+            );
+
+            var data = resp?.Data.results;
+
+            return Json(new
+            {
+                data = data ?? new List<M_ALLOC_MAST>(),
+                count = resp?.Data.rowCount ?? 0
+            }, JsonRequestBehavior.AllowGet);
+        }
+        public async Task<JsonResult> GetMasterTdsHead(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
+        {
+            
+            var resp = await Services.FinanceGetAsync<PageModel<MAST_TDS_HEAD>>($"/api/MasterTdsHead/GetByPage?page={p}&pageSize={limit}");
+            var data = resp?.Data?.value;
+
+            return Json(new { data = data?.results ?? new List<MAST_TDS_HEAD>(), count = data?.rowCount ?? 0 }, JsonRequestBehavior.AllowGet);
+        }
+
 
         public async Task<JsonResult> GetWarehouse(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
@@ -472,7 +522,7 @@ namespace PacketTea.Controllers.TEA
                     {
                         UNIT = unit,
                         GLOCA = gloca,
-                        PUR_TYPE = doctypeType
+                        PUR_TYPE = doctype
                     },
 
                     T_TEA_DETAIL = new List<T_TEA_PURCHASE>()
@@ -604,7 +654,7 @@ namespace PacketTea.Controllers.TEA
                 detail.PUR_TYPE = head.PUR_TYPE;
                 detail.GLOCA = head.GLOCA;
                 detail.UNIT = head.UNIT;
-              
+                detail.DOCNO = head.DOCNO;
                 detail.DOCDT = head.DOCDT;
                 detail.DOC_YEAR = head.DOC_YEAR;
                 head.PACK_DATE = DateTime.Now;
@@ -616,34 +666,29 @@ namespace PacketTea.Controllers.TEA
 
                 detail.EWAYBILLNO = head.EWAYBILLNO;
                 detail.EWAYBILLDT = head.EWAYBILLDT;
-
+                detail.TDS_AMT = head.TDS_AMT;
                 detail.PCODE = head.PCODE;
                 detail.VENDORNAME = head.VENDORNAME;
                 detail.TPT = head.TPT;
                 detail.VEH_NO = head.VEH_NO;
                 detail.PCODE_TYPE = detail.SZ_CODE;
                 detail.GRADE_TYPE = head.GRADE_TYPE;
-
+                detail.TOT_GSTAMT_M = head.TOT_GSTAMT_M;
                 detail.SEASON = head.SEASON;
-
+                detail.ROUNDOFF = head.ROUNDOFF;
                 detail.CONS_NO = head.CONS_NO;
                 detail.CONS_DT = head.CONS_DT;
                 detail.PROMPT_DATE = head.PROMPT_DATE;
-
+                detail.TDS_CODE = head.TDS_CODE;
+                detail.TDS_DETD = head.TDS_DETD;
                 detail.BROK_CODE = head.BROK_CODE;
-
-                //detail.DO_NO = head.DO_NO;
-                //detail.DO_DT = head.DO_DT;
-
-                //detail.ALLOCATION = head.ALLOCATION;
-
                 detail.REMARKS = head.REMARKS;
-
+                detail.TDS_PER = head.TDS_PER;
                 detail.SALE_CENTRE = head.SALE_CENTRE;
                 detail.SALE_TYPE = head.SALE_TYPE;
 
                 detail.FLAVOUR = head.FLAVOUR;
-                detail.ORGANIC_TEA_TYPE = head.ORGANIC_TEA_TYPE;
+          
 
                 // DETAIL
                 detail.SL_NO = slNo.ToString();
@@ -669,8 +714,8 @@ namespace PacketTea.Controllers.TEA
                 detail.O_USERNEW = Environment.UserName;
                 detail.T_IDNEW = Environment.MachineName;
 
-                //detail.USER_NAME_NEW = user.getUserName;
-                //detail.USER_ENTDT_NEW = DateTime.Now;
+                detail.USER_NAME_NEW = user.getUserName;
+                detail.USER_ENTDT_NEW = DateTime.Now;
 
                 detail.OS_USER = Environment.UserName;
                 detail.TERMINAL_ID = Environment.MachineName;
@@ -712,6 +757,8 @@ namespace PacketTea.Controllers.TEA
             //        return RedirectToAction("Index");
             try
             {
+                var json = JsonSerializer.Serialize(details);
+                var purchases = details;
                 var response = await Services.PostAsync<List<T_TEA_PURCHASE>>(
                     "/api/TeaPurchase/SaveOrUpdateAll",
                     details

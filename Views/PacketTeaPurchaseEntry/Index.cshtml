@@ -58,7 +58,7 @@
             <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
             <li>
                 <button type="button"
-                        class="IdaddNewRecord btn btn-link">
+                        class="IdaddNewRecord btn btn-link"
                     disabled="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false))">
                     <i class="fa fa-plus"></i> New
                 </button>
@@ -146,6 +146,8 @@
                 <tr>
                     <th><input type="checkbox" id="selectAll" class="checkbox-round" /></th>
                     <th></th>
+                    <th>Unit <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
+
                     <th>Document No <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
                     <th>Date <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
                     <th>Pur. Location <a href="#"><i class="feather icon-arrow-up"></i><i class="feather icon-arrow-down"></i></a></th>
@@ -596,7 +598,7 @@
             ],
 
             // Show only CODE after selection
-            fieldText: 'CODE',
+            fieldText: 'DESCN',
 
             // Input value = CODE
             fieldValue: 'CODE',
@@ -831,7 +833,7 @@
               { name: 'CODE', text: 'CODE' },
               { name: 'NAME', text: 'NAME' }
           ],
-          fieldText: 'CODE',
+          fieldText: 'NAME',
           fieldValue: 'CODE',
           headShow: true,
           autoOpen: true,

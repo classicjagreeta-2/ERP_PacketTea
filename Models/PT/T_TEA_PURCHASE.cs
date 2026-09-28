@@ -43,28 +43,28 @@ namespace PacketTea.Models.PT
         public virtual string CAT { get; set; }
         public virtual string SUBCAT { get; set; }
 
-        public virtual decimal? BAG_CHEST { get; set; }
-        public virtual decimal? QTY { get; set; }
-        public virtual decimal? RATE { get; set; }
-        public virtual decimal? AMOUNT { get; set; }
-        public virtual decimal? DISC_PER { get; set; }
-        public virtual decimal? DISCOUNT { get; set; }
+        public virtual decimal? BAG_CHEST { get; set; } = 0;
+        public virtual decimal? QTY { get; set; } = 0;
+        public virtual decimal? RATE { get; set; } = 0;
+        public virtual decimal? AMOUNT { get; set; } = 0;
+        public virtual decimal? DISC_PER { get; set; } = 0;
+        public virtual decimal? DISCOUNT { get; set; } = 0;
 
-        public virtual decimal? CGST_RT { get; set; }
-        public virtual decimal? CGST_AMT { get; set; }
-        public virtual decimal? SGST_RT { get; set; }
-        public virtual decimal? SGST_AMT { get; set; }
-        public virtual decimal? IGST_RT { get; set; }
-        public virtual decimal? IGST_AMT { get; set; }
-        public virtual decimal? TCS_RATE { get; set; }
-        public virtual decimal? TCS_AMT { get; set; }
-        public virtual decimal? TOT_AMT { get; set; }
+        public virtual decimal? CGST_RT { get; set; } = 0;
+        public virtual decimal? CGST_AMT { get; set; } = 0;
+        public virtual decimal? SGST_RT { get; set; } = 0;
+        public virtual decimal? SGST_AMT { get; set; } = 0;
+        public virtual decimal? IGST_RT { get; set; } = 0;
+        public virtual decimal? IGST_AMT { get; set; } = 0;
+        public virtual decimal? TCS_RATE { get; set; } = 0;
+        public virtual decimal? TCS_AMT { get; set; } = 0;
+        public virtual decimal? TOT_AMT { get; set; } = 0;
 
-        public virtual decimal? TARE { get; set; }
-        public virtual decimal? GROSS { get; set; }
+        public virtual decimal? TARE { get; set; } = 0;
+        public virtual decimal? GROSS { get; set; } = 0;
 
-        public virtual decimal? CHESTSLF { get; set; }
-        public virtual decimal? CHESTSLT { get; set; }
+        public virtual decimal? CHESTSLF { get; set; } = 0;
+        public virtual decimal? CHESTSLT { get; set; } = 0;
 
         public virtual string SZ_CODE { get; set; }
         public virtual string SEASON { get; set; }
@@ -82,22 +82,22 @@ namespace PacketTea.Models.PT
         public virtual DateTime? DO_DT { get; set; }
         public virtual string ALLOCATION { get; set; }
 
-        public virtual decimal? MISC_CHGS { get; set; }
-        public virtual decimal? ROUNDOFF { get; set; }
+        public virtual decimal? MISC_CHGS { get; set; } = 0;
+        public virtual decimal? ROUNDOFF { get; set; } = 0;
         public virtual string REMARKS { get; set; }
 
         public virtual string SALE_CENTRE { get; set; }
         public virtual string SALE_TYPE { get; set; }
-        public virtual decimal? TOT_GSTAMT_M { get; set; }
+        public virtual decimal? TOT_GSTAMT_M { get; set; } = 0;
 
         public virtual string SALE_NO { get; set; }
-        public virtual decimal? BROKERAGE { get; set; }
+        public virtual decimal? BROKERAGE { get; set; } = 0;
         public virtual DateTime? SALE_DATE { get; set; }
 
         public virtual string TDS_CODE { get; set; }
-        public virtual decimal? TDS_AMT { get; set; }
-        public virtual decimal? TDS_PER { get; set; }
-        public virtual decimal? TDS_DETD { get; set; }
+        public virtual decimal? TDS_AMT { get; set; } = 0;
+        public virtual decimal? TDS_PER { get; set; } = 0;
+        public virtual decimal? TDS_DETD { get; set; } = 0;
 
         public virtual string FLAVOUR { get; set; }
         public virtual string ORGANIC_TEA_TYPE { get; set; }
@@ -133,7 +133,9 @@ namespace PacketTea.Models.PT
         public virtual string WAREHOUSEDESC { get; set; }
 
         public virtual string GRADEDESC { get; set; }
-        
+        public virtual string ALLOCDESC { get; set; }
+
+        public virtual string ORGANICDESC { get; set; }
 
     }
 }

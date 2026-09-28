@@ -143,8 +143,7 @@
                 <input type="hidden" id="hiddenUNIT" />
                 <input type="hidden" id="hiddenDOCTYPE" />
                 <input type="hidden" id="hiddenDOCTYPETYPE" />
-                @*<input type="hidden" id="LocationStateCode" />
-                    <input type="hidden" id="LocationGSTNo" />*@
+
 
                 <input type="hidden" id="VendorStateCode" />
                 <input type="hidden" id="VendorGSTNo" />
@@ -329,18 +328,18 @@
                                 <div class="form-col-10">
                                     <label>Action Sale number</label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.SALE_NO, new { @class = "form-control" , maxlength = "7" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.SALE_NO, new { @class = "form-control", maxlength = "7" })
                                 </div>
 
                                 <div class="form-col-10">
                                     <label>Vehicle No</label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.VEH_NO, new { @class = "form-control" , maxlength = "15" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.VEH_NO, new { @class = "form-control", maxlength = "15" })
                                 </div>
                                 <div class="form-col-10">
                                     <label>CN NO</label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.CONCT_DOCNO, new { @class = "form-control" , maxlength = "10" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.CONCT_DOCNO, new { @class = "form-control", maxlength = "10" })
                                 </div>
                                 <div class="form-col-10">
                                     <label>Date</label>
@@ -357,7 +356,7 @@
                                 <div class="form-col-10">
                                     <label>E-Way Bill No </label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.EWAYBILLNO, new { @class = "form-control" , maxlength = "16" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.EWAYBILLNO, new { @class = "form-control", maxlength = "16" })
                                 </div>
                                 <div class="form-col-10">
                                     <label>Date </label>
@@ -502,27 +501,52 @@
                             <div class="form-row">
                                 <div class="form-col-10">
                                     <label>Head</label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.REMARKS, new { @class = "form-control " })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_CODE, new { @class = "form-control head-code" })
+
                                 </div>
                                 <div class="form-col-20">
                                     <label>Description</label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.REMARKS, new { @class = "form-control ", @readonly = "readonly", tabindex = "-1" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.REMARKS, new { @class = "form-control head-desc", @readonly = "readonly", tabindex = "-1" })
                                 </div>
                                 <div class="form-col-10">
                                     <label>Detd. on Amt. <span>(*)</span></label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_DETD, new { @class = "form-control " })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_DETD, new
+                                    {
+                                        @class = "form-control decimal2",
+                                   type = "text",
+                                   inputmode = "decimal"
+                               ,
+                                   value = Model.T_TEA_HEAD.TDS_DETD?.ToString("0.00") ?? "0.00"
+                               })
                                 </div>
                                 <div class="form-col-10">
                                     <label>TDS %</label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_PER, new { @class = "form-control " })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_PER, new
+                                    {
+                                        @class = "form-control decimal2 "
+                               ,
+                                   value = Model.T_TEA_HEAD.TDS_PER?.ToString("0.00") ?? "0.00"
+                               })
                                 </div>
                                 <div class="form-col-10">
                                     <label>TDS Amt.</label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_AMT, new { @class = "form-control " })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_AMT, new
+                                    {
+                                        @class = "form-control decimal3 "
+                               ,
+                                   value = Model.T_TEA_HEAD.TDS_AMT?.ToString("0.000") ?? "0.000"
+                               })
                                 </div>
                                 <div class="form-col-10">
                                     <label>Total GST As Per System </label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_GSTAMT_M, new { @class = "form-control", id = "TotalGSTSystem" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_GSTAMT_M, new
+                                    {
+                                        @class = "form-control decimal2",
+                                        id = "TotalGSTSystem",
+                                        @readonly = "readonly"
+                               ,
+                                   value = Model.T_TEA_HEAD.TOT_GSTAMT_M?.ToString("0.00") ?? "0.00"
+                               })
                                 </div>
                             </div>
                             <div class="form-row" style="line-height:2.5;">
@@ -534,12 +558,22 @@
 
                                 <div class="form-col-10">
                                     <label> Rounded Off</label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.ROUNDOFF, new { @class = "form-control" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.ROUNDOFF, new
+                                    {
+                                        @class = "form-control decimal2"
+                               ,
+                                   value = Model.T_TEA_HEAD.ROUNDOFF?.ToString("0.00") ?? "0.00"
+                               })
                                 </div>
 
                                 <div class="form-col-10">
                                     <label> Total Amount</label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_AMT, new { @class = "form-control", id = "TotalAmount" })
+                                    <input type="text"
+                                           id="TotalAmount"
+                                           class="form-control text-right decimal3"
+                                           value="0.000"
+                                           readonly
+                                           tabindex="-1" />
                                 </div>
 
                             </div>
@@ -740,46 +774,36 @@
 
     <script>
 
-        function LoadPacketTeaPurchaseDetails() {
+function LoadPacketTeaPurchaseDetails() {
 
     var unit = $('#UNIT').val();
-            var Docdt = $('#DOCDT').val() || '';
+    var Docdt = $('#DOCDT').val() || '';
+    var docno = $('#DOCNO').val() || '';
 
-            var docno = $('#DOCNO').val() || '';
-            $('#linesLoader').css('display', 'flex');
+    $('#linesLoader').css('display', 'flex');
 
     $.ajax({
+
         url: '@Url.Action("LoadPacketTeaPurchaseDetails", "PacketTeaPurchaseEntry")',
+
         type: 'GET',
+
         data: {
-
-             docno: docno,
-
+            docno: docno,
             unit: unit,
             Docdt: Docdt
         },
+
         success: function (html) {
+
+            // Load rows
             $('#mainTable tbody').html(html);
-            //calculateAllRows();
 
-            //if (typeof recalculateAllGradeGST === 'function') {
-            //    recalculateAllGradeGST();
-            //}
+            // Calculate only once after all rows are loaded
+            calculateAllRows();
 
-            $("#mainTable tbody tr").each(function () {
-
-                var invNo = $(this).find("input[name*='.INVNO']").val();
-
-                if (invNo) {
-
-
-                        invNo: $.trim(invNo)
-
-
-                }
-
-            });
         },
+
         error: function (xhr) {
 
             console.log(xhr.responseText);
@@ -791,22 +815,78 @@
                 '</td>' +
                 '</tr>'
             );
+
         },
 
         complete: function () {
 
-            // Hide loader after response/error
             $('#linesLoader').hide();
-        }
-    });
+
         }
 
-     // ✅ PAGE LOAD
-     $(document).ready(function () {
-         LoadPacketTeaPurchaseDetails();
-     });
+    });
+}
+
+
+$(document).ready(function () {
+
+    LoadPacketTeaPurchaseDetails();
+
+});
 
     </script>
+    @*<script>
+
+            function LoadPacketTeaPurchaseDetails() {
+
+        var unit = $('#UNIT').val();
+                var Docdt = $('#DOCDT').val() || '';
+
+                var docno = $('#DOCNO').val() || '';
+                $('#linesLoader').css('display', 'flex');
+
+        $.ajax({
+            url: '@Url.Action("LoadPacketTeaPurchaseDetails", "PacketTeaPurchaseEntry")',
+            type: 'GET',
+            data: {
+
+                 docno: docno,
+
+                unit: unit,
+                Docdt: Docdt
+            },
+            success: function (html) {
+                $('#mainTable tbody').html(html);
+
+                calculateAllRows();
+            },
+            error: function (xhr) {
+
+                console.log(xhr.responseText);
+
+                $('#mainTable tbody').html(
+                    '<tr>' +
+                    '<td colspan="28" style="text-align:center;color:red;">' +
+                    'Unable to load product details.' +
+                    '</td>' +
+                    '</tr>'
+                );
+            },
+
+            complete: function () {
+
+                // Hide loader after response/error
+                $('#linesLoader').hide();
+            }
+        });
+            }
+
+         // ✅ PAGE LOAD
+         $(document).ready(function () {
+             LoadPacketTeaPurchaseDetails();
+         });
+
+        </script>*@
     <script>
     function formatDateToYMD(date) {
         var year = date.getFullYear();
@@ -993,10 +1073,10 @@
             $("#CnNoDate").on("click", function () {
                 $(this).datepicker("show");
             });
-            
+
             $("#dodate").on("click", function () {
-                   $(this).datepicker("show");
-               });
+                $(this).datepicker("show");
+            });
         });
     </script>
 
@@ -2346,6 +2426,650 @@ $(document).on('change', '.broker-code', function () {
 });
     </script>
 
+    <script>
+
+    // =====================================================
+    // TDS HEAD INPUTPICKER
+    // =====================================================
+    $(document).on('click', '.head-code', function () {
+
+        var $input = $(this);
+
+        $('.inputpicker-wrapped-list').remove();
+
+        if ($input.data('inputpicker')) {
+            $input.inputpicker('show');
+            return;
+        }
+
+        $input.inputpicker({
+
+            url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
+
+            // TDS_ACODE is NOT displayed
+            fields: [
+                { name: 'CODE', text: 'CODE' },
+                { name: 'DESCN', text: 'NAME' },
+                { name: 'TDS_CODE', text: 'TDS CODE' }
+            ],
+
+            fieldText: 'CODE',
+            fieldValue: 'CODE',
+
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+
+            width: 'auto',
+            urlDelay: 1
+        });
+
+
+        // =====================================================
+        // SELECT
+        // =====================================================
+        $input
+            .off('inputpicker.select.tds')
+            .on('inputpicker.select.tds', function (e, item) {
+
+                if (!item) return;
+
+                var $this = $(this);
+
+                var code = $.trim(item.CODE || '');
+                var desc = $.trim(item.DESCN || '');
+
+                // Hidden value returned by API
+                var acode = $.trim(item.TDS_ACODE || '');
+
+
+                // =================================================
+                // TDS A/CODE NOT AVAILABLE
+                // =================================================
+                if (!acode) {
+
+                    $.alert({
+                        title: 'Warning',
+                        type: 'orange',
+                        content: 'A/C Code not available.'
+                    });
+
+                    // Clear TDS CODE
+                    $this.val('');
+
+                    // Clear description
+                    $('.head-desc').val('');
+
+                    $this.inputpicker('hide');
+
+                    return;
+                }
+
+
+                // =================================================
+                // VALID TDS CODE
+                // =================================================
+                $this.val(code);
+
+                $('.head-desc').val(desc);
+
+                $this.inputpicker('hide');
+            });
+    });
+
+
+    // =====================================================
+    // CHANGE
+    // =====================================================
+$(document).on('change', '.head-code', function () {
+
+    var $input = $(this);
+    var code = $.trim($input.val() || '');
+
+    if (!code) {
+        clearTdsHead($input);
+        return;
+    }
+
+    $.ajax({
+
+        url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
+        type: 'GET',
+
+        data: {
+            q: code,
+            limit: 1,
+            p: 1
+        },
+
+        success: function (res) {
+
+            if (!res || !res.data || res.data.length === 0) {
+
+                clearTdsHead($input);
+
+                return;
+            }
+
+            var item = res.data[0];
+
+            var acode = $.trim(item.TDS_ACODE || '');
+            var desc = $.trim(item.DESCN || '');
+
+            // =========================================
+            // A/C CODE NOT AVAILABLE
+            // =========================================
+            if (!acode) {
+
+                $.alert({
+                    title: 'Warning',
+                    type: 'orange',
+                    content: 'A/C Code not available.',
+                    buttons: {
+                        ok: {
+                            text: 'OK',
+                            action: function () {
+                                clearTdsHead($input);
+                            }
+                        }
+                    }
+                });
+
+                return;
+            }
+
+            // Valid
+            $('.head-desc').val(desc);
+        },
+
+        error: function () {
+            clearTdsHead($input);
+        }
+    });
+});
+
+        function clearTdsHead($input) {
+
+            // Clear original input
+            $input.val('');
+
+            // Clear description
+            $('.head-desc').val('');
+
+            // Clear InputPicker value
+            try {
+                if ($input.data('inputpicker')) {
+                    $input.inputpicker('val', '');
+                    $input.inputpicker('hide');
+                }
+            } catch (e) {
+                console.log('TDS InputPicker clear error:', e);
+            }
+
+            // Clear visible InputPicker textbox/clone
+            $('.head-code.inputpicker-input').val('');
+
+            // Also clear any inputpicker clone having same value
+            $('.inputpicker-input').filter(function () {
+                return $(this).hasClass('head-code');
+            }).val('');
+        }
+    // =====================================================
+    // BLUR
+    // =====================================================
+    @*$(document).on('blur', '.head-code', function () {
+
+        var $input = $(this);
+        var code = $.trim($input.val() || '');
+
+        setTimeout(function () {
+
+            if (!code) {
+                $('.head-desc').val('');
+                return;
+            }
+
+            $.ajax({
+
+                url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
+
+                type: 'GET',
+
+                data: {
+                    q: code,
+                    limit: 1,
+                    p: 1
+                },
+
+                success: function (res) {
+
+                    if (!res ||
+                        !res.data ||
+                        res.data.length === 0) {
+
+                        $input.val('');
+                        $('.head-desc').val('');
+
+                        return;
+                    }
+
+                    var item = res.data[0];
+
+                    var acode = $.trim(item.TDS_ACODE || '');
+                    var desc = $.trim(item.DESCN || '');
+
+
+                    // =================================================
+                    // NO A/C CODE
+                    // =================================================
+                    if (!acode) {
+
+                        $.alert({
+                            title: 'Warning',
+                            type: 'orange',
+                            content: 'A/C Code not available.'
+                        });
+
+                        $input.val('');
+                        $('.head-desc').val('');
+
+                        return;
+                    }
+
+
+                    // Valid
+                    $('.head-desc').val(desc);
+                }
+            });
+
+        }, 200);
+    });*@
+
+    </script>
+    @*<script>
+                $(document).on('click', '.head-code', function () {
+
+            var $input = $(this);
+            var $row = $input.closest('tr');
+
+            $('.inputpicker-wrapped-list').remove();
+
+            if ($input.data('inputpicker')) {
+                $input.inputpicker('show');
+                return;
+            }
+
+            $input.inputpicker({
+                url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
+                fields: [
+                    { name: 'CODE', text: 'CODE' },
+                    { name: 'NAME', text: 'NAME' }
+                ],
+                fieldText: 'CODE',
+                fieldValue: 'CODE',
+                headShow: true,
+                filterOpen: true,
+                autoOpen: true,
+                pagination: true,
+                pageField: 'p',
+                pageLimitField: 'limit',
+                pageLimit: 10,
+                pageCountField: 'count',
+                width: 'auto',
+                urlDelay: 1
+            });
+
+            // SELECT
+            $input.off('inputpicker.select').on('inputpicker.select', function (e, item) {
+
+                if (!item) return;
+
+                // ✅ Only update the current row
+                $row.find('.head-code').val(item.CODE);
+                $row.find('.head-desc').val(item.NAME || '');
+
+                $(this).inputpicker('hide');
+            });
+        });
+
+
+        // CHANGE
+                $(document).on('change', '.head-code', function () {
+
+            var $input = $(this);
+            var $row = $input.closest('tr');
+            var code = $input.val();
+
+            if (!code) {
+                $row.find('.head-desc').val('');
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
+                type: 'GET',
+                data: {
+                    q: code,
+                    limit: 1,
+                    p: 1
+                },
+                success: function (res) {
+
+                    if (res && res.data && res.data.length > 0) {
+
+                        // ✅ Only current row
+                        $row.find('.head-desc').val(res.data[0].NAME || '');
+
+                    } else {
+
+                        $row.find('.head-desc').val('');
+                    }
+                }
+            });
+        });
+
+
+        // BLUR
+                $(document).on('blur', '.head-code', function () {
+
+            var $input = $(this);
+            var $row = $input.closest('tr');
+            var code = $input.val().trim();
+
+            setTimeout(function () {
+
+                if (!code) {
+                    $row.find('.head-desc').val('');
+                    return;
+                }
+
+                $.ajax({
+                    url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
+                    type: 'GET',
+                    data: {
+                        q: code,
+                        limit: 1,
+                        p: 1
+                    },
+                    success: function (res) {
+
+                        if (!res || !res.data || res.data.length === 0) {
+
+                            // ✅ Only current row
+                            $input.val('');
+                            $row.find('.head-desc').val('');
+                        }
+                    }
+                });
+
+            }, 200);
+        });
+            </script>*@
+
+
+    <script>
+    $(document).on('click', '.allocation-code', function () {
+
+        var $input = $(this);
+        var $row = $input.closest('tr');
+
+        $('.inputpicker-wrapped-list').remove();
+
+        if ($input.data('inputpicker')) {
+            $input.inputpicker('show');
+            return;
+        }
+
+        var doctype = $('#hiddenDOCTYPE').val() || $('#PUR_TYPE').val() || '';
+
+        $input.inputpicker({
+            url: '@Url.Action("GetAllocation", "PacketTeaPurchaseEntry")'
+                + '?doctype=' + encodeURIComponent(doctype),
+
+            fields: [
+                { name: 'CODE', text: 'CODE' },
+                { name: 'DESCN', text: 'NAME' }
+            ],
+
+            fieldText: 'CODE',
+            fieldValue: 'CODE',
+
+            headShow: true,
+            filterOpen: true,
+            autoOpen: true,
+
+            pagination: true,
+            pageField: 'p',
+            pageLimitField: 'limit',
+            pageLimit: 10,
+            pageCountField: 'count',
+
+            width: 'auto',
+            urlDelay: 1
+        });
+
+
+        // SELECT
+        $input
+            .off('inputpicker.select')
+            .on('inputpicker.select', function (e, item) {
+
+                if (!item) return;
+
+                $row.find('.allocation-code').val(item.CODE);
+                $row.find('.allocation-desc').val(item.DESCN || '');
+
+                $(this).inputpicker('hide');
+            });
+    });
+
+
+    // CHANGE
+    $(document).on('change', '.allocation-code', function () {
+
+        var $input = $(this);
+        var $row = $input.closest('tr');
+        var code = $.trim($input.val());
+
+        if (!code) {
+            $row.find('.allocation-desc').val('');
+            return;
+        }
+
+        $.ajax({
+            url: '@Url.Action("GetAllocation", "PacketTeaPurchaseEntry")',
+            type: 'GET',
+
+            data: {
+                q: code,
+                doctype: $('#hiddenDOCTYPE').val() || $('#PUR_TYPE').val() || '',
+                limit: 1,
+                p: 1
+            },
+
+            success: function (res) {
+
+                if (res && res.data && res.data.length > 0) {
+
+                    $row.find('.allocation-desc')
+                        .val(res.data[0].DESCN || '');
+
+                }
+                else {
+
+                    $row.find('.allocation-desc').val('');
+                }
+            }
+        });
+    });
+
+
+    // BLUR
+    $(document).on('blur', '.allocation-code', function () {
+
+        var $input = $(this);
+        var $row = $input.closest('tr');
+        var code = $.trim($input.val());
+
+        setTimeout(function () {
+
+            if (!code) {
+                $row.find('.allocation-desc').val('');
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Action("GetAllocation", "PacketTeaPurchaseEntry")',
+                type: 'GET',
+
+                data: {
+                    q: code,
+                    doctype: $('#hiddenDOCTYPE').val() || $('#PUR_TYPE').val() || '',
+                    limit: 1,
+                    p: 1
+                },
+
+                success: function (res) {
+
+                    if (!res ||
+                        !res.data ||
+                        res.data.length === 0) {
+
+                        $input.val('');
+                        $row.find('.allocation-desc').val('');
+                    }
+                }
+            });
+
+        }, 200);
+    });
+
+    </script>
+    <script>
+        $(document).on('click', '.orgte-code', function () {
+
+    var $input = $(this);
+    var $row = $input.closest('tr');
+
+    $('.inputpicker-wrapped-list').remove();
+
+    if ($input.data('inputpicker')) {
+        $input.inputpicker('show');
+        return;
+    }
+
+    $input.inputpicker({
+        url: '@Url.Action("GetOrganicTeaType", "PacketTeaPurchaseEntry")',
+        fields: [
+            { name: 'CODE', text: 'CODE' },
+            { name: 'DESCN', text: 'NAME' }
+        ],
+        fieldText: 'CODE',
+        fieldValue: 'CODE',
+        headShow: true,
+        filterOpen: true,
+        autoOpen: true,
+        pagination: true,
+        pageField: 'p',
+        pageLimitField: 'limit',
+        pageLimit: 10,
+        pageCountField: 'count',
+        width: 'auto',
+        urlDelay: 1
+    });
+
+    // SELECT
+    $input.off('inputpicker.select').on('inputpicker.select', function (e, item) {
+
+        if (!item) return;
+
+        // ✅ Only update the current row
+        $row.find('.orgte-code').val(item.CODE);
+        $row.find('.orgte-desc').val(item.DESCN || '');
+
+        $(this).inputpicker('hide');
+    });
+});
+
+
+// CHANGE
+        $(document).on('change', '.orgte-code', function () {
+
+    var $input = $(this);
+    var $row = $input.closest('tr');
+    var code = $input.val();
+
+    if (!code) {
+        $row.find('.orgte-desc').val('');
+        return;
+    }
+
+    $.ajax({
+        url: '@Url.Action("GetOrganicTeaType", "PacketTeaPurchaseEntry")',
+        type: 'GET',
+        data: {
+            q: code,
+            limit: 1,
+            p: 1
+        },
+        success: function (res) {
+
+            if (res && res.data && res.data.length > 0) {
+
+                // ✅ Only current row
+                $row.find('.orgte-desc').val(res.data[0].DESCN || '');
+
+            } else {
+
+                $row.find('.orgte-desc').val('');
+            }
+        }
+    });
+});
+
+
+// BLUR
+        $(document).on('blur', '.orgte-code', function () {
+
+    var $input = $(this);
+    var $row = $input.closest('tr');
+    var code = $input.val().trim();
+
+    setTimeout(function () {
+
+        if (!code) {
+            $row.find('.orgte-desc').val('');
+            return;
+        }
+
+        $.ajax({
+            url: '@Url.Action("GetOrganicTeaType", "PacketTeaPurchaseEntry")',
+            type: 'GET',
+            data: {
+                q: code,
+                limit: 1,
+                p: 1
+            },
+            success: function (res) {
+
+                if (!res || !res.data || res.data.length === 0) {
+
+                    // ✅ Only current row
+                    $input.val('');
+                    $row.find('.orgte-desc').val('');
+                }
+            }
+        });
+
+    }, 200);
+});
+    </script>
 
 
     <script>
@@ -3752,617 +4476,617 @@ $(function () {
 
     </script>
 
-    <script>
+    @*<script>
 
-        // ======================================================
-        // CALCULATE ONE ROW
-        // ======================================================
+            // ======================================================
+            // CALCULATE ONE ROW
+            // ======================================================
 
-        function calculateRow($row) {
+            function calculateRow($row) {
 
-            if (!$row || !$row.length) {
-                return;
-            }
-
-
-            // ============================================
-            // 1. TOTAL NET WT
-            // ============================================
-
-            var totalNetWt =
-                parseFloat(
-                    $row.find('.total-net-wt').val()
-                ) || 0;
-
-
-            // ============================================
-            // 2. RATE
-            // ============================================
-
-            var rate =
-                parseFloat(
-                    $row.find('.rate').val()
-                ) || 0;
-
-
-            // ============================================
-            // 3. AMOUNT
-            // TOTAL NET WT × RATE
-            // ============================================
-
-            var amount =
-                totalNetWt * rate;
-
-            $row.find('.amount')
-                .val(amount.toFixed(2));
-
-
-            // ============================================
-            // 4. DISCOUNT %
-            // ============================================
-
-            var discPer =
-                parseFloat(
-                    $row.find('.disc-per').val()
-                ) || 0;
-
-
-            // ============================================
-            // 5. DISCOUNT VALUE
-            // AMOUNT × DISCOUNT % / 100
-            // ============================================
-
-            var discount =
-                amount * discPer / 100;
-
-            $row.find('.discount')
-                .val(discount.toFixed(2));
-
-
-            // ============================================
-            // 6. TAXABLE AMOUNT
-            // AMOUNT - DISCOUNT
-            // ============================================
-
-            var taxableAmount =
-                amount - discount;
-
-            if (taxableAmount < 0) {
-                taxableAmount = 0;
-            }
-
-            $row.find('.taxable-amt')
-                .val(taxableAmount.toFixed(2));
-
-
-            // ============================================
-            // 7. GST RATES
-            // ============================================
-
-            var cgstRate =
-                parseFloat(
-                    $row.find('.cgst-rate').val()
-                ) || 0;
-
-            var sgstRate =
-                parseFloat(
-                    $row.find('.sgst-rate').val()
-                ) || 0;
-
-            var igstRate =
-                parseFloat(
-                    $row.find('.igst-rate').val()
-                ) || 0;
-
-
-            // ============================================
-            // 8. GST AMOUNT
-            // GST MUST USE TAXABLE AMOUNT
-            // ============================================
-
-            var cgstAmt =
-                taxableAmount * cgstRate / 100;
-
-            var sgstAmt =
-                taxableAmount * sgstRate / 100;
-
-            var igstAmt =
-                taxableAmount * igstRate / 100;
-
-
-            // ============================================
-            // 9. SET GST AMOUNTS
-            // ============================================
-
-            $row.find('.cgst-amt')
-                .val(cgstAmt.toFixed(2));
-
-            $row.find('.sgst-amt')
-                .val(sgstAmt.toFixed(2));
-
-            $row.find('.igst-amt')
-                .val(igstAmt.toFixed(2));
-
-
-            // ============================================
-            // 10. TOTAL AMOUNT
-            // TAXABLE + GST
-            // ============================================
-
-            var totalAmount =
-                taxableAmount +
-                cgstAmt +
-                sgstAmt +
-                igstAmt;
-
-            $row.find('.tot-amt')
-                .val(totalAmount.toFixed(2));
-
-
-            // ============================================
-            // 11. HEADER TOTALS
-            // ============================================
-
-            calculateHeaderTotals();
-        }
-        // ======================================================
-        // CALCULATE ALL ROWS
-        // ======================================================
-
-        function calculateAllRows() {
-
-            $('#mainTable tbody tr').each(function () {
-
-                calculateRow($(this));
-
-            });
-        }
-
-
-
-        // ======================================================
-        // HEADER TOTALS
-        // ======================================================
-
-        function calculateHeaderTotals() {
-
-            var totalGST = 0;
-            var totalAmount = 0;
-
-
-            $('#mainTable tbody tr').each(function () {
-
-                var $row = $(this);
-
-
-                var cgst =
-                    parseFloat(
-                        $row.find('.cgst-amt').val()
-                    ) || 0;
-
-                var sgst =
-                    parseFloat(
-                        $row.find('.sgst-amt').val()
-                    ) || 0;
-
-                var igst =
-                    parseFloat(
-                        $row.find('.igst-amt').val()
-                    ) || 0;
-
-                var rowTotal =
-                    parseFloat(
-                        $row.find('.tot-amt').val()
-                    ) || 0;
-
-
-                totalGST +=
-                    cgst +
-                    sgst +
-                    igst;
-
-                totalAmount +=
-                    rowTotal;
-            });
-
-
-            // ==================================================
-            // HEADER GST
-            // ==================================================
-
-            $('#TotalGSTSystem')
-                .val(totalGST.toFixed(2));
-
-
-            // ==================================================
-            // HEADER TOTAL AMOUNT
-            // ==================================================
-
-            $('#TotalAmount')
-                .val(totalAmount.toFixed(2));
-        }
-
-
-
-        // ======================================================
-        // WHEN WEIGHT / RATE / DISCOUNT CHANGES
-        // ======================================================
-
-        // ======================================================
-        // GST CONFIRMATION FOR:
-        // BAGS / NET WT / TOTAL NET WT (QTY) / RATE / DISCOUNT %
-        // ======================================================
-
-        $(document)
-            .off(
-                'focus.gstChange',
-                '.bags, .net-wt, .total-net-wt, .rate, .disc-per'
-            )
-            .on(
-                'focus.gstChange',
-                '.bags, .net-wt, .total-net-wt, .rate, .disc-per',
-                function () {
-
-                    var $row = $(this).closest('tr');
-
-                    // Store old values before user changes them.
-                    // Bags / Net Wt also rewrite Total Net Wt, so
-                    // keep all three weight fields for restore.
-                    $(this).data('gst-old-value', {
-                        bags: $row.find('.bags').val(),
-                        netWt: $row.find('.net-wt').val(),
-                        totalNetWt: $row.find('.total-net-wt').val(),
-                        self: $(this).val()
-                    });
+                if (!$row || !$row.length) {
+                    return;
                 }
-            );
 
 
-        $(document)
-            .off(
-                'change.gstChange',
-                '.bags, .net-wt, .total-net-wt, .rate, .disc-per'
-            )
-            .on(
-                'change.gstChange',
-                '.bags, .net-wt, .total-net-wt, .rate, .disc-per',
-                function () {
+                // ============================================
+                // 1. TOTAL NET WT
+                // ============================================
 
-                    var $input = $(this);
-
-                    var $row =
-                        $input.closest('tr');
-
-                    var newValue =
-                        $input.val();
-
-                    var old =
-                        $input.data('gst-old-value') || {};
+                var totalNetWt =
+                    parseFloat(
+                        $row.find('.total-net-wt').val()
+                    ) || 0;
 
 
-                    // ==========================================
-                    // VALUE DID NOT CHANGE
-                    // ==========================================
+                // ============================================
+                // 2. RATE
+                // ============================================
+
+                var rate =
+                    parseFloat(
+                        $row.find('.rate').val()
+                    ) || 0;
+
+
+                // ============================================
+                // 3. AMOUNT
+                // TOTAL NET WT × RATE
+                // ============================================
+
+                var amount =
+                    totalNetWt * rate;
+
+                $row.find('.amount')
+                    .val(amount.toFixed(2));
+
+
+                // ============================================
+                // 4. DISCOUNT %
+                // ============================================
+
+                var discPer =
+                    parseFloat(
+                        $row.find('.disc-per').val()
+                    ) || 0;
+
+
+                // ============================================
+                // 5. DISCOUNT VALUE
+                // AMOUNT × DISCOUNT % / 100
+                // ============================================
+
+                var discount =
+                    amount * discPer / 100;
+
+                $row.find('.discount')
+                    .val(discount.toFixed(2));
+
+
+                // ============================================
+                // 6. TAXABLE AMOUNT
+                // AMOUNT - DISCOUNT
+                // ============================================
+
+                var taxableAmount =
+                    amount - discount;
+
+                if (taxableAmount < 0) {
+                    taxableAmount = 0;
+                }
+
+                $row.find('.taxable-amt')
+                    .val(taxableAmount.toFixed(2));
+
+
+                // ============================================
+                // 7. GST RATES
+                // ============================================
+
+                var cgstRate =
+                    parseFloat(
+                        $row.find('.cgst-rate').val()
+                    ) || 0;
+
+                var sgstRate =
+                    parseFloat(
+                        $row.find('.sgst-rate').val()
+                    ) || 0;
+
+                var igstRate =
+                    parseFloat(
+                        $row.find('.igst-rate').val()
+                    ) || 0;
+
+
+                // ============================================
+                // 8. GST AMOUNT
+                // GST MUST USE TAXABLE AMOUNT
+                // ============================================
+
+                var cgstAmt =
+                    taxableAmount * cgstRate / 100;
+
+                var sgstAmt =
+                    taxableAmount * sgstRate / 100;
+
+                var igstAmt =
+                    taxableAmount * igstRate / 100;
+
+
+                // ============================================
+                // 9. SET GST AMOUNTS
+                // ============================================
+
+                $row.find('.cgst-amt')
+                    .val(cgstAmt.toFixed(2));
+
+                $row.find('.sgst-amt')
+                    .val(sgstAmt.toFixed(2));
+
+                $row.find('.igst-amt')
+                    .val(igstAmt.toFixed(2));
+
+
+                // ============================================
+                // 10. TOTAL AMOUNT
+                // TAXABLE + GST
+                // ============================================
+
+                var totalAmount =
+                    taxableAmount +
+                    cgstAmt +
+                    sgstAmt +
+                    igstAmt;
+
+                $row.find('.tot-amt')
+                    .val(totalAmount.toFixed(2));
+
+
+                // ============================================
+                // 11. HEADER TOTALS
+                // ============================================
+
+                calculateHeaderTotals();
+            }
+            // ======================================================
+            // CALCULATE ALL ROWS
+            // ======================================================
+
+            function calculateAllRows() {
+
+                $('#mainTable tbody tr').each(function () {
+
+                    calculateRow($(this));
+
+                });
+            }
+
+
+
+            // ======================================================
+            // HEADER TOTALS
+            // ======================================================
+
+            function calculateHeaderTotals() {
+
+                var totalGST = 0;
+                var totalAmount = 0;
+
+
+                $('#mainTable tbody tr').each(function () {
+
+                    var $row = $(this);
+
+
+                    var cgst =
+                        parseFloat(
+                            $row.find('.cgst-amt').val()
+                        ) || 0;
+
+                    var sgst =
+                        parseFloat(
+                            $row.find('.sgst-amt').val()
+                        ) || 0;
+
+                    var igst =
+                        parseFloat(
+                            $row.find('.igst-amt').val()
+                        ) || 0;
+
+                    var rowTotal =
+                        parseFloat(
+                            $row.find('.tot-amt').val()
+                        ) || 0;
+
+
+                    totalGST +=
+                        cgst +
+                        sgst +
+                        igst;
+
+                    totalAmount +=
+                        rowTotal;
+                });
+
+
+                // ==================================================
+                // HEADER GST
+                // ==================================================
+
+                $('#TotalGSTSystem')
+                    .val(totalGST.toFixed(2));
+
+
+                // ==================================================
+                // HEADER TOTAL AMOUNT
+                // ==================================================
+
+                $('#TotalAmount')
+                    .val(totalAmount.toFixed(2));
+            }
+
+
+
+            // ======================================================
+            // WHEN WEIGHT / RATE / DISCOUNT CHANGES
+            // ======================================================
+
+            // ======================================================
+            // GST CONFIRMATION FOR:
+            // BAGS / NET WT / TOTAL NET WT (QTY) / RATE / DISCOUNT %
+            // ======================================================
+
+            $(document)
+                .off(
+                    'focus.gstChange',
+                    '.bags, .net-wt, .total-net-wt, .rate, .disc-per'
+                )
+                .on(
+                    'focus.gstChange',
+                    '.bags, .net-wt, .total-net-wt, .rate, .disc-per',
+                    function () {
+
+                        var $row = $(this).closest('tr');
+
+                        // Store old values before user changes them.
+                        // Bags / Net Wt also rewrite Total Net Wt, so
+                        // keep all three weight fields for restore.
+                        $(this).data('gst-old-value', {
+                            bags: $row.find('.bags').val(),
+                            netWt: $row.find('.net-wt').val(),
+                            totalNetWt: $row.find('.total-net-wt').val(),
+                            self: $(this).val()
+                        });
+                    }
+                );
+
+
+            $(document)
+                .off(
+                    'change.gstChange',
+                    '.bags, .net-wt, .total-net-wt, .rate, .disc-per'
+                )
+                .on(
+                    'change.gstChange',
+                    '.bags, .net-wt, .total-net-wt, .rate, .disc-per',
+                    function () {
+
+                        var $input = $(this);
+
+                        var $row =
+                            $input.closest('tr');
+
+                        var newValue =
+                            $input.val();
+
+                        var old =
+                            $input.data('gst-old-value') || {};
+
+
+                        // ==========================================
+                        // VALUE DID NOT CHANGE
+                        // ==========================================
+
+                        if (
+                            (parseFloat(newValue) || 0) ===
+                            (parseFloat(old.self) || 0)
+                        ) {
+                            calculateRow($row);
+                            return;
+                        }
+
+
+                        // ==========================================
+                        // YES
+                        // ==========================================
+
+                        function applyChange() {
+
+                            calculateRow($row);
+                        }
+
+
+                        // ==========================================
+                        // NO
+                        // ==========================================
+
+                        function restoreChange() {
+
+                            if ($input.is('.bags, .net-wt, .total-net-wt')) {
+                                $row.find('.bags').val(old.bags);
+                                $row.find('.net-wt').val(old.netWt);
+                                $row.find('.total-net-wt').val(old.totalNetWt);
+                            } else {
+                                $input.val(old.self);
+                            }
+
+                            calculateRow($row);
+                        }
+
+
+                        // ==========================================
+                        // CONFIRM
+                        // ==========================================
+
+                        confirmGSTChange(
+                            applyChange,
+                            restoreChange
+                        );
+                    }
+                );
+            function isGSTAlreadyCalculated() {
+
+                var hasGST = false;
+
+                $('#mainTable tbody tr').each(function () {
+
+                    var $row = $(this);
+
+                    var cgstRate = parseFloat(
+                        $row.find('input[name$=".CGST_RT"]').val()
+                    ) || 0;
+
+                    var sgstRate = parseFloat(
+                        $row.find('input[name$=".SGST_RT"]').val()
+                    ) || 0;
+
+                    var igstRate = parseFloat(
+                        $row.find('input[name$=".IGST_RT"]').val()
+                    ) || 0;
+
+                    var cgstAmt = parseFloat(
+                        $row.find('input[name$=".CGST_AMT"]').val()
+                    ) || 0;
+
+                    var sgstAmt = parseFloat(
+                        $row.find('input[name$=".SGST_AMT"]').val()
+                    ) || 0;
+
+                    var igstAmt = parseFloat(
+                        $row.find('input[name$=".IGST_AMT"]').val()
+                    ) || 0;
 
                     if (
-                        (parseFloat(newValue) || 0) ===
-                        (parseFloat(old.self) || 0)
+                        cgstRate > 0 ||
+                        sgstRate > 0 ||
+                        igstRate > 0 ||
+                        cgstAmt > 0 ||
+                        sgstAmt > 0 ||
+                        igstAmt > 0
                     ) {
-                        calculateRow($row);
-                        return;
+                        hasGST = true;
+                        return false;
+                    }
+                });
+
+                return hasGST;
+            }
+
+
+
+
+            // Edit mode = existing document (DOCNO present)
+            function isEditMode() {
+                return $.trim($('#DOCNO').val() || '') !== '';
+            }
+
+
+            // askInAddMode: Vendor / Location changes ask in Add mode too
+            function confirmGSTChange(onYes, onNo, askInAddMode) {
+
+                // Add mode (unless asked for), or no GST calculated yet -> directly continue
+                if ((!askInAddMode && !isEditMode()) || !isGSTAlreadyCalculated()) {
+
+                    if (typeof onYes === 'function') {
+                        onYes();
                     }
 
+                    return;
+                }
 
-                    // ==========================================
-                    // YES
-                    // ==========================================
+                $.confirm({
+                    title: "GST Warning",
+                    type: "orange",
 
-                    function applyChange() {
+                    content:
+                        "GST has already been calculated for this entry.<br><br>" +
+                        "If you changing the Vendor, Location, Total Net Wt, Rate, or Discount % " +
+                        "will require the GST to be recalculated.<br><br>" +
+                        "Do you want to continue?",
 
-                        calculateRow($row);
-                    }
+                    buttons: {
 
+                        Yes: {
+                            text: "Yes",
+                            btnClass: "btn-orange",
 
-                    // ==========================================
-                    // NO
-                    // ==========================================
+                            action: function () {
 
-                    function restoreChange() {
+                                if (typeof onYes === 'function') {
+                                    onYes();
+                                }
+                            }
+                        },
 
-                        if ($input.is('.bags, .net-wt, .total-net-wt')) {
-                            $row.find('.bags').val(old.bags);
-                            $row.find('.net-wt').val(old.netWt);
-                            $row.find('.total-net-wt').val(old.totalNetWt);
-                        } else {
-                            $input.val(old.self);
+                        No: {
+                            text: "No",
+
+                            action: function () {
+
+                                if (typeof onNo === 'function') {
+                                    onNo();
+                                }
+                            }
                         }
-
-                        calculateRow($row);
                     }
+                });
+            }
+            // ======================================================
+            // REAL-TIME WEIGHT CALCULATION
+            // ======================================================
+
+            function calculateWeight($row, source) {
+
+                if (!$row || !$row.length) {
+                    return;
+                }
+
+                var bags = parseFloat($row.find('.bags').val()) || 0;
+                var netWt = parseFloat($row.find('.net-wt').val()) || 0;
+                var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
 
 
-                    // ==========================================
-                    // CONFIRM
-                    // ==========================================
+                // ==================================================
+                // BAGS / NET WT CHANGED
+                // TOTAL NET WT = BAGS × NET WT
+                // ==================================================
 
-                    confirmGSTChange(
-                        applyChange,
-                        restoreChange
+                if (source === 'bags' || source === 'net-wt') {
+
+                    if (bags > 0 && netWt > 0) {
+
+                        totalNetWt = bags * netWt;
+
+                        $row.find('.total-net-wt')
+                            .val(totalNetWt.toFixed(3));
+                    }
+                    else {
+
+                        // Clear total when calculation is not possible
+                        $row.find('.total-net-wt').val('');
+                    }
+                }
+
+
+                // ==================================================
+                // TOTAL NET WT CHANGED
+                // NET WT = TOTAL NET WT / BAGS
+                // ==================================================
+
+                else if (source === 'total-net-wt') {
+
+                    if (bags > 0 && totalNetWt > 0) {
+
+                        netWt = totalNetWt / bags;
+
+                        $row.find('.net-wt')
+                            .val(netWt.toFixed(3));
+                    }
+                    else {
+
+                        $row.find('.net-wt').val('');
+                    }
+                }
+
+
+                // ==================================================
+                // AFTER WEIGHT CALCULATION
+                // RECALCULATE AMOUNT / GST / TOTAL
+                // ==================================================
+
+                calculateRow($row);
+            }
+
+
+            // ======================================================
+            // BAGS - REAL TIME
+            // ======================================================
+
+            $(document)
+                .off('input.weightCalculation', '.bags')
+                .on('input.weightCalculation', '.bags', function () {
+
+                    calculateWeight(
+                        $(this).closest('tr'),
+                        'bags'
                     );
-                }
-            );
-        function isGSTAlreadyCalculated() {
 
-            var hasGST = false;
+                });
 
-            $('#mainTable tbody tr').each(function () {
 
-                var $row = $(this);
+            // ======================================================
+            // NET WT - REAL TIME
+            // ======================================================
 
-                var cgstRate = parseFloat(
-                    $row.find('input[name$=".CGST_RT"]').val()
-                ) || 0;
+            $(document)
+                .off('input.weightCalculation', '.net-wt')
+                .on('input.weightCalculation', '.net-wt', function () {
 
-                var sgstRate = parseFloat(
-                    $row.find('input[name$=".SGST_RT"]').val()
-                ) || 0;
+                    calculateWeight(
+                        $(this).closest('tr'),
+                        'net-wt'
+                    );
 
-                var igstRate = parseFloat(
-                    $row.find('input[name$=".IGST_RT"]').val()
-                ) || 0;
+                });
 
-                var cgstAmt = parseFloat(
-                    $row.find('input[name$=".CGST_AMT"]').val()
-                ) || 0;
 
-                var sgstAmt = parseFloat(
-                    $row.find('input[name$=".SGST_AMT"]').val()
-                ) || 0;
+            // ======================================================
+            // TOTAL NET WT - REAL TIME
+            // ======================================================
 
-                var igstAmt = parseFloat(
-                    $row.find('input[name$=".IGST_AMT"]').val()
-                ) || 0;
+            $(document)
+                .off('input.weightCalculation', '.total-net-wt')
+                .on('input.weightCalculation', '.total-net-wt', function () {
 
-                if (
-                    cgstRate > 0 ||
-                    sgstRate > 0 ||
-                    igstRate > 0 ||
-                    cgstAmt > 0 ||
-                    sgstAmt > 0 ||
-                    igstAmt > 0
-                ) {
-                    hasGST = true;
-                    return false;
-                }
-            });
+                    calculateWeight(
+                        $(this).closest('tr'),
+                        'total-net-wt'
+                    );
 
-            return hasGST;
-        }
+                });
 
+            //function calculateWeight($row, source) {
+            //    var bags = parseFloat($row.find('.bags').val()) || 0;
+            //    var netWt = parseFloat($row.find('.net-wt').val()) || 0;
+            //    var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
 
+            //    if (source === 'bags' || source === 'net-wt') {
 
+            //        // TOTAL NET WT = BAGS × NET WT
+            //        if (bags > 0 && netWt > 0) {
+            //            totalNetWt = bags * netWt;
 
-        // Edit mode = existing document (DOCNO present)
-        function isEditMode() {
-            return $.trim($('#DOCNO').val() || '') !== '';
-        }
+            //            $row.find('.total-net-wt')
+            //                .val(totalNetWt.toFixed(3));
+            //        }
 
+            //    } else if (source === 'total-net-wt') {
 
-        // askInAddMode: Vendor / Location changes ask in Add mode too
-        function confirmGSTChange(onYes, onNo, askInAddMode) {
+            //        // NET WT = TOTAL NET WT ÷ BAGS
+            //        if (bags > 0 && totalNetWt > 0) {
+            //            netWt = totalNetWt / bags;
 
-            // Add mode (unless asked for), or no GST calculated yet -> directly continue
-            if ((!askInAddMode && !isEditMode()) || !isGSTAlreadyCalculated()) {
+            //            $row.find('.net-wt')
+            //                .val(netWt.toFixed(3));
+            //        }
+            //    }
+            //}
 
-                if (typeof onYes === 'function') {
-                    onYes();
-                }
 
-                return;
-            }
+            //// Bags change
+            //$(document)
+            //    .off('input.weightCalculation', '.bags')
+            //    .on('input.weightCalculation', '.bags', function () {
+            //        calculateWeight($(this).closest('tr'), 'bags');
+            //    });
 
-            $.confirm({
-                title: "GST Warning",
-                type: "orange",
 
-                content:
-                    "GST has already been calculated for this entry.<br><br>" +
-                    "If you changing the Vendor, Location, Total Net Wt, Rate, or Discount % " +
-                    "will require the GST to be recalculated.<br><br>" +
-                    "Do you want to continue?",
+            //// Net Wt change
+            //$(document)
+            //    .off('input.weightCalculation', '.net-wt')
+            //    .on('input.weightCalculation', '.net-wt', function () {
+            //        calculateWeight($(this).closest('tr'), 'net-wt');
+            //    });
 
-                buttons: {
 
-                    Yes: {
-                        text: "Yes",
-                        btnClass: "btn-orange",
-
-                        action: function () {
-
-                            if (typeof onYes === 'function') {
-                                onYes();
-                            }
-                        }
-                    },
-
-                    No: {
-                        text: "No",
-
-                        action: function () {
-
-                            if (typeof onNo === 'function') {
-                                onNo();
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        // ======================================================
-        // REAL-TIME WEIGHT CALCULATION
-        // ======================================================
-
-        function calculateWeight($row, source) {
-
-            if (!$row || !$row.length) {
-                return;
-            }
-
-            var bags = parseFloat($row.find('.bags').val()) || 0;
-            var netWt = parseFloat($row.find('.net-wt').val()) || 0;
-            var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
-
-
-            // ==================================================
-            // BAGS / NET WT CHANGED
-            // TOTAL NET WT = BAGS × NET WT
-            // ==================================================
-
-            if (source === 'bags' || source === 'net-wt') {
-
-                if (bags > 0 && netWt > 0) {
-
-                    totalNetWt = bags * netWt;
-
-                    $row.find('.total-net-wt')
-                        .val(totalNetWt.toFixed(3));
-                }
-                else {
-
-                    // Clear total when calculation is not possible
-                    $row.find('.total-net-wt').val('');
-                }
-            }
-
-
-            // ==================================================
-            // TOTAL NET WT CHANGED
-            // NET WT = TOTAL NET WT / BAGS
-            // ==================================================
-
-            else if (source === 'total-net-wt') {
-
-                if (bags > 0 && totalNetWt > 0) {
-
-                    netWt = totalNetWt / bags;
-
-                    $row.find('.net-wt')
-                        .val(netWt.toFixed(3));
-                }
-                else {
-
-                    $row.find('.net-wt').val('');
-                }
-            }
-
-
-            // ==================================================
-            // AFTER WEIGHT CALCULATION
-            // RECALCULATE AMOUNT / GST / TOTAL
-            // ==================================================
-
-            calculateRow($row);
-        }
-
-
-        // ======================================================
-        // BAGS - REAL TIME
-        // ======================================================
-
-        $(document)
-            .off('input.weightCalculation', '.bags')
-            .on('input.weightCalculation', '.bags', function () {
-
-                calculateWeight(
-                    $(this).closest('tr'),
-                    'bags'
-                );
-
-            });
-
-
-        // ======================================================
-        // NET WT - REAL TIME
-        // ======================================================
-
-        $(document)
-            .off('input.weightCalculation', '.net-wt')
-            .on('input.weightCalculation', '.net-wt', function () {
-
-                calculateWeight(
-                    $(this).closest('tr'),
-                    'net-wt'
-                );
-
-            });
-
-
-        // ======================================================
-        // TOTAL NET WT - REAL TIME
-        // ======================================================
-
-        $(document)
-            .off('input.weightCalculation', '.total-net-wt')
-            .on('input.weightCalculation', '.total-net-wt', function () {
-
-                calculateWeight(
-                    $(this).closest('tr'),
-                    'total-net-wt'
-                );
-
-            });
-
-        //function calculateWeight($row, source) {
-        //    var bags = parseFloat($row.find('.bags').val()) || 0;
-        //    var netWt = parseFloat($row.find('.net-wt').val()) || 0;
-        //    var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
-
-        //    if (source === 'bags' || source === 'net-wt') {
-
-        //        // TOTAL NET WT = BAGS × NET WT
-        //        if (bags > 0 && netWt > 0) {
-        //            totalNetWt = bags * netWt;
-
-        //            $row.find('.total-net-wt')
-        //                .val(totalNetWt.toFixed(3));
-        //        }
-
-        //    } else if (source === 'total-net-wt') {
-
-        //        // NET WT = TOTAL NET WT ÷ BAGS
-        //        if (bags > 0 && totalNetWt > 0) {
-        //            netWt = totalNetWt / bags;
-
-        //            $row.find('.net-wt')
-        //                .val(netWt.toFixed(3));
-        //        }
-        //    }
-        //}
-
-
-        //// Bags change
-        //$(document)
-        //    .off('input.weightCalculation', '.bags')
-        //    .on('input.weightCalculation', '.bags', function () {
-        //        calculateWeight($(this).closest('tr'), 'bags');
-        //    });
-
-
-        //// Net Wt change
-        //$(document)
-        //    .off('input.weightCalculation', '.net-wt')
-        //    .on('input.weightCalculation', '.net-wt', function () {
-        //        calculateWeight($(this).closest('tr'), 'net-wt');
-        //    });
-
-
-        //// Total Net Wt change
-        //$(document)
-        //    .off('input.weightCalculation', '.total-net-wt')
-        //    .on('input.weightCalculation', '.total-net-wt', function () {
-        //        calculateWeight($(this).closest('tr'), 'total-net-wt');
-        //    });
-    </script>
+            //// Total Net Wt change
+            //$(document)
+            //    .off('input.weightCalculation', '.total-net-wt')
+            //    .on('input.weightCalculation', '.total-net-wt', function () {
+            //        calculateWeight($(this).closest('tr'), 'total-net-wt');
+            //    });
+        </script>*@
 
     <script>
         // ✅ SINGLE UNIFIED SUBMIT HANDLER
@@ -4596,6 +5320,826 @@ $(function () {
 
         });
     </script>
+    <script>
+        $(document).ready(function () {
+
+            $('.decimal2').each(function () {
+
+                var val = parseFloat($(this).val());
+
+                if (!isNaN(val)) {
+                    $(this).val(val.toFixed(2));
+                } else {
+                    $(this).val('0.00');
+                }
+
+            });
+
+
+            $('.decimal3').each(function () {
+
+                var val = parseFloat($(this).val());
+
+                if (!isNaN(val)) {
+                    $(this).val(val.toFixed(3));
+                } else {
+                    $(this).val('0.000');
+                }
+
+            });
+
+        });
+    </script>
+
+    <script>
+
+        // ======================================================
+        // CALCULATE ONE ROW
+        // ======================================================
+
+        function calculateRow($row) {
+
+            if (!$row || !$row.length) {
+                return;
+            }
+
+            // ============================================
+            // 1. TOTAL NET WT
+            // ============================================
+
+            var totalNetWt =
+                parseFloat(
+                    $row.find('.total-net-wt').val()
+                ) || 0;
+
+
+            // ============================================
+            // 2. RATE
+            // ============================================
+
+            var rate =
+                parseFloat(
+                    $row.find('.rate').val()
+                ) || 0;
+
+
+            // ============================================
+            // 3. AMOUNT
+            // TOTAL NET WT × RATE
+            // ============================================
+
+            var amount =
+                totalNetWt * rate;
+
+            $row.find('.amount')
+                .val(amount.toFixed(2));
+
+
+            // ============================================
+            // 4. DISCOUNT %
+            // ============================================
+
+            var discPer =
+                parseFloat(
+                    $row.find('.disc-per').val()
+                ) || 0;
+
+
+            // ============================================
+            // 5. DISCOUNT VALUE
+            // AMOUNT × DISCOUNT % / 100
+            // ============================================
+
+            var discount =
+                amount * discPer / 100;
+
+            $row.find('.discount')
+                .val(discount.toFixed(2));
+
+
+            // ============================================
+            // 6. TAXABLE AMOUNT
+            // AMOUNT - DISCOUNT
+            // ============================================
+
+            var taxableAmount =
+                amount - discount;
+
+            if (taxableAmount < 0) {
+                taxableAmount = 0;
+            }
+
+            $row.find('.taxable-amt')
+                .val(taxableAmount.toFixed(2));
+
+
+            // ============================================
+            // 7. GST RATES
+            // ============================================
+
+            var cgstRate =
+                parseFloat(
+                    $row.find('.cgst-rate').val()
+                ) || 0;
+
+            var sgstRate =
+                parseFloat(
+                    $row.find('.sgst-rate').val()
+                ) || 0;
+
+            var igstRate =
+                parseFloat(
+                    $row.find('.igst-rate').val()
+                ) || 0;
+
+
+            // ============================================
+            // 8. GST AMOUNT
+            // GST MUST USE TAXABLE AMOUNT
+            // ============================================
+
+            var cgstAmt =
+                taxableAmount * cgstRate / 100;
+
+            var sgstAmt =
+                taxableAmount * sgstRate / 100;
+
+            var igstAmt =
+                taxableAmount * igstRate / 100;
+
+
+            // ============================================
+            // 9. SET GST AMOUNTS
+            // ============================================
+
+            $row.find('.cgst-amt')
+                .val(cgstAmt.toFixed(2));
+
+            $row.find('.sgst-amt')
+                .val(sgstAmt.toFixed(2));
+
+            $row.find('.igst-amt')
+                .val(igstAmt.toFixed(2));
+
+
+            // ============================================
+            // 10. TOTAL AMOUNT
+            // TAXABLE + GST
+            // ============================================
+
+            var totalAmount =
+                taxableAmount +
+                cgstAmt +
+                sgstAmt +
+                igstAmt;
+
+            $row.find('.tot-amt')
+                .val(totalAmount.toFixed(2));
+
+
+            // ============================================
+            // 11. HEADER TOTALS
+            // ============================================
+
+            calculateHeaderTotals();
+        }
+
+
+        // ======================================================
+        // CALCULATE ALL ROWS
+        // ======================================================
+
+        function calculateAllRows() {
+
+            $('#mainTable tbody tr').each(function () {
+
+                calculateRow($(this));
+
+            });
+        }
+
+
+        // ======================================================
+        // HEADER TOTALS
+        // ======================================================
+
+        function calculateHeaderTotals() {
+
+            var totalGST = 0;
+            var totalAmount = 0;
+
+
+            $('#mainTable tbody tr').each(function () {
+
+                var $row = $(this);
+
+
+                var cgst =
+                    parseFloat(
+                        $row.find('.cgst-amt').val()
+                    ) || 0;
+
+
+                var sgst =
+                    parseFloat(
+                        $row.find('.sgst-amt').val()
+                    ) || 0;
+
+
+                var igst =
+                    parseFloat(
+                        $row.find('.igst-amt').val()
+                    ) || 0;
+
+
+                var rowTotal =
+                    parseFloat(
+                        $row.find('.tot-amt').val()
+                    ) || 0;
+
+
+                totalGST +=
+                    cgst +
+                    sgst +
+                    igst;
+
+
+                totalAmount +=
+                    rowTotal;
+
+            });
+
+
+            // ==================================================
+            // HEADER GST
+            // ==================================================
+
+            $('#TotalGSTSystem')
+                .val(totalGST.toFixed(2));
+
+
+            // ==================================================
+            // HEADER TOTAL AMOUNT
+            // ==================================================
+
+            $('#TotalAmount')
+                .val(totalAmount.toFixed(2));
+        }
+
+
+        // ======================================================
+        // GST CONFIRMATION
+        // BAGS / NET WT / TOTAL NET WT / RATE / DISCOUNT %
+        // ======================================================
+
+        $(document)
+            .off(
+                'focus.gstChange',
+                '.bags, .net-wt, .total-net-wt, .rate, .disc-per'
+            )
+            .on(
+                'focus.gstChange',
+                '.bags, .net-wt, .total-net-wt, .rate, .disc-per',
+                function () {
+
+                    var $row = $(this).closest('tr');
+
+                    // Store old values before user changes them
+                    // Bags / Net Wt also rewrite Total Net Wt
+                    $(this).data('gst-old-value', {
+
+                        bags: $row.find('.bags').val(),
+
+                        netWt: $row.find('.net-wt').val(),
+
+                        totalNetWt:
+                            $row.find('.total-net-wt').val(),
+
+                        self: $(this).val()
+
+                    });
+
+                }
+            );
+
+
+        // ======================================================
+        // GST CHANGE CONFIRMATION
+        // ======================================================
+
+        $(document)
+            .off(
+                'change.gstChange',
+                '.bags, .net-wt, .total-net-wt, .rate, .disc-per'
+            )
+            .on(
+                'change.gstChange',
+                '.bags, .net-wt, .total-net-wt, .rate, .disc-per',
+                function () {
+
+                    var $input = $(this);
+
+                    var $row =
+                        $input.closest('tr');
+
+                    var newValue =
+                        $input.val();
+
+                    var old =
+                        $input.data('gst-old-value') || {};
+
+
+                    // ==========================================
+                    // VALUE DID NOT CHANGE
+                    // ==========================================
+
+                    if (
+                        (parseFloat(newValue) || 0) ===
+                        (parseFloat(old.self) || 0)
+                    ) {
+
+                        calculateRow($row);
+
+                        return;
+                    }
+
+
+                    // ==========================================
+                    // YES
+                    // ==========================================
+
+                    function applyChange() {
+
+                        calculateRow($row);
+
+                    }
+
+
+                    // ==========================================
+                    // NO
+                    // ==========================================
+
+                    function restoreChange() {
+
+                        if (
+                            $input.is(
+                                '.bags, .net-wt, .total-net-wt'
+                            )
+                        ) {
+
+                            $row.find('.bags')
+                                .val(old.bags);
+
+                            $row.find('.net-wt')
+                                .val(old.netWt);
+
+                            $row.find('.total-net-wt')
+                                .val(old.totalNetWt);
+
+                        }
+                        else {
+
+                            $input.val(old.self);
+
+                        }
+
+                        calculateRow($row);
+
+                    }
+
+
+                    // ==========================================
+                    // CONFIRM
+                    // ==========================================
+
+                    confirmGSTChange(
+                        applyChange,
+                        restoreChange
+                    );
+
+                }
+            );
+
+
+        // ======================================================
+        // CHECK GST ALREADY CALCULATED
+        // ======================================================
+
+        function isGSTAlreadyCalculated() {
+
+            var hasGST = false;
+
+
+            $('#mainTable tbody tr').each(function () {
+
+                var $row = $(this);
+
+
+                var cgstRate =
+                    parseFloat(
+                        $row.find(
+                            'input[name$=".CGST_RT"]'
+                        ).val()
+                    ) || 0;
+
+
+                var sgstRate =
+                    parseFloat(
+                        $row.find(
+                            'input[name$=".SGST_RT"]'
+                        ).val()
+                    ) || 0;
+
+
+                var igstRate =
+                    parseFloat(
+                        $row.find(
+                            'input[name$=".IGST_RT"]'
+                        ).val()
+                    ) || 0;
+
+
+                var cgstAmt =
+                    parseFloat(
+                        $row.find(
+                            'input[name$=".CGST_AMT"]'
+                        ).val()
+                    ) || 0;
+
+
+                var sgstAmt =
+                    parseFloat(
+                        $row.find(
+                            'input[name$=".SGST_AMT"]'
+                        ).val()
+                    ) || 0;
+
+
+                var igstAmt =
+                    parseFloat(
+                        $row.find(
+                            'input[name$=".IGST_AMT"]'
+                        ).val()
+                    ) || 0;
+
+
+                if (
+                    cgstRate > 0 ||
+                    sgstRate > 0 ||
+                    igstRate > 0 ||
+                    cgstAmt > 0 ||
+                    sgstAmt > 0 ||
+                    igstAmt > 0
+                ) {
+
+                    hasGST = true;
+
+                    return false;
+
+                }
+
+            });
+
+
+            return hasGST;
+        }
+
+
+        // ======================================================
+        // EDIT MODE
+        // ======================================================
+
+        function isEditMode() {
+
+            return $.trim(
+                $('#DOCNO').val() || ''
+            ) !== '';
+
+        }
+
+
+        // ======================================================
+        // GST CONFIRMATION POPUP
+        // ======================================================
+
+        function confirmGSTChange(
+            onYes,
+            onNo,
+            askInAddMode
+        ) {
+
+            // Add mode without GST confirmation
+            // OR GST not calculated yet
+            if (
+                (!askInAddMode && !isEditMode()) ||
+                !isGSTAlreadyCalculated()
+            ) {
+
+                if (typeof onYes === 'function') {
+                    onYes();
+                }
+
+                return;
+            }
+
+
+            $.confirm({
+
+                title: "GST Warning",
+
+                type: "orange",
+
+                content:
+                    "GST has already been calculated for this entry.<br><br>" +
+                    "If you changing the Vendor, Location, Total Net Wt, Rate, or Discount % " +
+                    "will require the GST to be recalculated.<br><br>" +
+                    "Do you want to continue?",
+
+                buttons: {
+
+                    Yes: {
+
+                        text: "Yes",
+
+                        btnClass: "btn-orange",
+
+                        action: function () {
+
+                            if (typeof onYes === 'function') {
+                                onYes();
+                            }
+
+                        }
+
+                    },
+
+                    No: {
+
+                        text: "No",
+
+                        action: function () {
+
+                            if (typeof onNo === 'function') {
+                                onNo();
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            });
+
+        }
+
+
+        // ======================================================
+        // REAL-TIME WEIGHT CALCULATION
+        // ======================================================
+
+        function calculateWeight($row, source) {
+
+            if (!$row || !$row.length) {
+                return;
+            }
+
+
+            var bags =
+                parseFloat(
+                    $row.find('.bags').val()
+                ) || 0;
+
+
+            var netWt =
+                parseFloat(
+                    $row.find('.net-wt').val()
+                ) || 0;
+
+
+            var totalNetWt =
+                parseFloat(
+                    $row.find('.total-net-wt').val()
+                ) || 0;
+
+
+            // ==================================================
+            // BAGS / NET WT CHANGED
+            // TOTAL NET WT = BAGS × NET WT
+            // ==================================================
+
+            if (
+                source === 'bags' ||
+                source === 'net-wt'
+            ) {
+
+                if (
+                    bags > 0 &&
+                    netWt > 0
+                ) {
+
+                    totalNetWt =
+                        bags * netWt;
+
+                    $row.find('.total-net-wt')
+                        .val(totalNetWt.toFixed(3));
+
+                }
+                else {
+
+                    $row.find('.total-net-wt')
+                        .val('');
+
+                }
+
+            }
+
+
+            // ==================================================
+            // TOTAL NET WT CHANGED
+            // NET WT = TOTAL NET WT / BAGS
+            // ==================================================
+
+            else if (
+                source === 'total-net-wt'
+            ) {
+
+                if (
+                    bags > 0 &&
+                    totalNetWt > 0
+                ) {
+
+                    netWt =
+                        totalNetWt / bags;
+
+                    $row.find('.net-wt')
+                        .val(netWt.toFixed(3));
+
+                }
+                else {
+
+                    $row.find('.net-wt')
+                        .val('');
+
+                }
+
+            }
+
+
+            // ==================================================
+            // AFTER WEIGHT CALCULATION
+            // RECALCULATE AMOUNT / GST / TOTAL
+            // ==================================================
+
+            calculateRow($row);
+
+        }
+
+
+        // ======================================================
+        // BAGS - REAL TIME
+        // ======================================================
+
+        $(document)
+            .off(
+                'input.weightCalculation',
+                '.bags'
+            )
+            .on(
+                'input.weightCalculation',
+                '.bags',
+                function () {
+
+                    calculateWeight(
+                        $(this).closest('tr'),
+                        'bags'
+                    );
+
+                }
+            );
+
+
+        // ======================================================
+        // NET WT - REAL TIME
+        // ======================================================
+
+        $(document)
+            .off(
+                'input.weightCalculation',
+                '.net-wt'
+            )
+            .on(
+                'input.weightCalculation',
+                '.net-wt',
+                function () {
+
+                    calculateWeight(
+                        $(this).closest('tr'),
+                        'net-wt'
+                    );
+
+                }
+            );
+
+
+        // ======================================================
+        // TOTAL NET WT - REAL TIME
+        // ======================================================
+
+        $(document)
+            .off(
+                'input.weightCalculation',
+                '.total-net-wt'
+            )
+            .on(
+                'input.weightCalculation',
+                '.total-net-wt',
+                function () {
+
+                    calculateWeight(
+                        $(this).closest('tr'),
+                        'total-net-wt'
+                    );
+
+                }
+            );
+
+
+        // ======================================================
+        // RATE / DISCOUNT / GST RATE - REAL TIME
+        // ======================================================
+
+        $(document)
+            .off(
+                'input.calculation change.calculation keyup.calculation',
+                '.rate, .disc-per, .cgst-rate, .sgst-rate, .igst-rate'
+            )
+            .on(
+                'input.calculation change.calculation keyup.calculation',
+                '.rate, .disc-per, .cgst-rate, .sgst-rate, .igst-rate',
+                function () {
+
+                    calculateRow(
+                        $(this).closest('tr')
+                    );
+
+                }
+            );
+
+
+        // ======================================================
+        // CALCULATE AFTER PAGE LOAD
+        // ======================================================
+
+        $(document).ready(function () {
+
+            calculateAllRows();
+
+        });
+
+    </script>
+
+    @*<script>
+            // ======================================================
+            // REAL-TIME TOTAL GST SYSTEM
+            // CGST Amt + SGST Amt + IGST Amt
+            // ======================================================
+
+            $(document).on(
+                'input change keyup',
+                '.cgst-amt, .sgst-amt, .igst-amt',
+                function () {
+
+                    var totalGST = 0;
+
+                    $('#mainTable tbody tr').each(function () {
+
+                        var cgst =
+                            parseFloat($(this).find('.cgst-amt').val()) || 0;
+
+                        var sgst =
+                            parseFloat($(this).find('.sgst-amt').val()) || 0;
+
+                        var igst =
+                            parseFloat($(this).find('.igst-amt').val()) || 0;
+
+                        totalGST += cgst + sgst + igst;
+                    });
+
+                    $('#TotalGSTSystem').val(totalGST.toFixed(2));
+                }
+            );
+            $(document).on(
+                'input change keyup',
+                '.bags, .net-wt, .total-net-wt, .rate, .disc-per, .cgst-rate, .sgst-rate, .igst-rate',
+                function () {
+
+                    var $row = $(this).closest('tr');
+
+                    calculateRow($row);
+                }
+            );
+        </script>*@
     <script>
         $(document).on('keydown', 'input', function (e) {
             if (e.key === 'Enter') {
