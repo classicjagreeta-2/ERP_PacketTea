@@ -335,7 +335,7 @@ namespace PacketTea.Controllers.TEA
         public async Task<JsonResult> GetMasterTdsHead(string q = "", int limit = 0, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
             
-            var resp = await Services.FinanceGetAsync<PageModel<MAST_TDS_HEAD>>($"/api/MasterTdsHead/GetByPage?page={p}&pageSize={limit}");
+            var resp = await Services.FinanceGetAsync<PageModel<MAST_TDS_HEAD>>($"/api/MasterTdsHead/GetByPage?search={q}&page={p}&pageSize={limit}");
             var data = resp?.Data?.value;
 
             return Json(new { data = data?.results ?? new List<MAST_TDS_HEAD>(), count = data?.rowCount ?? 0 }, JsonRequestBehavior.AllowGet);

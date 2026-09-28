@@ -212,8 +212,8 @@
                         <div class="accordion-body ">
                             <!-- Customer account -->
                             <div class="form-row">
-                                <div class="form-col-10">
-                                    <label>Document No </label>
+                                <div class="form-col-10" style="width:80px;">
+                                    <label>Document No  </label>
 
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.DOCNO, new { @class = "form-control ", @readonly = "readonly", tabindex = "-1" })
                                 </div>
@@ -269,7 +269,7 @@
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.PCODE, new { @class = "form-control req vendor-code" })
 
                                 </div>
-                                <div class="form-col-20">
+                                <div class="form-col-10">
                                     <label>Vendor Name</label>
 
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.VENDORNAME, new { @class = "form-control vendor-desc", @readonly = "readonly", tabindex = "-1" })
@@ -282,17 +282,17 @@
 
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.BROK_CODE, new { @class = "form-control broker-code" })
                                 </div>
+                                <div class="form-col-10">
+                                    <label>Broker Name</label>
 
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.BROKERNAME, new { @class = "form-control broker-desc", @readonly = "readonly", tabindex = "-1" })
+                                </div>
 
                             </div>
 
                             <div class="form-row" style="line-height:2.5;">
 
-                                <div class="form-col-20">
-                                    <label>Broker Name</label>
 
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.BROKERNAME, new { @class = "form-control broker-desc", @readonly = "readonly", tabindex = "-1" })
-                                </div>
 
                                 <div class="form-col-10">
                                     <label>Transporter</label>
@@ -321,21 +321,23 @@
                                              class="calendar-icon" data-target="BillNoDate" />
                                     </div>
                                 </div>
-                            </div>
-
-                            <div class="form-row" style="line-height:2.5;">
-
                                 <div class="form-col-10">
                                     <label>Action Sale number</label>
 
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.SALE_NO, new { @class = "form-control", maxlength = "7" })
                                 </div>
-
                                 <div class="form-col-10">
                                     <label>Vehicle No</label>
 
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.VEH_NO, new { @class = "form-control", maxlength = "15" })
                                 </div>
+                            </div>
+
+                            <div class="form-row" style="line-height:2.5;">
+
+
+
+
                                 <div class="form-col-10">
                                     <label>CN NO</label>
 
@@ -501,7 +503,7 @@
                             <div class="form-row">
                                 <div class="form-col-10">
                                     <label>Head</label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_CODE, new { @class = "form-control head-code" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_CODE, new { @class = "form-control req head-code" })
 
                                 </div>
                                 <div class="form-col-20">
@@ -511,10 +513,11 @@
                                 <div class="form-col-10">
                                     <label>Detd. on Amt. <span>(*)</span></label>
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_DETD, new
-                                    {
-                                        @class = "form-control decimal2",
+                               {
+                                   @class = "form-control DetdAmt decimal2",
                                    type = "text",
-                                   inputmode = "decimal"
+                                   inputmode = "decimal",
+                                   disabled = "disabled"
                                ,
                                    value = Model.T_TEA_HEAD.TDS_DETD?.ToString("0.00") ?? "0.00"
                                })
@@ -522,8 +525,9 @@
                                 <div class="form-col-10">
                                     <label>TDS %</label>
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_PER, new
-                                    {
-                                        @class = "form-control decimal2 "
+                               {
+                                   @class = "form-control tdspercentage decimal2 ",
+                                   disabled = "disabled"
                                ,
                                    value = Model.T_TEA_HEAD.TDS_PER?.ToString("0.00") ?? "0.00"
                                })
@@ -531,18 +535,21 @@
                                 <div class="form-col-10">
                                     <label>TDS Amt.</label>
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_AMT, new
-                                    {
-                                        @class = "form-control decimal3 "
+                               {
+                                   @class = "form-control tdsAmt decimal2 ",
+                                   @readonly = "readonly",
+                                   tabindex = "-1"
                                ,
-                                   value = Model.T_TEA_HEAD.TDS_AMT?.ToString("0.000") ?? "0.000"
+                                   value = Model.T_TEA_HEAD.TDS_AMT?.ToString("0.000") ?? "0.00"
                                })
                                 </div>
                                 <div class="form-col-10">
                                     <label>Total GST As Per System </label>
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_GSTAMT_M, new
-                                    {
-                                        @class = "form-control decimal2",
-                                        id = "TotalGSTSystem",
+                               {
+                                   @class = "form-control decimal2",
+                                   id = "TotalGSTSystem",
+                                   tabindex = "-1",
                                         @readonly = "readonly"
                                ,
                                    value = Model.T_TEA_HEAD.TOT_GSTAMT_M?.ToString("0.00") ?? "0.00"
@@ -559,19 +566,20 @@
                                 <div class="form-col-10">
                                     <label> Rounded Off</label>
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.ROUNDOFF, new
-                                    {
-                                        @class = "form-control decimal2"
-                               ,
-                                   value = Model.T_TEA_HEAD.ROUNDOFF?.ToString("0.00") ?? "0.00"
-                               })
+                                        {
+                                            @class = "form-control decimal2-negative",
+                                            type = "text",
+                                            inputmode = "decimal",
+                                            value = Model.T_TEA_HEAD.ROUNDOFF?.ToString("0.00") ?? "0.00"
+                                        })
                                 </div>
 
                                 <div class="form-col-10">
                                     <label> Total Amount</label>
                                     <input type="text"
                                            id="TotalAmount"
-                                           class="form-control text-right decimal3"
-                                           value="0.000"
+                                           class="form-control text-right decimal2"
+                                           value="0.00"
                                            readonly
                                            tabindex="-1" />
                                 </div>
@@ -800,6 +808,7 @@ function LoadPacketTeaPurchaseDetails() {
             $('#mainTable tbody').html(html);
 
             // Calculate only once after all rows are loaded
+            calculateHeaderTotals();
             calculateAllRows();
 
         },
@@ -2426,17 +2435,285 @@ $(document).on('change', '.broker-code', function () {
 });
     </script>
 
+    <!--<script>
+
+        // =====================================================
+        // TDS HEAD INPUTPICKER
+        // =====================================================
+        $(document).on('click', '.head-code', function () {
+
+            var $input = $(this);
+
+            $('.inputpicker-wrapped-list').remove();
+
+            if ($input.data('inputpicker')) {
+                $input.inputpicker('show');
+                return;
+            }
+
+            $input.inputpicker({
+
+                url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
+
+                // TDS_ACODE is NOT displayed
+                fields: [
+                    { name: 'CODE', text: 'CODE' },
+                    { name: 'DESCN', text: 'NAME' },
+                    { name: 'TDS_PER', text: 'TDS PER' },
+                    { name: 'TDS_CODE', text: 'TDS CODE' }
+                ],
+
+                fieldText: 'CODE',
+                fieldValue: 'CODE',
+
+                headShow: true,
+                filterOpen: true,
+                autoOpen: true,
+
+                pagination: true,
+                pageField: 'p',
+                pageLimitField: 'limit',
+                pageLimit: 10,
+                pageCountField: 'count',
+
+                width: 'auto',
+                urlDelay: 1
+            });
+
+
+            // =====================================================
+            // SELECT
+            // =====================================================
+            $input
+                .off('inputpicker.select.tds')
+                .on('inputpicker.select.tds', function (e, item) {
+
+                    if (!item) return;
+
+                    var $this = $(this);
+
+                    var code = $.trim(item.CODE || '');
+                    var desc = $.trim(item.DESCN || '');
+
+                    // Hidden value returned by API
+                    var acode = $.trim(item.TDS_ACODE || '');
+
+
+                    // =================================================
+                    // TDS A/CODE NOT AVAILABLE
+                    // =================================================
+                    if (!acode) {
+
+                        $.alert({
+                            title: 'Warning',
+                            type: 'orange',
+                            content: 'A/C Code not available.'
+                        });
+
+                        // Clear TDS CODE
+                        $this.val('');
+
+                        // Clear description
+                        $('.head-desc').val('');
+
+                        $this.inputpicker('hide');
+
+                        return;
+                    }
+
+
+                    // =================================================
+                    // VALID TDS CODE
+                    // =================================================
+                    $this.val(code);
+
+                    $('.head-desc').val(desc);
+
+                    $this.inputpicker('hide');
+                });
+        });
+
+
+        // =====================================================
+        // CHANGE
+        // =====================================================
+    $(document).on('change', '.head-code', function () {
+
+        var $input = $(this);
+        var code = $.trim($input.val() || '');
+
+        if (!code) {
+            clearTdsHead($input);
+            return;
+        }
+
+        $.ajax({
+
+            url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
+            type: 'GET',
+
+            data: {
+                q: code,
+                limit: 1,
+                p: 1
+            },
+
+            success: function (res) {
+
+                if (!res || !res.data || res.data.length === 0) {
+
+                    clearTdsHead($input);
+
+                    return;
+                }
+
+                var item = res.data[0];
+
+                var acode = $.trim(item.TDS_ACODE || '');
+                var desc = $.trim(item.DESCN || '');
+
+                // =========================================
+                // A/C CODE NOT AVAILABLE
+                // =========================================
+                if (!acode) {
+
+                    $.alert({
+                        title: 'Warning',
+                        type: 'orange',
+                        content: 'A/C Code not available.',
+                        buttons: {
+                            ok: {
+                                text: 'OK',
+                                action: function () {
+                                    clearTdsHead($input);
+                                }
+                            }
+                        }
+                    });
+
+                    return;
+                }
+
+                // Valid
+                $('.head-desc').val(desc);
+            },
+
+            error: function () {
+                clearTdsHead($input);
+            }
+        });
+    });
+
+            function clearTdsHead($input) {
+
+                // Clear original input
+                $input.val('');
+
+                // Clear description
+                $('.head-desc').val('');
+
+                // Clear InputPicker value
+                try {
+                    if ($input.data('inputpicker')) {
+                        $input.inputpicker('val', '');
+                        $input.inputpicker('hide');
+                    }
+                } catch (e) {
+                    console.log('TDS InputPicker clear error:', e);
+                }
+
+                // Clear visible InputPicker textbox/clone
+                $('.head-code.inputpicker-input').val('');
+
+                // Also clear any inputpicker clone having same value
+                $('.inputpicker-input').filter(function () {
+                    return $(this).hasClass('head-code');
+                }).val('');
+            }
+        // =====================================================
+        // BLUR
+        // =====================================================-->
+    @*$(document).on('blur', '.head-code', function () {
+
+            var $input = $(this);
+            var code = $.trim($input.val() || '');
+
+            setTimeout(function () {
+
+                if (!code) {
+                    $('.head-desc').val('');
+                    return;
+                }
+
+                $.ajax({
+
+                    url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
+
+                    type: 'GET',
+
+                    data: {
+                        q: code,
+                        limit: 1,
+                        p: 1
+                    },
+
+                    success: function (res) {
+
+                        if (!res ||
+                            !res.data ||
+                            res.data.length === 0) {
+
+                            $input.val('');
+                            $('.head-desc').val('');
+
+                            return;
+                        }
+
+                        var item = res.data[0];
+
+                        var acode = $.trim(item.TDS_ACODE || '');
+                        var desc = $.trim(item.DESCN || '');
+
+
+                        // =================================================
+                        // NO A/C CODE
+                        // =================================================
+                        if (!acode) {
+
+                            $.alert({
+                                title: 'Warning',
+                                type: 'orange',
+                                content: 'A/C Code not available.'
+                            });
+
+                            $input.val('');
+                            $('.head-desc').val('');
+
+                            return;
+                        }
+
+
+                        // Valid
+                        $('.head-desc').val(desc);
+                    }
+                });
+
+            }, 200);
+        });*@
+
+    <!--</script>-->
     <script>
 
-    // =====================================================
+    // =========================================================
     // TDS HEAD INPUTPICKER
-    // =====================================================
+    // =========================================================
     $(document).on('click', '.head-code', function () {
 
         var $input = $(this);
 
         $('.inputpicker-wrapped-list').remove();
 
+        // Already initialized
         if ($input.data('inputpicker')) {
             $input.inputpicker('show');
             return;
@@ -2446,11 +2723,13 @@ $(document).on('change', '.broker-code', function () {
 
             url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
 
-            // TDS_ACODE is NOT displayed
+            // Only these are displayed in InputPicker
+            // TDS_ACODE remains hidden and is used for validation
             fields: [
                 { name: 'CODE', text: 'CODE' },
                 { name: 'DESCN', text: 'NAME' },
-                { name: 'TDS_CODE', text: 'TDS CODE' }
+                { name: 'TDS_PER', text: 'TDS PER' },
+                { name: 'TDS_ACODE', text: 'TDS ACODE' }
             ],
 
             fieldText: 'CODE',
@@ -2472,345 +2751,288 @@ $(document).on('change', '.broker-code', function () {
 
 
         // =====================================================
-        // SELECT
+        // SELECT TDS HEAD
         // =====================================================
         $input
             .off('inputpicker.select.tds')
             .on('inputpicker.select.tds', function (e, item) {
 
-                if (!item) return;
+                if (!item) {
+                    return;
+                }
 
                 var $this = $(this);
 
                 var code = $.trim(item.CODE || '');
                 var desc = $.trim(item.DESCN || '');
-
-                // Hidden value returned by API
                 var acode = $.trim(item.TDS_ACODE || '');
+
+                var tdsPer = parseFloat(item.TDS_PER) || 0;
 
 
                 // =================================================
-                // TDS A/CODE NOT AVAILABLE
+                // A/C CODE NOT AVAILABLE
                 // =================================================
                 if (!acode) {
 
                     $.alert({
                         title: 'Warning',
                         type: 'orange',
-                        content: 'A/C Code not available.'
+                        content: 'A/C Code not available.',
+                        buttons: {
+                            ok: {
+                                text: 'OK',
+                                action: function () {
+
+                                    clearTdsHead($this);
+                                }
+                            }
+                        }
                     });
-
-                    // Clear TDS CODE
-                    $this.val('');
-
-                    // Clear description
-                    $('.head-desc').val('');
-
-                    $this.inputpicker('hide');
 
                     return;
                 }
 
 
                 // =================================================
-                // VALID TDS CODE
+                // VALID TDS HEAD
                 // =================================================
+
                 $this.val(code);
 
                 $('.head-desc').val(desc);
+
+                // Set TDS percentage from master
+                $('.tdspercentage').val(tdsPer.toFixed(2));
+
+                // Enable manual entry
+                $('.DetdAmt').prop('disabled', false);
+                $('.tdspercentage').prop('disabled', false);
+
+                // Calculate TDS
+                calculateTDS();
 
                 $this.inputpicker('hide');
             });
     });
 
 
-    // =====================================================
-    // CHANGE
-    // =====================================================
-$(document).on('change', '.head-code', function () {
-
-    var $input = $(this);
-    var code = $.trim($input.val() || '');
-
-    if (!code) {
-        clearTdsHead($input);
-        return;
-    }
-
-    $.ajax({
-
-        url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
-        type: 'GET',
-
-        data: {
-            q: code,
-            limit: 1,
-            p: 1
-        },
-
-        success: function (res) {
-
-            if (!res || !res.data || res.data.length === 0) {
-
-                clearTdsHead($input);
-
-                return;
-            }
-
-            var item = res.data[0];
-
-            var acode = $.trim(item.TDS_ACODE || '');
-            var desc = $.trim(item.DESCN || '');
-
-            // =========================================
-            // A/C CODE NOT AVAILABLE
-            // =========================================
-            if (!acode) {
-
-                $.alert({
-                    title: 'Warning',
-                    type: 'orange',
-                    content: 'A/C Code not available.',
-                    buttons: {
-                        ok: {
-                            text: 'OK',
-                            action: function () {
-                                clearTdsHead($input);
-                            }
-                        }
-                    }
-                });
-
-                return;
-            }
-
-            // Valid
-            $('.head-desc').val(desc);
-        },
-
-        error: function () {
-            clearTdsHead($input);
-        }
-    });
-});
-
-        function clearTdsHead($input) {
-
-            // Clear original input
-            $input.val('');
-
-            // Clear description
-            $('.head-desc').val('');
-
-            // Clear InputPicker value
-            try {
-                if ($input.data('inputpicker')) {
-                    $input.inputpicker('val', '');
-                    $input.inputpicker('hide');
-                }
-            } catch (e) {
-                console.log('TDS InputPicker clear error:', e);
-            }
-
-            // Clear visible InputPicker textbox/clone
-            $('.head-code.inputpicker-input').val('');
-
-            // Also clear any inputpicker clone having same value
-            $('.inputpicker-input').filter(function () {
-                return $(this).hasClass('head-code');
-            }).val('');
-        }
-    // =====================================================
-    // BLUR
-    // =====================================================
-    @*$(document).on('blur', '.head-code', function () {
+    // =========================================================
+    // CHANGE - MANUAL TDS CODE
+    // =========================================================
+    $(document).on('change', '.head-code', function () {
 
         var $input = $(this);
         var code = $.trim($input.val() || '');
 
-        setTimeout(function () {
+        if (!code) {
 
-            if (!code) {
-                $('.head-desc').val('');
-                return;
-            }
+            clearTdsHead($input);
 
-            $.ajax({
-
-                url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
-
-                type: 'GET',
-
-                data: {
-                    q: code,
-                    limit: 1,
-                    p: 1
-                },
-
-                success: function (res) {
-
-                    if (!res ||
-                        !res.data ||
-                        res.data.length === 0) {
-
-                        $input.val('');
-                        $('.head-desc').val('');
-
-                        return;
-                    }
-
-                    var item = res.data[0];
-
-                    var acode = $.trim(item.TDS_ACODE || '');
-                    var desc = $.trim(item.DESCN || '');
+            return;
+        }
 
 
-                    // =================================================
-                    // NO A/C CODE
-                    // =================================================
-                    if (!acode) {
+        $.ajax({
 
-                        $.alert({
-                            title: 'Warning',
-                            type: 'orange',
-                            content: 'A/C Code not available.'
-                        });
+            url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
 
-                        $input.val('');
-                        $('.head-desc').val('');
+            type: 'GET',
 
-                        return;
-                    }
+            data: {
+                q: code,
+                limit: 1,
+                p: 1
+            },
 
 
-                    // Valid
-                    $('.head-desc').val(desc);
-                }
-            });
+            success: function (res) {
 
-        }, 200);
-    });*@
+                // =================================================
+                // INVALID CODE
+                // =================================================
+                if (!res ||
+                    !res.data ||
+                    res.data.length === 0) {
 
-    </script>
-    @*<script>
-                $(document).on('click', '.head-code', function () {
+                    clearTdsHead($input);
 
-            var $input = $(this);
-            var $row = $input.closest('tr');
-
-            $('.inputpicker-wrapped-list').remove();
-
-            if ($input.data('inputpicker')) {
-                $input.inputpicker('show');
-                return;
-            }
-
-            $input.inputpicker({
-                url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
-                fields: [
-                    { name: 'CODE', text: 'CODE' },
-                    { name: 'NAME', text: 'NAME' }
-                ],
-                fieldText: 'CODE',
-                fieldValue: 'CODE',
-                headShow: true,
-                filterOpen: true,
-                autoOpen: true,
-                pagination: true,
-                pageField: 'p',
-                pageLimitField: 'limit',
-                pageLimit: 10,
-                pageCountField: 'count',
-                width: 'auto',
-                urlDelay: 1
-            });
-
-            // SELECT
-            $input.off('inputpicker.select').on('inputpicker.select', function (e, item) {
-
-                if (!item) return;
-
-                // ✅ Only update the current row
-                $row.find('.head-code').val(item.CODE);
-                $row.find('.head-desc').val(item.NAME || '');
-
-                $(this).inputpicker('hide');
-            });
-        });
-
-
-        // CHANGE
-                $(document).on('change', '.head-code', function () {
-
-            var $input = $(this);
-            var $row = $input.closest('tr');
-            var code = $input.val();
-
-            if (!code) {
-                $row.find('.head-desc').val('');
-                return;
-            }
-
-            $.ajax({
-                url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
-                type: 'GET',
-                data: {
-                    q: code,
-                    limit: 1,
-                    p: 1
-                },
-                success: function (res) {
-
-                    if (res && res.data && res.data.length > 0) {
-
-                        // ✅ Only current row
-                        $row.find('.head-desc').val(res.data[0].NAME || '');
-
-                    } else {
-
-                        $row.find('.head-desc').val('');
-                    }
-                }
-            });
-        });
-
-
-        // BLUR
-                $(document).on('blur', '.head-code', function () {
-
-            var $input = $(this);
-            var $row = $input.closest('tr');
-            var code = $input.val().trim();
-
-            setTimeout(function () {
-
-                if (!code) {
-                    $row.find('.head-desc').val('');
                     return;
                 }
 
-                $.ajax({
-                    url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
-                    type: 'GET',
-                    data: {
-                        q: code,
-                        limit: 1,
-                        p: 1
-                    },
-                    success: function (res) {
 
-                        if (!res || !res.data || res.data.length === 0) {
+                var item = res.data[0];
 
-                            // ✅ Only current row
-                            $input.val('');
-                            $row.find('.head-desc').val('');
+                var returnedCode =
+                    $.trim(item.CODE || '');
+
+                var desc =
+                    $.trim(item.DESCN || '');
+
+                var acode =
+                    $.trim(item.TDS_ACODE || '');
+
+                var tdsPer =
+                    parseFloat(item.TDS_PER) || 0;
+
+
+                // =================================================
+                // A/C CODE NOT AVAILABLE
+                // =================================================
+                if (!acode) {
+
+                    $.alert({
+                        title: 'Warning',
+                        type: 'orange',
+                        content: 'A/C Code not available.',
+                        buttons: {
+                            ok: {
+                                text: 'OK',
+                                action: function () {
+
+                                    clearTdsHead($input);
+                                }
+                            }
                         }
-                    }
-                });
+                    });
 
-            }, 200);
+                    return;
+                }
+
+
+                // =================================================
+                // CODE VALIDATION
+                // =================================================
+                if (returnedCode.toUpperCase() !== code.toUpperCase()) {
+
+                    clearTdsHead($input);
+
+                    return;
+                }
+
+
+                // =================================================
+                // VALID
+                // =================================================
+
+                $input.val(returnedCode);
+
+                $('.head-desc').val(desc);
+
+                // Set master TDS %
+                $('.tdspercentage').val(tdsPer.toFixed(2));
+
+                // Enable fields
+                $('.DetdAmt').prop('disabled', false);
+                $('.tdspercentage').prop('disabled', false);
+
+                // Calculate
+                calculateTDS();
+            },
+
+
+            error: function () {
+
+                clearTdsHead($input);
+            }
         });
-            </script>*@
+    });
+
+
+    // =========================================================
+    // CLEAR TDS
+    // =========================================================
+    function clearTdsHead($input) {
+
+        // Clear TDS Head
+        $input.val('');
+
+        // Clear description
+        $('.head-desc').val('');
+
+        // Clear TDS fields
+        $('.DetdAmt').val('0.00');
+        $('.tdspercentage').val('0.00');
+
+        // Clear TDS amount
+        $('.tdsAmt').val('0.00');
+
+
+        // Disable fields
+        $('.DetdAmt').prop('disabled', true);
+        $('.tdspercentage').prop('disabled', true);
+
+
+        // Clear InputPicker
+        try {
+
+            if ($input.data('inputpicker')) {
+
+                $input.inputpicker('val', '');
+                $input.inputpicker('hide');
+            }
+
+        } catch (e) {
+
+            console.log('TDS InputPicker clear error:', e);
+        }
+
+
+        // Clear visible InputPicker input
+        $('.inputpicker-input').val('');
+    }
+
+
+    // =========================================================
+    // CALCULATE TDS
+    // =========================================================
+    function calculateTDS() {
+
+        var detdAmt =
+            parseFloat($('.DetdAmt').val()) || 0;
+
+        var tdsPer =
+            parseFloat($('.tdspercentage').val()) || 0;
+
+
+        // TDS = Detd Amount × TDS %
+        var tdsAmt =
+            (detdAmt * tdsPer) / 100;
+
+
+        // Set TDS Amount
+        $('.tdsAmt').val(
+            tdsAmt.toFixed(2)
+        );
+    }
+
+
+    // =========================================================
+    // MANUAL CHANGE OF DETD AMOUNT / TDS %
+    // =========================================================
+    $(document).on(
+        'input',
+        '.DetdAmt, .tdspercentage',
+        function () {
+
+            calculateTDS();
+        }
+    );
+
+
+    // =========================================================
+    // OPTIONAL: CALCULATE WHEN DETD AMOUNT CHANGES
+    // =========================================================
+    $(document).on(
+        'change',
+        '.DetdAmt, .tdspercentage',
+        function () {
+
+            calculateTDS();
+        }
+    );
+
+    </script>
 
 
     <script>
@@ -5232,6 +5454,7 @@ $(function () {
             }
 
         });
+
     </script>
     <script>
         $(document).on('focus click', '.decimal0', function () {
@@ -5523,75 +5746,147 @@ $(function () {
         // HEADER TOTALS
         // ======================================================
 
+        //function calculateHeaderTotals() {
+
+        //    var totalGST = 0;
+        //    var totalAmount = 0;
+
+
+        //    $('#mainTable tbody tr').each(function () {
+
+        //        var $row = $(this);
+
+
+        //        var cgst =
+        //            parseFloat(
+        //                $row.find('.cgst-amt').val()
+        //            ) || 0;
+
+
+        //        var sgst =
+        //            parseFloat(
+        //                $row.find('.sgst-amt').val()
+        //            ) || 0;
+
+
+        //        var igst =
+        //            parseFloat(
+        //                $row.find('.igst-amt').val()
+        //            ) || 0;
+
+
+        //        var rowTotal =
+        //            parseFloat(
+        //                $row.find('.tot-amt').val()
+        //            ) || 0;
+
+
+        //        totalGST +=
+        //            cgst +
+        //            sgst +
+        //            igst;
+
+
+        //        totalAmount +=
+        //            rowTotal;
+
+        //    });
+
+
+        //    // ==================================================
+        //    // HEADER GST
+        //    // ==================================================
+
+        //    $('#TotalGSTSystem')
+        //        .val(totalGST.toFixed(2));
+
+
+        //    // ==================================================
+        //    // HEADER TOTAL AMOUNT
+        //    // ==================================================
+
+        //    $('#TotalAmount')
+        //        .val(totalAmount.toFixed(2));
+        //}
+
         function calculateHeaderTotals() {
 
             var totalGST = 0;
             var totalAmount = 0;
 
-
             $('#mainTable tbody tr').each(function () {
 
                 var $row = $(this);
 
-
                 var cgst =
-                    parseFloat(
-                        $row.find('.cgst-amt').val()
-                    ) || 0;
-
+                    parseFloat($row.find('.cgst-amt').val()) || 0;
 
                 var sgst =
-                    parseFloat(
-                        $row.find('.sgst-amt').val()
-                    ) || 0;
-
+                    parseFloat($row.find('.sgst-amt').val()) || 0;
 
                 var igst =
-                    parseFloat(
-                        $row.find('.igst-amt').val()
-                    ) || 0;
-
+                    parseFloat($row.find('.igst-amt').val()) || 0;
 
                 var rowTotal =
-                    parseFloat(
-                        $row.find('.tot-amt').val()
-                    ) || 0;
+                    parseFloat($row.find('.tot-amt').val()) || 0;
 
+                totalGST += cgst + sgst + igst;
 
-                totalGST +=
-                    cgst +
-                    sgst +
-                    igst;
-
-
-                totalAmount +=
-                    rowTotal;
-
+                totalAmount += rowTotal;
             });
 
 
-            // ==================================================
+            // ============================================
             // HEADER GST
-            // ==================================================
+            // ============================================
 
             $('#TotalGSTSystem')
                 .val(totalGST.toFixed(2));
 
 
-            // ==================================================
-            // HEADER TOTAL AMOUNT
-            // ==================================================
+            // ==========================================
+            // MANUAL ROUNDED OFF
+            // ==========================================
+
+            var roundOff =
+                parseFloat($('.decimal2-negative').val()) || 0;
+
+
+            // ==========================================
+            // FINAL TOTAL AMOUNT
+            // ==========================================
+
+            var finalTotal =
+                totalAmount + roundOff;
+
 
             $('#TotalAmount')
-                .val(totalAmount.toFixed(2));
+                .val(finalTotal.toFixed(2));
         }
-
 
         // ======================================================
         // GST CONFIRMATION
         // BAGS / NET WT / TOTAL NET WT / RATE / DISCOUNT %
         // ======================================================
+        $(document)
+            .off('input.roundOffCalculation', '.decimal2-negative')
+            .on(
+                'input.roundOffCalculation',
+                '.decimal2-negative',
+                function () {
+                    calculateHeaderTotals();
+                }
+            );
 
+        $(document)
+            .off('change.roundOffCalculation', '.decimal2-negative')
+            .on(
+                'change.roundOffCalculation',
+                '.decimal2-negative',
+                function () {
+                    calculateHeaderTotals();
+                }
+            );
         $(document)
             .off(
                 'focus.gstChange',
@@ -6094,6 +6389,152 @@ $(function () {
         $(document).ready(function () {
 
             calculateAllRows();
+
+        });
+        //function calculateRoundOff() {
+
+        //    var totalAmount = parseFloat($('#TotalAmount').val()) || 0;
+        //    var roundedAmount = Math.round(totalAmount);
+        //    var roundOff = roundedAmount - totalAmount;
+
+        //    $('.roundedoff').val(roundOff.toFixed(2));
+        //}
+        //$(document).on('input', '.roundoff-field', function () {
+
+        //    var val = this.value;
+
+        //    if (!/^-?\d*\.?\d*$/.test(val)) {
+        //        this.value = val.slice(0, -1);
+        //        return;
+        //    }
+
+        //    var parts = val.split('.');
+
+        //    if (parts.length === 2 && parts[1].length > 2) {
+        //        this.value =
+        //            parts[0] + '.' + parts[1].substring(0, 2);
+        //    }
+        //});
+
+        //$(document).on('blur', '.roundoff-field', function () {
+
+        //    var val = parseFloat(this.value);
+
+        //    if (!isNaN(val)) {
+        //        this.value = val.toFixed(2);
+        //    } else {
+        //        this.value = "0.00";
+        //    }
+        //});
+
+        function calculateRoundOff() {
+
+            var totalAmount =
+                parseFloat($('#TotalAmount').val()) || 0;
+
+            var roundedAmount =
+                Math.round(totalAmount);
+
+            var roundOff =
+                roundedAmount - totalAmount;
+
+            $('.roundedoff')
+                .val(roundOff.toFixed(2));
+        }
+        function calculateTDS() {
+
+            var detdAmt = parseFloat($('.DetdAmt').val()) || 0;
+            var tdsPer = parseFloat($('.tdspercentage').val()) || 0;
+
+            var tdsAmt = (detdAmt * tdsPer) / 100;
+
+            $('.tdsAmt').val(tdsAmt.toFixed(2));
+        }
+        $(document).on('input', '.DetdAmt, .tdspercentage', function () {
+            calculateTDS();
+        });
+    </script>
+    <script>
+
+        // ==========================================
+        // DECIMAL2-NEGATIVE
+        // Allows positive AND negative values
+        // Maximum 2 decimal places
+        // ==========================================
+
+        $(document).ready(function () {
+
+            $('.decimal2-negative').each(function () {
+
+                var val = parseFloat($(this).val());
+
+                if (!isNaN(val)) {
+                    $(this).val(val.toFixed(2));
+                } else {
+                    $(this).val('0.00');
+                }
+
+            });
+
+        });
+
+
+        // Auto select on focus/click
+        $(document).on('focus click', '.decimal2-negative', function () {
+
+            var el = this;
+
+            setTimeout(function () {
+
+                if (!el.readOnly && !el.disabled) {
+                    el.select();
+                }
+
+            }, 0);
+
+        });
+
+
+        // Input validation
+        $(document).on('input', '.decimal2-negative', function () {
+
+            var val = this.value;
+
+            // Allow negative sign, numbers and decimal point
+            if (!/^-?\d*\.?\d*$/.test(val)) {
+
+                this.value = val.slice(0, -1);
+                return;
+
+            }
+
+            var parts = val.split('.');
+
+            // Maximum 2 decimal places
+            if (parts.length === 2 && parts[1].length > 2) {
+
+                this.value =
+                    parts[0] + '.' + parts[1].substring(0, 2);
+
+            }
+
+        });
+
+
+        // Format on blur
+        $(document).on('blur', '.decimal2-negative', function () {
+
+            var val = parseFloat(this.value);
+
+            if (!isNaN(val)) {
+
+                this.value = val.toFixed(2);
+
+            } else {
+
+                this.value = '0.00';
+
+            }
 
         });
 
