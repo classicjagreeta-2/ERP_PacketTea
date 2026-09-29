@@ -1,0 +1,32 @@
+@* Screen-language dropdown for the shared layout's top bar (every screen except AWR Entry, which shows
+   its own copy in the toolbar). Reuses AWREntry/SetLanguage ("ui_lang" cookie) -- see _LanguagePicker. *@
+@using PacketTea.Utility
+@{
+    var current = UiLanguage.Current;
+    var currentCode = UiLanguage.CurrentCode;
+}
+<div style="display:flex;align-items:center;white-space:nowrap;">
+    <i class="fa fa-globe" style="margin-right:6px;"></i>
+    <select id="uiLangGlobal" style="height:28px;border:1px solid #ccc;border-radius:4px;padding:0 6px;font-size:12px;">
+        @foreach (var l in UiLanguage.Supported)
+        {
+            <option value="@l[0]" selected="@(l[0] == current && !CultureCatalog.Contains(currentCode))">@l[1]</option>
+        }
+        @foreach (var g in CultureCatalog.ByContinent())
+        {
+            <optgroup label="@g.Key">
+                @foreach (var c in g)
+                {
+                    <option value="@c.Code" selected="@(c.Code == currentCode)">@c.DisplayName</option>
+                }
+            </optgroup>
+        }
+    </select>
+    <script>
+        document.getElementById('uiLangGlobal').addEventListener('change', function () {
+            window.location.href = '@Url.Action("SetLanguage", "AWREntry")'
+                + '?lang=' + encodeURIComponent(this.value)
+                + '&returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+        });
+    </script>
+</div>

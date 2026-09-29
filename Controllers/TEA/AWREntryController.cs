@@ -49,6 +49,23 @@ namespace Finance.Controllers.TEA
             { "TB", "JSTI" },
         };
 
+        // Screen language (i18n): the "ui_lang" cookie picked in the language dropdown on the list /
+        // entry screen sets this request's UI culture, so AwrText (Resources\AWR*.resx) returns that
+        // language's texts. Only the UI culture changes -- date/number parsing is unaffected.
+        protected override IAsyncResult BeginExecuteCore(AsyncCallback callback, object state)
+        {
+            UiLanguage.Apply(Request);
+            return base.BeginExecuteCore(callback, state);
+        }
+
+        // GET: AWREntry/SetLanguage -- stores the picked language and returns to the page it came from.
+        [HttpGet]
+        public ActionResult SetLanguage(string lang, string returnUrl = "")
+        {
+            Response.Cookies.Add(UiLanguage.MakeCookie(lang));
+            return Redirect(Url.IsLocalUrl(returnUrl) ? returnUrl : Url.Action("Index"));
+        }
+
         private string CurrentUnit => SessionHelper.GetUser()?.CurentUnit ?? "";
         private string CurrentLoca => SessionHelper.GetUser()?.Loca ?? "";
         private string UnitForAWRType(string awrType) =>
@@ -125,7 +142,7 @@ namespace Finance.Controllers.TEA
             {
                 TempData["toastrError"] = !string.IsNullOrEmpty(response?.Message)
                     ? response.Message
-                    : $"Unable to load AWR Entry list (API returned {response?.StatusCode}).";
+                    : AwrText.F("Err_ListLoad", response?.StatusCode);
             }
 
             return View(list);
@@ -149,7 +166,7 @@ namespace Finance.Controllers.TEA
             view = view && !string.IsNullOrEmpty(docno);
             if (view && !(permission?.View ?? false))
             {
-                TempData["toastrError"] = "You do not have permission to view this entry.";
+                TempData["toastrError"] = AwrText.T("Err_NoViewPerm");
                 return RedirectToAction("Index", new { awrType });
             }
             ViewBag.IsView = view;
@@ -164,7 +181,7 @@ namespace Finance.Controllers.TEA
             // URL is reachable directly -- block it here too (enforce rights server-side).
             if (isNewEntry && !(permission?.Add ?? false))
             {
-                TempData["toastrError"] = "You do not have permission to add a new entry.";
+                TempData["toastrError"] = AwrText.T("Err_NoAddPerm");
                 return RedirectToAction("Index", new { awrType });
             }
 
@@ -216,7 +233,7 @@ namespace Finance.Controllers.TEA
 
             if (!response.IsSuccessStatusCode || response.Data == null)
             {
-                TempData["toastrError"] = response.Message ?? "Record not found.";
+                TempData["toastrError"] = response.Message ?? AwrText.T("Err_RecordNotFound");
                 return RedirectToAction("Index", new { awrType });
             }
 
@@ -227,7 +244,7 @@ namespace Finance.Controllers.TEA
             var recordUnit = editModel.T_AWR.FirstOrDefault()?.UNIT;
             if (!UnitScope.IsAllowed(!string.IsNullOrEmpty(recordUnit) ? recordUnit : unit, userUnits))
             {
-                TempData["toastrError"] = $"You do not have permission for Unit {(!string.IsNullOrEmpty(recordUnit) ? recordUnit : unit)}.";
+                TempData["toastrError"] = AwrText.F("Err_NoUnitPerm", !string.IsNullOrEmpty(recordUnit) ? recordUnit : unit);
                 return RedirectToAction("Index", new { awrType });
             }
 
@@ -261,7 +278,7 @@ namespace Finance.Controllers.TEA
             var r = await Services.GetAsync<dynamic>(
                 $"/api/TeaAWR/GetRowLines?docno={Uri.EscapeDataString(docno ?? "")}&awrDate={Uri.EscapeDataString(awrDate ?? "")}&awrType={Uri.EscapeDataString(awrType ?? "")}&unit={Uri.EscapeDataString(unit ?? "")}");
             if (!r.IsSuccessStatusCode || r.Data == null)
-                return JsonExact(new { success = false, message = r.Message ?? "Record not found." });
+                return JsonExact(new { success = false, message = r.Message ?? AwrText.T("Err_RecordNotFound") });
 
             var obj = (Newtonsoft.Json.Linq.JObject)r.Data;
             obj["success"] = true;
@@ -293,7 +310,7 @@ namespace Finance.Controllers.TEA
                 var userUnits = await GetUnitsForUserAsync();
                 var denied = postedUnits.FirstOrDefault(u => !UnitScope.IsAllowed(u, userUnits));
                 if (denied != null)
-                    return Json(new { success = false, message = $"You do not have permission for Unit {denied}." });
+                    return Json(new { success = false, message = AwrText.F("Err_NoUnitPerm", denied) });
             }
 
             // LOCA is never posted by the client (InsertOrUpdate.cshtml's payload builder
@@ -314,7 +331,7 @@ namespace Finance.Controllers.TEA
             return Json(new
             {
                 success = response.IsSuccessStatusCode,
-                message = response.IsSuccessStatusCode ? "Saved successfully." : (response.Message ?? "Save failed."),
+                message = response.IsSuccessStatusCode ? AwrText.T("Msg_Saved") : (response.Message ?? AwrText.T("Msg_SaveFailed")),
                 data = response.Data
             });
         }
@@ -335,7 +352,7 @@ namespace Finance.Controllers.TEA
             // The row's Unit (Doc No repeats across units) must be one the user is linked to.
             if (!string.IsNullOrEmpty(unit) && !UnitScope.IsAllowed(unit, await GetUnitsForUserAsync()))
             {
-                TempData["toastrError"] = $"You do not have permission for Unit {unit}.";
+                TempData["toastrError"] = AwrText.F("Err_NoUnitPerm", unit);
                 return RedirectToAction("Index", new { awrType });
             }
 
@@ -343,7 +360,7 @@ namespace Finance.Controllers.TEA
                 $"/api/TeaAWR/Delete?docno={Uri.EscapeDataString(docno ?? "")}&awrDate={Uri.EscapeDataString(awrDate ?? "")}&awrType={Uri.EscapeDataString(awrType ?? "")}&unit={Uri.EscapeDataString(!string.IsNullOrEmpty(unit) ? unit : CurrentUnit)}", new { });
 
             TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
-                response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");
+                response.IsSuccessStatusCode ? AwrText.T("Msg_Deleted") : (response.Message ?? AwrText.T("Msg_DeleteFailed"));
 
             return RedirectToAction("Index", new { awrType });
         }
@@ -369,13 +386,13 @@ namespace Finance.Controllers.TEA
                 if (isAuthFailure)
                 {
                     Response.StatusCode = 440;
-                    return JsonExact(new { sessionExpired = true, message = "Your session has expired. Please log in again." });
+                    return JsonExact(new { sessionExpired = true, message = AwrText.T("Msg_SessionExpired") });
                 }
                 Response.StatusCode = 500;
                 return JsonExact(new
                 {
                     sessionExpired = false,
-                    message = !string.IsNullOrEmpty(r.Message) ? r.Message : $"Unable to load data (API returned {r.StatusCode})."
+                    message = !string.IsNullOrEmpty(r.Message) ? r.Message : AwrText.F("Err_LoadData", r.StatusCode)
                 });
             }
             return JsonExact(r.Data);

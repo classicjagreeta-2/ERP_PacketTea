@@ -21,10 +21,10 @@
             </td>
             <td><input type="checkbox" name="selectedDetail" /> </td>
             <td><input type="text" class="form-control req NumSlNo" data-field="srlno" value="@(pt.srlno > 0 ? pt.srlno : ++RowIndex)" readonly style="width:10px !important;" /> </td>
-            <td> <input type="text" class="form-control req txtItemCode" data-field="itcd" value="@pt.itcd" /> </td>
+            <td> <input type="text" class="form-control req txtItemCode" data-field="itcd" value="@pt.itcd" maxlength="6" /> </td>
             <td> <input type="text" class="form-control req ddlItemName" data-field="itemName" value="@pt.itcd" /> </td> @*there no field itemName is UNBL API (getbyid and save )*@
-            <td> <input type="text" class="form-control txtItemDesc" data-field="itdesC1" value="@pt.itdesC1" /></td>
-            <td> <input type="text" class="form-control req txtMrp" data-field="mrp" value="@pt.mrp" style="width:80px;" /> </td>
+            <td> <input type="text" class="form-control txtItemDesc" data-field="itdesC1" value="@pt.itdesC1" maxlength="200" /></td>
+            <td> <input type="text" class="form-control req txtMrp" data-field="mrp" value="@pt.mrp" maxlength="4" style="width:80px;" /> </td>
             <td> <input type="text" class="form-control req dateMfgdt" data-field="mfgdt" value="@(pt.mfgdt.HasValue ? pt.mfgdt.Value.ToString("dd-MM-yyyy") : "")" /> </td>
             <td><input type="text" class="form-control req txtBatchNo" data-field="batchno" value="@pt.batchno" style="width:80px;" /></td>
 

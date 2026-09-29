@@ -1,7 +1,10 @@
 @model PacketTea.Models.PT.T_AWR_PT_DATA
 @using Newtonsoft.Json
+@using PacketTea.Utility
+@* Texts are localized (AwrText -> Resources\AWR*.resx); the language is picked in the toolbar
+   (_LanguagePicker, which confirms first since reloading drops unsaved changes). *@
 @{
-    ViewBag.Title = "AWR Entry";
+    ViewBag.Title = AwrText.T("Title");
     Layout = "~/Views/Shared/_Layout.cshtml";
     var awrTypes = (Dictionary<string, string>)ViewBag.AWRTypes;
     bool isEdit = ViewBag.IsEdit ?? false;
@@ -15,7 +18,7 @@
 }
 
 <!doctype html>
-<html lang="en">
+<html lang="@UiLanguage.Current">
 <head>
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
@@ -67,22 +70,23 @@
             <div class="header-content">
                 <div class="action-btns">
                     <ul>
-                        <li><a href="@Url.Action("Index", "AWREntry")"><i class="fa fa-arrow-left"></i> Back</a></li>
-                        <li><button type="button" id="btnSave"><i class="fa fa-floppy-o"></i> Save</button></li>
-                        <li><a href="@Url.Action("Index", "AWREntry")"><i class="fa fa-times"></i> Cancel</a></li>
+                        <li><a href="@Url.Action("Index", "AWREntry")"><i class="fa fa-arrow-left"></i> @AwrText.T("Back")</a></li>
+                        <li><button type="button" id="btnSave"><i class="fa fa-floppy-o"></i> @AwrText.T("Save")</button></li>
+                        <li><a href="@Url.Action("Index", "AWREntry")"><i class="fa fa-times"></i> @AwrText.T("Cancel")</a></li>
                         <li style="margin-left:auto">
                             <label class="btn btn-inverse pull-right" style="margin:0; border:none;">
-                                Status : <span id="statusText">@(isView ? "View" : isEdit ? "Edit" : "Add")</span>
+                                @AwrText.T("Status") : <span id="statusText">@AwrText.T(isView ? "View" : isEdit ? "Edit" : "Add")</span>
                             </label>
                         </li>
+                        @Html.Partial("_LanguagePicker", new ViewDataDictionary { { "ConfirmReload", !isView } })
                     </ul>
                 </div>
                 <div class="header-details">
                     <div class="left">
                         <div class="order-code">
-                            <div class="txt"><div class="title-heading">AWR Entry</div></div>
+                            <div class="txt"><div class="title-heading">@AwrText.T("Title")</div></div>
                         </div>
-                        <div class="title-heading">DOC NO. : @docno</div>
+                        <div class="title-heading">@AwrText.T("DocNoLabel") : @docno</div>
                     </div>
                 </div>
             </div>
@@ -90,7 +94,7 @@
             <!-- Unit / AWR Type -- relabelled from "Unit / Blend Type" per the request. -->
             <div class="accordion-container compact-accordion">
                 <div class="accordion">
-                    <div class="accordion-header active"><span class="txt">Unit / AWR Type</span></div>
+                    <div class="accordion-header active"><span class="txt">@AwrText.T("Sec_UnitType")</span></div>
                     <div class="accordion-body">
                         <div class="form-row">
                             <!-- Read-only: the Unit picked on the list page (new) / the record's own Unit (edit).
@@ -99,11 +103,11 @@
                                  (read-only) once Unit + AWR Type were chosen on the list (lockedFromList)
                                  and in Edit mode. -->
                             <div class="form-col-20">
-                                <label>Unit</label>
+                                <label>@AwrText.T("Col_Unit")</label>
                                 <input type="text" id="UNIT_disp" value="@unit" readonly />
                             </div>
                             <div class="form-col-20">
-                                <label>AWR Type <span>(*)</span></label>
+                                <label>@AwrText.T("Lbl_AwrType") <span>(*)</span></label>
                                 <select id="AWR_TYPE" @((isEdit || lockedFromList) ? "disabled" : "")>
                                     @foreach (var t in awrTypes)
                                     {
@@ -120,46 +124,46 @@
 
                 <!-- Header -->
                 <div class="accordion">
-                    <div class="accordion-header active"><span class="txt">Header</span></div>
+                    <div class="accordion-header active"><span class="txt">@AwrText.T("Sec_Header")</span></div>
                     <div class="accordion-body">
                         <div class="form-row">
                             <div class="form-col-20">
-                                <label>AWR No <span>(*)</span></label>
-                                <input type="text" id="AWR_NO" value="@awrNo" @(isEdit ? "readonly" : "") />
+                                <label>@AwrText.T("Lbl_AwrNo") <span>(*)</span></label>
+                                <input type="text" id="AWR_NO" value="@awrNo" @(isEdit ? "readonly" : "") maxlength="20" />
                             </div>
                             <div class="form-col-20">
-                                <label>AWR Date <span>(*)</span></label>
+                                <label>@AwrText.T("Col_AwrDate") <span>(*)</span></label>
                                 <input type="date" id="AWR_DATE" value="@(first?.AWR_DATE.ToString("yyyy-MM-dd"))"
                                        min="@ViewBag.MinDocDate" max="@ViewBag.FyEnd" @(isEdit ? "disabled" : "") />
                             </div>
                             <div class="form-col-20">
-                                <label>Arrival Date</label>
+                                <label>@AwrText.T("Col_ArrivalDate")</label>
                                 <input type="date" id="ARRIVAL_DATE" value="@(first?.ARRIVAL_DATE?.ToString("yyyy-MM-dd"))"
                                        min="@ViewBag.FyStart" max="@ViewBag.FyEnd" />
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-col-20">
-                                <label>Warehouse <span>(*)</span></label>
-                                <input type="text" id="WAREHOUSE" data-picker="warehouse" value="@(first?.WAREHOUSE)" placeholder="Code" />
+                                <label>@AwrText.T("Col_Warehouse") <span>(*)</span></label>
+                                <input type="text" id="WAREHOUSE" data-picker="warehouse" value="@(first?.WAREHOUSE)" placeholder="@AwrText.T("Pick_Code")" />
                             </div>
                             <div class="form-col-20">
-                                <label>Warehouse Name</label>
+                                <label>@AwrText.T("Lbl_WarehouseName")</label>
                                 <input type="text" id="WAREHOUSE_disp" value="@(first?.WarehouseName)" readonly />
                             </div>
                             <div class="form-col-20">
-                                <label>Sales Centre <span>(*)</span></label>
-                                <input type="text" id="SALE_CENTRE" data-picker="salescentre" value="@(first?.SALE_CENTRE)" placeholder="Code" />
+                                <label>@AwrText.T("Col_SalesCentre") <span>(*)</span></label>
+                                <input type="text" id="SALE_CENTRE" data-picker="salescentre" value="@(first?.SALE_CENTRE)" placeholder="@AwrText.T("Pick_Code")" />
                             </div>
                             <div class="form-col-20">
-                                <label>Sales Centre Name</label>
+                                <label>@AwrText.T("Lbl_SalesCentreName")</label>
                                 <input type="text" id="SALE_CENTRE_disp" value="@(first?.SaleCentreName)" readonly />
                             </div>
                             <div class="form-col-20">
-                                <label>Source</label>
+                                <label>@AwrText.T("Lbl_Source")</label>
                                 <select id="SOURCE_MODE">
-                                    <option value="Purchase">Purchase</option>
-                                    <option value="Transfer">Inter Transfer</option>
+                                    <option value="Purchase">@AwrText.T("Src_Purchase")</option>
+                                    <option value="Transfer">@AwrText.T("Src_Transfer")</option>
                                 </select>
                             </div>
                         </div>
@@ -168,13 +172,13 @@
 
                 <!-- Lines -->
                 <div class="accordion">
-                    <div class="accordion-header"><span class="txt">Lines</span></div>
+                    <div class="accordion-header"><span class="txt">@AwrText.T("Lines")</span></div>
                     <div class="accordion-body active" style="display:block;">
                         <div class="action-btns">
                             <ul>
-                                <li><a href="javascript:void(0)" id="btnSelectStock"><i class="fa fa-search"></i> Select Despatch Data</a></li>
-                                <li><a href="javascript:void(0)" id="btnAddRow"><i class="fa fa-plus"></i> Add Row</a></li>
-                                <li><a href="javascript:void(0)" id="btnRemoveRows"><i class="fa fa-trash-o"></i> Remove Selected</a></li>
+                                <li><a href="javascript:void(0)" id="btnSelectStock"><i class="fa fa-search"></i> @AwrText.T("SelectDespatch")</a></li>
+                                <li><a href="javascript:void(0)" id="btnAddRow"><i class="fa fa-plus"></i> @AwrText.T("AddRow")</a></li>
+                                <li><a href="javascript:void(0)" id="btnRemoveRows"><i class="fa fa-trash-o"></i> @AwrText.T("RemoveSelected")</a></li>
                             </ul>
                         </div>
                         <div class="table-responsive">
@@ -182,24 +186,24 @@
                                 <thead>
                                     <tr>
                                         <th style="width:26px;"><input type="checkbox" id="chkAll" /></th>
-                                        <th style="width:30px;">Sl</th>
-                                        <th>Inv No <span style="color:red;">(*)</span></th>
-                                        <th style="width:110px;">Pack Date</th>
-                                        <th>Grade</th>
-                                        <th>Mark</th>
-                                        <th style="width:75px;text-align:right;">Bag/Chest</th>
-                                        <th style="width:85px;text-align:right;">Net Wt</th>
-                                        <th style="width:85px;text-align:right;">Total Net Wt</th>
-                                        <th style="width:85px;text-align:right;">Total Gross Wt</th>
-                                        <th style="width:85px;text-align:right;">Bag Rcvd <span style="color:red;">(*)</span></th>
-                                        <th style="width:85px;text-align:right;">Net Rcvd</th>
-                                        <th style="width:85px;text-align:right;">Gross Rcvd</th>
+                                        <th style="width:30px;">@AwrText.T("Col_Sl")</th>
+                                        <th>@AwrText.T("Col_InvNo") <span style="color:red;">(*)</span></th>
+                                        <th style="width:110px;">@AwrText.T("Col_PackDate")</th>
+                                        <th>@AwrText.T("Col_Grade")</th>
+                                        <th>@AwrText.T("Col_Mark")</th>
+                                        <th style="width:75px;text-align:right;">@AwrText.T("Col_BagChest")</th>
+                                        <th style="width:85px;text-align:right;">@AwrText.T("Col_NetWt")</th>
+                                        <th style="width:85px;text-align:right;">@AwrText.T("Col_TotalNetWt")</th>
+                                        <th style="width:85px;text-align:right;">@AwrText.T("Col_TotalGrossWt")</th>
+                                        <th style="width:85px;text-align:right;">@AwrText.T("Col_BagRcvd") <span style="color:red;">(*)</span></th>
+                                        <th style="width:85px;text-align:right;">@AwrText.T("Col_NetRcvd")</th>
+                                        <th style="width:85px;text-align:right;">@AwrText.T("Col_GrossRcvd")</th>
                                     </tr>
                                 </thead>
                                 <tbody id="gridBody"></tbody>
                                 <tfoot>
                                     <tr class="total">
-                                        <td colspan="6" style="text-align:right;">Total</td>
+                                        <td colspan="6" style="text-align:right;">@AwrText.T("Total")</td>
                                         <td id="ftBag" style="text-align:right;"></td>
                                         <td></td>
                                         <td id="ftTNet" style="text-align:right;"></td>
@@ -222,35 +226,44 @@
 
     <div class="popup-box picker-box wide" id="stockPicker">
         <div class="popup-header">
-            <h2>Select Despatch Data</h2>
+            <h2>@AwrText.T("SelectDespatch")</h2>
             <button type="button" class="close-btn" onclick="closeStockPicker()">X</button>
         </div>
         <div class="stock-filters">
-            <button type="button" id="btnStockFilter" class="btn-blue" style="width:auto;padding:5px 14px;">Refresh</button>
-            <button type="button" id="btnStockSelectAll" class="btn-white" style="width:auto;padding:5px 14px;">Select All</button>
-            <button type="button" id="btnStockDeselectAll" class="btn-white" style="width:auto;padding:5px 14px;">De-Select All</button>
+            <button type="button" id="btnStockFilter" class="btn-blue" style="width:auto;padding:5px 14px;">@AwrText.T("Refresh")</button>
+            <button type="button" id="btnStockSelectAll" class="btn-white" style="width:auto;padding:5px 14px;">@AwrText.T("SelectAll")</button>
+            <button type="button" id="btnStockDeselectAll" class="btn-white" style="width:auto;padding:5px 14px;">@AwrText.T("DeselectAll")</button>
         </div>
         <div class="picker-body" id="stockBody"></div>
         <div style="text-align:right;padding-top:10px;">
-            <button type="button" class="btn-blue" id="btnStockOk" style="width:auto;padding:5px 16px;">OK</button>
-            <button type="button" class="btn-white" onclick="closeStockPicker()" style="width:auto;padding:5px 16px;">Cancel</button>
+            <button type="button" class="btn-blue" id="btnStockOk" style="width:auto;padding:5px 16px;">@AwrText.T("OK")</button>
+            <button type="button" class="btn-white" onclick="closeStockPicker()" style="width:auto;padding:5px 16px;">@AwrText.T("Cancel")</button>
         </div>
     </div>
 
     <div class="popup-overlay" id="appAlertOverlay"></div>
     <div class="popup-box alert-box" id="appAlertBox">
-        <div class="popup-header"><h2 id="appAlertTitle">Notice</h2></div>
+        <div class="popup-header"><h2 id="appAlertTitle">@AwrText.T("Notice")</h2></div>
         <div class="alert-message" id="appAlertMessage"></div>
         <div class="alert-actions">
-            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">Cancel</button>
-            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">OK</button>
+            <button type="button" class="btn-white" id="appAlertCancel" style="width:auto;padding:5px 16px;">@AwrText.T("Cancel")</button>
+            <button type="button" class="btn-blue" id="appAlertOk" style="width:auto;padding:5px 16px;">@AwrText.T("OK")</button>
         </div>
     </div>
 
 <script>
+    // Localized texts for this script (Resources\AWR*.resx, current UI language).
+    var L = @Html.Raw(AwrText.Json("Notice", "Msg_SessionExpired", "Msg_CouldNotLoad", "Ph_ViaDespatch",
+        "Msg_SelectRowRemove", "Pick_Code", "Pick_Name", "Pick_Destination", "Col_InvNo", "Col_Mark", "Col_Grade",
+        "Col_PackDate", "Col_BagChest", "Col_NetWt", "Msg_NoDespatch", "Msg_Blank", "Lbl_AwrNo", "Col_AwrDate",
+        "Col_Warehouse", "Col_SalesCentre", "Msg_NoInvoice", "Msg_BagRcvdRequired", "Msg_Saved", "Msg_SaveFailed"));
+    var UI_LANG = '@UiLanguage.Current';
+    function fmt(s) { var a = arguments; return String(s).replace(/\{(\d+)\}/g, function (m, i) { return a[+i + 1] != null ? a[+i + 1] : ''; }); }
+    function esc(s) { return $('<div>').text(s == null ? '' : s).html().replace(/"/g, '&quot;'); }
+
     function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
     function showAlert(message, onOk) {
-        $('#appAlertTitle').text('Notice');
+        $('#appAlertTitle').text(L.Notice);
         $('#appAlertMessage').text(message || '');
         $('#appAlertCancel').hide();
         $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
@@ -258,10 +271,10 @@
     }
     function handleLookupFail(jqXHR) {
         if (jqXHR.status === 440) {
-            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Your session has expired. Please log in again.',
+            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || L.Msg_SessionExpired,
                 function () { window.location.reload(); });
         } else {
-            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Could not load data. Please try again.');
+            showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || L.Msg_CouldNotLoad);
         }
     }
     $('#pickerOverlay, #stockPicker, #appAlertOverlay, #appAlertBox').appendTo(document.body);
@@ -299,7 +312,7 @@
             var tr = $('<tr data-cid="' + r._cid + '"></tr>');
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
             tr.append('<td>' + r.SRLNO + '</td>');
-            tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" placeholder="Via Select Despatch Data" readonly /></td>');
+            tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" placeholder="' + esc(L.Ph_ViaDespatch) + '" readonly /></td>');
             tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-mark" value="' + (r.MarkName || r.MARK || '') + '" readonly /></td>');
@@ -357,7 +370,7 @@
     $('#chkAll').on('change', function () { $('.rowChk').prop('checked', $(this).is(':checked')); });
     $('#btnRemoveRows').on('click', function () {
         var cids = $('.rowChk:checked').map(function () { return $(this).closest('tr').data('cid'); }).get();
-        if (!cids.length) { showAlert('Select at least one row to remove.'); return; }
+        if (!cids.length) { showAlert(L.Msg_SelectRowRemove); return; }
         rows = rows.filter(function (r) { return cids.indexOf(r._cid) === -1; });
         renderGrid();
     });
@@ -370,8 +383,8 @@
     // Destination; Sales Centre: Code, Name).
     // =========================================================
     var pickerConfig = {
-        warehouse: { url: '@Url.Action("GetWarehouse", "AWREntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }, { name: 'DESTI', text: 'Destination' }], target: 'WAREHOUSE' },
-        salescentre: { url: '@Url.Action("GetSalesCentre", "AWREntry")', fields: [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }], target: 'SALE_CENTRE' }
+        warehouse: { url: '@Url.Action("GetWarehouse", "AWREntry")', fields: [{ name: 'CODE', text: L.Pick_Code }, { name: 'NAME', text: L.Pick_Name }, { name: 'DESTI', text: L.Pick_Destination }], target: 'WAREHOUSE' },
+        salescentre: { url: '@Url.Action("GetSalesCentre", "AWREntry")', fields: [{ name: 'CODE', text: L.Pick_Code }, { name: 'NAME', text: L.Pick_Name }], target: 'SALE_CENTRE' }
     };
 
     $('[data-picker]').on('click focus', function () { openPicker($(this).data('picker'), $(this)); });
@@ -450,14 +463,18 @@
         var mode = $('#SOURCE_MODE').val();
         $.getJSON('@Url.Action("GetDespatchData", "AWREntry")', { awrType: awrType, mode: mode }, function (data) {
             data = data || [];
-            var html = '<table><thead><tr><th></th><th>Inv No</th><th>Mark</th><th>Grade</th><th>Pack Date</th><th class="num" style="text-align:right;">Bag/Chest</th><th class="num" style="text-align:right;">Net Wt</th></tr></thead><tbody>';
+            var html = '<table><thead><tr><th></th><th>' + esc(L.Col_InvNo) + '</th><th>' + esc(L.Col_Mark) + '</th><th>' + esc(L.Col_Grade) + '</th><th>' + esc(L.Col_PackDate) +
+                '</th><th class="num" style="text-align:right;">' + esc(L.Col_BagChest) + '</th><th class="num" style="text-align:right;">' + esc(L.Col_NetWt) + '</th></tr></thead><tbody>';
             data.forEach(function (r, i) {
                 html += '<tr data-i="' + i + '"><td><input type="checkbox" class="stockChk" /></td><td>' + (r.invno || '') + '</td><td>' + (r.markDescn || r.mark || '') + '</td>' +
                     '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td class="num" style="text-align:right;">' + fmtCount(r.bagChest) + '</td><td class="num" style="text-align:right;">' + round3(r.netWt).toFixed(3) + '</td></tr>';
             });
             html += '</tbody></table>';
             if (!data.length) {
-                html += '<p class="stock-empty">No un-received ' + mode.toLowerCase() + ' lines available for AWR Type "' + awrType + '".</p>';
+                // The Source option's (localized) text, lower-cased mid-sentence except in German.
+                var modeText = $('#SOURCE_MODE option:selected').text();
+                if (UI_LANG !== 'de') modeText = modeText.toLowerCase();
+                html += '<p class="stock-empty">' + esc(fmt(L.Msg_NoDespatch, modeText, awrType)) + '</p>';
             }
             $('#stockBody').html(html);
             $('#stockBody').data('rows', data);
@@ -487,13 +504,13 @@
     });
 
     $('#btnSave').on('click', function () {
-        if (!$('#AWR_NO').val()) { showAlert('AWR No cannot be blank'); return; }
-        if (!$('#AWR_DATE').val()) { showAlert('AWR Date cannot be blank'); return; }
-        if (!$('#WAREHOUSE').val()) { showAlert('Warehouse cannot be blank'); return; }
-        if (!$('#SALE_CENTRE').val()) { showAlert('Sales Centre cannot be blank'); return; }
+        if (!$('#AWR_NO').val()) { showAlert(fmt(L.Msg_Blank, L.Lbl_AwrNo)); return; }
+        if (!$('#AWR_DATE').val()) { showAlert(fmt(L.Msg_Blank, L.Col_AwrDate)); return; }
+        if (!$('#WAREHOUSE').val()) { showAlert(fmt(L.Msg_Blank, L.Col_Warehouse)); return; }
+        if (!$('#SALE_CENTRE').val()) { showAlert(fmt(L.Msg_Blank, L.Col_SalesCentre)); return; }
         var validRows = rows.filter(function (r) { return r.INVNO; });
-        if (!validRows.length) { showAlert('Without Invoice Detail, Record Can Not be Saved.'); return; }
-        if (validRows.some(function (r) { return !(num(r.BAG_RCVD) > 0); })) { showAlert('Bag Received must be entered for every line.'); return; }
+        if (!validRows.length) { showAlert(L.Msg_NoInvoice); return; }
+        if (validRows.some(function (r) { return !(num(r.BAG_RCVD) > 0); })) { showAlert(L.Msg_BagRcvdRequired); return; }
 
         var payload = { T_AWR: validRows.map(function (r) {
             return {
@@ -519,9 +536,9 @@
             url: '@Url.Action("Save", "AWREntry")', type: 'POST', contentType: 'application/json', data: JSON.stringify(payload)
         }).done(function (resp) {
             if (resp.success) {
-                showAlert('Saved successfully.', function () { window.location.href = '@Url.Action("Index", "AWREntry")'; });
+                showAlert(L.Msg_Saved, function () { window.location.href = '@Url.Action("Index", "AWREntry")'; });
             } else {
-                showAlert(resp.message || 'Save failed.');
+                showAlert(resp.message || L.Msg_SaveFailed);
             }
         }).fail(handleLookupFail);
     });

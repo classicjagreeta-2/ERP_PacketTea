@@ -119,7 +119,7 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>MRP <span>(*)</span></label>
-                                <input type="text" inputmode="decimal" id="MRP" value="@head.MRP" placeholder="max 4 chars, e.g. 9.50 / 12.5"
+                                <input type="text" inputmode="decimal" id="MRP" value="@head.MRP" maxlength="4" placeholder="max 4 chars, e.g. 9.50 / 12.5"
                                        title="MRP is a 4-character code (PROD.MRP / STOCK.MRP), e.g. 9.50, 12.5, 220" />
                             </div>
                             <div class="form-col-20">
@@ -132,7 +132,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Shift</label>
-                                <input type="text" id="SHIFT" value="@head.SHIFT" maxlength="2" />
+                                <input type="text" id="SHIFT" value="@head.SHIFT" maxlength="4" />
                             </div>
                         </div>
 

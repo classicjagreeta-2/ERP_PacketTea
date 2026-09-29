@@ -178,11 +178,11 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Order No <span class="text-danger">(*)</span></label>
-                                @Html.TextBoxFor(m => m.unbL_HED.ordeR_NO, new { @class = "form-control", @required = "required", @id = "txtOrderNo" })
+                                @Html.TextBoxFor(m => m.unbL_HED.ordeR_NO, new { @class = "form-control", @required = "required", @id = "txtOrderNo", maxlength = "6" })
                             </div>
                             <div class="form-col-20">
                                 <label>Bill To</label>
-                                @Html.TextBoxFor(m => m.unbL_HED.bilL_LOCA, new { @class = "form-control", @id = "txtBillTo" })
+                                @Html.TextBoxFor(m => m.unbL_HED.bilL_LOCA, new { @class = "form-control", @id = "txtBillTo", maxlength = "4" })
                             </div>
                         </div>
                         <div class="form-row ">
@@ -200,7 +200,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>FDA No</label>
-                                @Html.TextBoxFor(m => m.unbL_HED.unit, new { @class = "form-control", @id = "txtFDANo" })
+                                @Html.TextBoxFor(m => m.unbL_HED.unit, new { @class = "form-control", @id = "txtFDANo", maxlength = "4" })
                             </div>
                             <div class=" form-col-20 p-2">
                                 <label class="d-block mb-1">Unit of Calculation</label>
@@ -230,11 +230,11 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Time <span>(*)</span></label>
-                                @Html.TextBoxFor(m => m.unbL_HED.tim, new { @class = "form-control ", @required = "required", @id = "txtTime" })
+                                @Html.TextBoxFor(m => m.unbL_HED.tim, new { @class = "form-control ", @required = "required", @id = "txtTime", maxlength = "8" })
                             </div>
                             <div class="form-col-20">
                                 <label>Time Removal <span>(*)</span></label>
-                                @Html.TextBoxFor(m => m.unbL_HED.timrem, new { @class = "form-control ", @required = "required", @id = "txtTimeRemoval" })
+                                @Html.TextBoxFor(m => m.unbL_HED.timrem, new { @class = "form-control ", @required = "required", @id = "txtTimeRemoval", maxlength = "8" })
                             </div>
                             <div class="form-col-20">
                                 <label>Vehicle Type  <span>(*)</span></label>
@@ -253,11 +253,11 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Lorry Rcpt No </label>
-                                @Html.TextBoxFor(m => m.unbL_HED.lR_NO, new { @class = "form-control ", @id = "txtLorryRcptNo" })
+                                @Html.TextBoxFor(m => m.unbL_HED.lR_NO, new { @class = "form-control ", @id = "txtLorryRcptNo", maxlength = "15" })
                             </div>
                             <div class="form-col-20">
                                 <label>Delivery </label>
-                                @Html.TextBoxFor(m => m.unbL_HED.delivery, new { @class = "form-control ", @id = "txtDelivery" })
+                                @Html.TextBoxFor(m => m.unbL_HED.delivery, new { @class = "form-control ", @id = "txtDelivery", maxlength = "60" })
                             </div>
                             <div class="form-col-20">
                                 <label>Delivery Date </label>
@@ -279,31 +279,31 @@
                             <div class="form-col-20">
                                 <label>Address </label>
                                 @Html.TextBoxFor(m => m.unbL_HED.adD1,
-                                new { @class = "form-control", @id = "txtAddress1" })
+                                new { @class = "form-control", @id = "txtAddress1", maxlength = "60" })
                             </div>
 
                             <div class="form-col-20">
                                 <label>&nbsp;</label>
                                 @Html.TextBoxFor(m => m.unbL_HED.adD2,
-                                new { @class = "form-control", @id = "txtAddress2" })
+                                new { @class = "form-control", @id = "txtAddress2", maxlength = "60" })
                             </div>
 
                             <div class="form-col-20">
                                 <label>&nbsp;</label>
                                 @Html.TextBoxFor(m => m.unbL_HED.adD3,
-                                new { @class = "form-control", @id = "txtAddress3" })
+                                new { @class = "form-control", @id = "txtAddress3", maxlength = "40" })
                             </div>
 
                             <div class="form-col-20">
                                 <label>City</label>
                                 @Html.TextBoxFor(m => m.unbL_HED.city,
-                                new { @class = "form-control", @id = "txtCity" })
+                                new { @class = "form-control", @id = "txtCity", maxlength = "25" })
                             </div>
 
                             <div class="form-col-20">
                                 <label>Pin</label>
                                 @Html.TextBoxFor(m => m.unbL_HED.pin,
-                                new { @class = "form-control", @id = "txtPin" })
+                                new { @class = "form-control", @id = "txtPin", maxlength = "10" })
                             </div>
 
                         </div>
@@ -314,7 +314,7 @@
                                 <label>PO No. &amp; Date <span>(*)</span></label>
                                 <div class="d-flex">
                                     @Html.TextBoxFor(m => m.unbL_HED.partY_ORDER_NO,
-                                    new { @class = "form-control mr-2", style = "flex:1;" })
+                                    new { @class = "form-control mr-2", style = "flex:1;", maxlength = "25" })
 
                                     <div class="date-field" style="flex:1;">
                                         @Html.TextBoxFor(m => m.unbL_HED.partY_ORDER_DT, "{0:dd-MM-yyyy}",
@@ -331,7 +331,7 @@
                                 <label>C/Note No. &amp; Date <span>(*)</span></label>
                                 <div class="d-flex">
                                     @Html.TextBoxFor(m => m.unbL_HED.cnotE_NO,
-                                    new { @class = "form-control mr-2", style = "flex:1;" })
+                                    new { @class = "form-control mr-2", style = "flex:1;", maxlength = "25" })
 
                                     <div class="date-field" style="flex:1;">
                                         @Html.TextBoxFor(m => m.unbL_HED.cnotE_DT, "{0:dd-MM-yyyy}",
@@ -348,7 +348,7 @@
                                 <label>Chalan No. &amp; Date</label>
                                 <div class="d-flex">
                                     @Html.TextBoxFor(m => m.unbL_HED.challaN_NO,
-                                    new { @class = "form-control mr-2", style = "flex:1;" })
+                                    new { @class = "form-control mr-2", style = "flex:1;", maxlength = "25" })
 
                                     <div class="date-field" style="flex:1;">
                                         @Html.TextBoxFor(m => m.unbL_HED.challaN_DT, "{0:dd-MM-yyyy}",
@@ -364,7 +364,7 @@
                         <div class="form-row ">
                             <div class="form-col-100 mt-3">
                                 <label>Remarks</label>
-                                @Html.TextBoxFor(m => m.unbL_HED.remarks, new { @class = "form-control ", @id = "txtRemarks" })
+                                @Html.TextBoxFor(m => m.unbL_HED.remarks, new { @class = "form-control ", @id = "txtRemarks", maxlength = "20" })
                             </div>
                         </div>
                     </div>

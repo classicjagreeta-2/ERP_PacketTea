@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>  <data name="Title" xml:space="preserve"><value>AWR এন্ট্রি</value></data>
+  <data name="Back" xml:space="preserve"><value>পিছনে</value></data>
+  <data name="New" xml:space="preserve"><value>নতুন</value></data>
+  <data name="Edit" xml:space="preserve"><value>সম্পাদনা</value></data>
+  <data name="Delete" xml:space="preserve"><value>মুছুন</value></data>
+  <data name="View" xml:space="preserve"><value>দেখুন</value></data>
+  <data name="Add" xml:space="preserve"><value>যোগ</value></data>
+  <data name="Lines" xml:space="preserve"><value>লাইন</value></data>
+  <data name="ListBadge" xml:space="preserve"><value>তালিকা</value></data>
+  <data name="Language" xml:space="preserve"><value>ভাষা</value></data>
+  <data name="LinesTitle" xml:space="preserve"><value>নির্বাচিত সারির লাইন দেখান</value></data>
+  <data name="SearchPlaceholder" xml:space="preserve"><value>ডক নং / AWR নং খুঁজুন</value></data>
+  <data name="SortBy" xml:space="preserve"><value>{0} অনুযায়ী সাজান</value></data>
+  <data name="Col_Unit" xml:space="preserve"><value>ইউনিট</value></data>
+  <data name="Col_DocNo" xml:space="preserve"><value>ডক নং</value></data>
+  <data name="Col_AwrDate" xml:space="preserve"><value>AWR তারিখ</value></data>
+  <data name="Col_ArrivalDate" xml:space="preserve"><value>আগমনের তারিখ</value></data>
+  <data name="Col_Warehouse" xml:space="preserve"><value>গুদাম</value></data>
+  <data name="Col_SalesCentre" xml:space="preserve"><value>বিক্রয় কেন্দ্র</value></data>
+  <data name="Col_TotalBag" xml:space="preserve"><value>মোট ব্যাগ</value></data>
+  <data name="Col_TotalNetWt" xml:space="preserve"><value>মোট নিট ওজন</value></data>
+  <data name="Col_TotalGrossWt" xml:space="preserve"><value>মোট গ্রস ওজন</value></data>
+  <data name="Col_TotalBagRcvd" xml:space="preserve"><value>মোট প্রাপ্ত ব্যাগ</value></data>
+  <data name="NoRecords" xml:space="preserve"><value>কোনো রেকর্ড পাওয়া যায়নি</value></data>
+  <data name="Loading" xml:space="preserve"><value>লোড হচ্ছে...</value></data>
+  <data name="Showing" xml:space="preserve"><value>{1}টির মধ্যে {0}টি দেখানো হচ্ছে</value></data>
+  <data name="ShowLines" xml:space="preserve"><value>লাইন দেখান</value></data>
+  <data name="OpenAwr" xml:space="preserve"><value>AWR এন্ট্রি খুলুন</value></data>
+  <data name="Col_Sl" xml:space="preserve"><value>ক্র.</value></data>
+  <data name="Col_Mark" xml:space="preserve"><value>মার্ক</value></data>
+  <data name="Col_InvNo" xml:space="preserve"><value>চালান নং</value></data>
+  <data name="Col_PackDate" xml:space="preserve"><value>প্যাকিং তারিখ</value></data>
+  <data name="Col_Grade" xml:space="preserve"><value>গ্রেড</value></data>
+  <data name="Col_BagChest" xml:space="preserve"><value>ব্যাগ/চেস্ট</value></data>
+  <data name="Col_BagRcvd" xml:space="preserve"><value>প্রাপ্ত ব্যাগ</value></data>
+  <data name="Col_NetRcvd" xml:space="preserve"><value>প্রাপ্ত নিট</value></data>
+  <data name="Col_GrossRcvd" xml:space="preserve"><value>প্রাপ্ত গ্রস</value></data>
+  <data name="Col_NetWt" xml:space="preserve"><value>নিট ওজন</value></data>
+  <data name="UnableLoadLines" xml:space="preserve"><value>লাইন লোড করা যায়নি।</value></data>
+  <data name="NoLines" xml:space="preserve"><value>কোনো লাইন নেই</value></data>
+  <data name="SelectUnit" xml:space="preserve"><value>ইউনিট নির্বাচন করুন</value></data>
+  <data name="SelectAwrType" xml:space="preserve"><value>AWR ধরন নির্বাচন করুন</value></data>
+  <data name="Msg_NoUnit" xml:space="preserve"><value>আপনার জন্য কোনো ইউনিট উপলব্ধ নেই (আপনার ব্যবহারকারীর সাথে কোনো ইউনিট যুক্ত নেই)।</value></data>
+  <data name="Msg_SelectUnitFirst" xml:space="preserve"><value>অনুগ্রহ করে প্রথমে ইউনিট নির্বাচন করুন</value></data>
+  <data name="Msg_SelectTypeFirst" xml:space="preserve"><value>অনুগ্রহ করে প্রথমে AWR ধরন নির্বাচন করুন</value></data>
+  <data name="Msg_SelectRecord" xml:space="preserve"><value>অনুগ্রহ করে {0} একটি রেকর্ড নির্বাচন করুন।</value></data>
+  <data name="Msg_SelectOnlyOne" xml:space="preserve"><value>অনুগ্রহ করে {0} শুধু একটি রেকর্ড নির্বাচন করুন।</value></data>
+  <data name="Act_Edit" xml:space="preserve"><value>সম্পাদনার জন্য</value></data>
+  <data name="Act_Delete" xml:space="preserve"><value>মোছার জন্য</value></data>
+  <data name="Act_View" xml:space="preserve"><value>দেখার জন্য</value></data>
+  <data name="Act_ViewLines" xml:space="preserve"><value>লাইন দেখার জন্য</value></data>
+  <data name="Msg_ConfirmDelete" xml:space="preserve"><value>আপনি কি নিশ্চিত যে ডক নং {0}-এর AWR মুছতে চান?</value></data>
+  <data name="Pick_Code" xml:space="preserve"><value>কোড</value></data>
+  <data name="Pick_Name" xml:space="preserve"><value>নাম</value></data>
+  <data name="Pick_Destination" xml:space="preserve"><value>গন্তব্য</value></data>
+  <data name="Save" xml:space="preserve"><value>সংরক্ষণ</value></data>
+  <data name="Cancel" xml:space="preserve"><value>বাতিল</value></data>
+  <data name="Status" xml:space="preserve"><value>অবস্থা</value></data>
+  <data name="DocNoLabel" xml:space="preserve"><value>ডক নং</value></data>
+  <data name="Sec_UnitType" xml:space="preserve"><value>ইউনিট / AWR ধরন</value></data>
+  <data name="Lbl_AwrType" xml:space="preserve"><value>AWR ধরন</value></data>
+  <data name="Sec_Header" xml:space="preserve"><value>হেডার</value></data>
+  <data name="Lbl_AwrNo" xml:space="preserve"><value>AWR নং</value></data>
+  <data name="Lbl_WarehouseName" xml:space="preserve"><value>গুদামের নাম</value></data>
+  <data name="Lbl_SalesCentreName" xml:space="preserve"><value>বিক্রয় কেন্দ্রের নাম</value></data>
+  <data name="Lbl_Source" xml:space="preserve"><value>উৎস</value></data>
+  <data name="Src_Purchase" xml:space="preserve"><value>ক্রয়</value></data>
+  <data name="Src_Transfer" xml:space="preserve"><value>আন্তঃস্থানান্তর</value></data>
+  <data name="SelectDespatch" xml:space="preserve"><value>প্রেরণ ডেটা নির্বাচন করুন</value></data>
+  <data name="AddRow" xml:space="preserve"><value>সারি যোগ করুন</value></data>
+  <data name="RemoveSelected" xml:space="preserve"><value>নির্বাচিত সরান</value></data>
+  <data name="Total" xml:space="preserve"><value>মোট</value></data>
+  <data name="Refresh" xml:space="preserve"><value>রিফ্রেশ</value></data>
+  <data name="SelectAll" xml:space="preserve"><value>সব নির্বাচন</value></data>
+  <data name="DeselectAll" xml:space="preserve"><value>সব অনির্বাচন</value></data>
+  <data name="OK" xml:space="preserve"><value>ঠিক আছে</value></data>
+  <data name="Notice" xml:space="preserve"><value>বিজ্ঞপ্তি</value></data>
+  <data name="Ph_ViaDespatch" xml:space="preserve"><value>&quot;প্রেরণ ডেটা নির্বাচন&quot; থেকে</value></data>
+  <data name="Msg_SessionExpired" xml:space="preserve"><value>আপনার সেশনের মেয়াদ শেষ হয়েছে। অনুগ্রহ করে আবার লগ ইন করুন।</value></data>
+  <data name="Msg_CouldNotLoad" xml:space="preserve"><value>ডেটা লোড করা যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।</value></data>
+  <data name="Msg_SelectRowRemove" xml:space="preserve"><value>সরানোর জন্য অন্তত একটি সারি নির্বাচন করুন।</value></data>
+  <data name="Msg_NoDespatch" xml:space="preserve"><value>AWR ধরন &quot;{1}&quot;-এর জন্য কোনো অপ্রাপ্ত {0} লাইন নেই।</value></data>
+  <data name="Msg_Blank" xml:space="preserve"><value>{0} খালি রাখা যাবে না</value></data>
+  <data name="Msg_NoInvoice" xml:space="preserve"><value>চালানের বিবরণ ছাড়া রেকর্ড সংরক্ষণ করা যাবে না।</value></data>
+  <data name="Msg_BagRcvdRequired" xml:space="preserve"><value>প্রতিটি লাইনের জন্য প্রাপ্ত ব্যাগ দিতে হবে।</value></data>
+  <data name="Msg_Saved" xml:space="preserve"><value>সফলভাবে সংরক্ষিত হয়েছে।</value></data>
+  <data name="Msg_SaveFailed" xml:space="preserve"><value>সংরক্ষণ ব্যর্থ হয়েছে।</value></data>
+  <data name="Msg_Deleted" xml:space="preserve"><value>সফলভাবে মুছে ফেলা হয়েছে।</value></data>
+  <data name="Msg_DeleteFailed" xml:space="preserve"><value>মুছে ফেলা ব্যর্থ হয়েছে।</value></data>
+  <data name="Msg_LangReload" xml:space="preserve"><value>ভাষা পরিবর্তন করলে পেজটি আবার লোড হবে এবং অসংরক্ষিত পরিবর্তন হারিয়ে যাবে। চালিয়ে যাবেন?</value></data>
+  <data name="Err_NoViewPerm" xml:space="preserve"><value>এই এন্ট্রি দেখার অনুমতি আপনার নেই।</value></data>
+  <data name="Err_NoAddPerm" xml:space="preserve"><value>নতুন এন্ট্রি যোগ করার অনুমতি আপনার নেই।</value></data>
+  <data name="Err_RecordNotFound" xml:space="preserve"><value>রেকর্ড পাওয়া যায়নি।</value></data>
+  <data name="Err_NoUnitPerm" xml:space="preserve"><value>ইউনিট {0}-এর অনুমতি আপনার নেই।</value></data>
+  <data name="Err_ListLoad" xml:space="preserve"><value>AWR এন্ট্রি তালিকা লোড করা যায়নি (API ফেরত দিয়েছে {0})।</value></data>
+  <data name="Err_LoadData" xml:space="preserve"><value>ডেটা লোড করা যায়নি (API ফেরত দিয়েছে {0})।</value></data>
+</root>

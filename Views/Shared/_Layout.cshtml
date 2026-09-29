@@ -662,6 +662,10 @@
                                 </li>*@
                         </ul>
                         <ul class="nav-right">
+                            @if ((string)ViewContext.RouteData.Values["controller"] != "AWREntry")
+                            {
+                                <li class="header-notification b-r-default">@Html.Partial("_CultureSwitcher")</li>
+                            }
                             <li class="header-notification b-r-default">
                                 <div class="dropdown-primary dropdown">
                                     <div class="displayChatbox dropdown-toggle" data-toggle="dropdown">

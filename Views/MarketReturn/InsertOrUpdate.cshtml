@@ -157,7 +157,7 @@
                             <div class="form-col-20">
                                 <label>Bill No <span>(*)</span></label>
                                 <div style="display:flex;gap:4px;">
-                                    <input type="text" id="BLNO" value="@head.BLNO" style="flex:1;" />
+                                    <input type="text" id="BLNO" value="@head.BLNO" maxlength="16" style="flex:1;" />
                                     <button type="button" id="btnBillHelp" title="Select a bill of this party" style="width:auto;padding:0 10px;"><i class="fa fa-search"></i></button>
                                 </div>
                             </div>
@@ -185,22 +185,22 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Vehicle No <span>(*)</span></label>
-                                <input type="text" id="VEH" value="@head.VEH" />
+                                <input type="text" id="VEH" value="@head.VEH" maxlength="11" />
                             </div>
                         </div>
 
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>LR No</label>
-                                <input type="text" id="LR_NO" value="@head.LR_NO" />
+                                <input type="text" id="LR_NO" value="@head.LR_NO" maxlength="15" />
                             </div>
                             <div class="form-col-20">
                                 <label>Invoice No</label>
-                                <input type="text" id="INVNO" value="@head.INVNO" />
+                                <input type="text" id="INVNO" value="@head.INVNO" maxlength="10" />
                             </div>
                             <div class="form-col-20">
                                 <label>Veh Type</label>
-                                <input type="text" id="VTYPE" value="@head.VTYPE" />
+                                <input type="text" id="VTYPE" value="@head.VTYPE" maxlength="10" />
                             </div>
                             <div class="form-col-20">
                                 <label>Trip No.</label>
@@ -503,22 +503,22 @@
             tr.append('<td><input type="checkbox" class="rowChk" /></td>');
             tr.append('<td style="text-align:right;">' + r.SRLNO + '</td>');
             tr.append('<td class="col-item"><input type="text" class="f-item" data-picker-row="item" value="' + (r.ITCD || '') + '" placeholder="Code" title="' + (r.ItemName || '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-mrp" value="' + (r.MRP || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-mrp" maxlength="4" value="' + (r.MRP || '') + '" /></td>');
             tr.append('<td><input type="date" class="f-mfgdt" value="' + (r.MFGDT ? r.MFGDT.substring(0, 10) : '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-batchno" value="' + (r.BATCHNO || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-batchno" maxlength="12" value="' + (r.BATCHNO || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.001" class="f-mretu" value="' + round3(r.Mretu).toFixed(3) + '" /></td>');
             tr.append('<td><input type="number" step="0.001" class="f-grosswt" value="' + round3(r.GROSS_WEIGHT).toFixed(3) + '" /></td>');
             tr.append('<td><input type="number" step="0.001" class="f-netwt" value="' + round3(r.WEIGHT).toFixed(3) + '" /></td>');
             tr.append('<td><input type="number" step="0.001" class="f-sht" value="' + round3(r.SHT).toFixed(3) + '" /></td>');
             tr.append('<td><input type="number" step="0.001" class="f-bkg" value="' + round3(r.BKG).toFixed(3) + '" /></td>');
             tr.append('<td><input type="number" step="0.001" class="f-lkg" value="' + round3(r.LKG).toFixed(3) + '" /></td>');
-            tr.append('<td><input type="text" class="f-plcrcd" value="' + (r.PLCRCD || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-plcrcd" maxlength="2" value="' + (r.PLCRCD || '') + '" /></td>');
             tr.append('<td><input type="number" step="1" class="f-crqty" value="' + (r.PLCRQTY || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-discpct" value="' + round2(r._discPct).toFixed(2) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-discount" value="' + round2(r.DISCOUNT).toFixed(2) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="text" class="f-gstcode" value="' + (r.GST_CODE || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-gstcode" maxlength="3" value="' + (r.GST_CODE || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-cgstrate" value="' + round2(r.CGST_RATE).toFixed(2) + '" readonly /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-cgstamt" value="' + round2(r.CGST_AMT).toFixed(2) + '" readonly /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-sgstrate" value="' + round2(r.SGST_RATE).toFixed(2) + '" readonly /></td>');

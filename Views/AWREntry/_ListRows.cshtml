@@ -6,6 +6,7 @@
    Unit + AWR Type as data attributes / link params -- a Doc No repeats across units, so
    Edit / View / Delete / "+" all identify the document by Doc No + Date + AWR Type + Unit. *@
 @model List<Finance.Controllers.TEA.AWRDocRow>
+@using PacketTea.Utility
 @{
     var rowIndex = (int?)ViewBag.RowOffset ?? 0;
     // Doc No is a link into Edit mode only for users holding the Edit right (AEDV) -- UX only:
@@ -27,7 +28,7 @@
                        data-unit="@row.unit" />
             </td>
             <td style="text-align:center;">
-                <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="Show lines" style="cursor:pointer;"></i>
+                <i class="fa fa-plus row-expand-btn" data-target="@detailId" title="@AwrText.T("ShowLines")" style="cursor:pointer;"></i>
             </td>
             <td>@row.unit</td>
             <td>
@@ -55,19 +56,19 @@
                     <table class="detail-sub-table">
                         <thead>
                             <tr>
-                                <th style="width:34px;">Sl</th>
-                                <th>Mark</th>
-                                <th>Inv No</th>
-                                <th>Pack Date</th>
-                                <th>Grade</th>
-                                <th style="text-align:right;">Bag/Chest</th>
-                                <th style="text-align:right;">Bag Rcvd</th>
-                                <th style="text-align:right;">Net Rcvd</th>
-                                <th style="text-align:right;">Gross Rcvd</th>
+                                <th style="width:34px;">@AwrText.T("Col_Sl")</th>
+                                <th>@AwrText.T("Col_Mark")</th>
+                                <th>@AwrText.T("Col_InvNo")</th>
+                                <th>@AwrText.T("Col_PackDate")</th>
+                                <th>@AwrText.T("Col_Grade")</th>
+                                <th style="text-align:right;">@AwrText.T("Col_BagChest")</th>
+                                <th style="text-align:right;">@AwrText.T("Col_BagRcvd")</th>
+                                <th style="text-align:right;">@AwrText.T("Col_NetRcvd")</th>
+                                <th style="text-align:right;">@AwrText.T("Col_GrossRcvd")</th>
                             </tr>
                         </thead>
                         <tbody class="detail-items-body">
-                            <tr><td colspan="9" style="text-align:center;color:#666;">Loading...</td></tr>
+                            <tr><td colspan="9" style="text-align:center;color:#666;">@AwrText.T("Loading")</td></tr>
                         </tbody>
                     </table>
                 </div>

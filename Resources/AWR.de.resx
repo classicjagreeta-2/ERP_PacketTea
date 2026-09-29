@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>  <data name="Title" xml:space="preserve"><value>AWR-Erfassung</value></data>
+  <data name="Back" xml:space="preserve"><value>Zurück</value></data>
+  <data name="New" xml:space="preserve"><value>Neu</value></data>
+  <data name="Edit" xml:space="preserve"><value>Bearbeiten</value></data>
+  <data name="Delete" xml:space="preserve"><value>Löschen</value></data>
+  <data name="View" xml:space="preserve"><value>Anzeigen</value></data>
+  <data name="Add" xml:space="preserve"><value>Hinzufügen</value></data>
+  <data name="Lines" xml:space="preserve"><value>Zeilen</value></data>
+  <data name="ListBadge" xml:space="preserve"><value>LISTE</value></data>
+  <data name="Language" xml:space="preserve"><value>Sprache</value></data>
+  <data name="LinesTitle" xml:space="preserve"><value>Zeilen der markierten Zeile anzeigen</value></data>
+  <data name="SearchPlaceholder" xml:space="preserve"><value>Beleg-Nr. / AWR-Nr. suchen</value></data>
+  <data name="SortBy" xml:space="preserve"><value>Sortieren nach {0}</value></data>
+  <data name="Col_Unit" xml:space="preserve"><value>Einheit</value></data>
+  <data name="Col_DocNo" xml:space="preserve"><value>Beleg-Nr.</value></data>
+  <data name="Col_AwrDate" xml:space="preserve"><value>AWR-Datum</value></data>
+  <data name="Col_ArrivalDate" xml:space="preserve"><value>Ankunftsdatum</value></data>
+  <data name="Col_Warehouse" xml:space="preserve"><value>Lager</value></data>
+  <data name="Col_SalesCentre" xml:space="preserve"><value>Verkaufsstelle</value></data>
+  <data name="Col_TotalBag" xml:space="preserve"><value>Säcke gesamt</value></data>
+  <data name="Col_TotalNetWt" xml:space="preserve"><value>Nettogewicht gesamt</value></data>
+  <data name="Col_TotalGrossWt" xml:space="preserve"><value>Bruttogewicht gesamt</value></data>
+  <data name="Col_TotalBagRcvd" xml:space="preserve"><value>Säcke erhalten gesamt</value></data>
+  <data name="NoRecords" xml:space="preserve"><value>Keine Datensätze gefunden</value></data>
+  <data name="Loading" xml:space="preserve"><value>Wird geladen...</value></data>
+  <data name="Showing" xml:space="preserve"><value>{0} von {1} angezeigt</value></data>
+  <data name="ShowLines" xml:space="preserve"><value>Zeilen anzeigen</value></data>
+  <data name="OpenAwr" xml:space="preserve"><value>AWR-Erfassung öffnen</value></data>
+  <data name="Col_Sl" xml:space="preserve"><value>Nr.</value></data>
+  <data name="Col_Mark" xml:space="preserve"><value>Marke</value></data>
+  <data name="Col_InvNo" xml:space="preserve"><value>Rechnungs-Nr.</value></data>
+  <data name="Col_PackDate" xml:space="preserve"><value>Packdatum</value></data>
+  <data name="Col_Grade" xml:space="preserve"><value>Sorte</value></data>
+  <data name="Col_BagChest" xml:space="preserve"><value>Sack/Kiste</value></data>
+  <data name="Col_BagRcvd" xml:space="preserve"><value>Säcke erhalten</value></data>
+  <data name="Col_NetRcvd" xml:space="preserve"><value>Netto erhalten</value></data>
+  <data name="Col_GrossRcvd" xml:space="preserve"><value>Brutto erhalten</value></data>
+  <data name="Col_NetWt" xml:space="preserve"><value>Nettogewicht</value></data>
+  <data name="UnableLoadLines" xml:space="preserve"><value>Zeilen konnten nicht geladen werden.</value></data>
+  <data name="NoLines" xml:space="preserve"><value>Keine Zeilen</value></data>
+  <data name="SelectUnit" xml:space="preserve"><value>Einheit wählen</value></data>
+  <data name="SelectAwrType" xml:space="preserve"><value>AWR-Typ wählen</value></data>
+  <data name="Msg_NoUnit" xml:space="preserve"><value>Ihnen steht keine Einheit zur Verfügung (Ihrem Benutzer ist keine Einheit zugeordnet).</value></data>
+  <data name="Msg_SelectUnitFirst" xml:space="preserve"><value>Bitte zuerst die Einheit wählen</value></data>
+  <data name="Msg_SelectTypeFirst" xml:space="preserve"><value>Bitte zuerst den AWR-Typ wählen</value></data>
+  <data name="Msg_SelectRecord" xml:space="preserve"><value>Bitte einen Datensatz {0} auswählen.</value></data>
+  <data name="Msg_SelectOnlyOne" xml:space="preserve"><value>Bitte nur einen Datensatz {0} auswählen.</value></data>
+  <data name="Act_Edit" xml:space="preserve"><value>zum Bearbeiten</value></data>
+  <data name="Act_Delete" xml:space="preserve"><value>zum Löschen</value></data>
+  <data name="Act_View" xml:space="preserve"><value>zum Anzeigen</value></data>
+  <data name="Act_ViewLines" xml:space="preserve"><value>zum Anzeigen der Zeilen</value></data>
+  <data name="Msg_ConfirmDelete" xml:space="preserve"><value>Möchten Sie das AWR zu Beleg-Nr. {0} wirklich löschen?</value></data>
+  <data name="Pick_Code" xml:space="preserve"><value>Code</value></data>
+  <data name="Pick_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Pick_Destination" xml:space="preserve"><value>Bestimmungsort</value></data>
+  <data name="Save" xml:space="preserve"><value>Speichern</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Abbrechen</value></data>
+  <data name="Status" xml:space="preserve"><value>Status</value></data>
+  <data name="DocNoLabel" xml:space="preserve"><value>BELEG-NR.</value></data>
+  <data name="Sec_UnitType" xml:space="preserve"><value>Einheit / AWR-Typ</value></data>
+  <data name="Lbl_AwrType" xml:space="preserve"><value>AWR-Typ</value></data>
+  <data name="Sec_Header" xml:space="preserve"><value>Kopfdaten</value></data>
+  <data name="Lbl_AwrNo" xml:space="preserve"><value>AWR-Nr.</value></data>
+  <data name="Lbl_WarehouseName" xml:space="preserve"><value>Lagername</value></data>
+  <data name="Lbl_SalesCentreName" xml:space="preserve"><value>Name der Verkaufsstelle</value></data>
+  <data name="Lbl_Source" xml:space="preserve"><value>Quelle</value></data>
+  <data name="Src_Purchase" xml:space="preserve"><value>Einkauf</value></data>
+  <data name="Src_Transfer" xml:space="preserve"><value>Interne Umlagerung</value></data>
+  <data name="SelectDespatch" xml:space="preserve"><value>Versanddaten auswählen</value></data>
+  <data name="AddRow" xml:space="preserve"><value>Zeile hinzufügen</value></data>
+  <data name="RemoveSelected" xml:space="preserve"><value>Auswahl entfernen</value></data>
+  <data name="Total" xml:space="preserve"><value>Summe</value></data>
+  <data name="Refresh" xml:space="preserve"><value>Aktualisieren</value></data>
+  <data name="SelectAll" xml:space="preserve"><value>Alle auswählen</value></data>
+  <data name="DeselectAll" xml:space="preserve"><value>Auswahl aufheben</value></data>
+  <data name="OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Notice" xml:space="preserve"><value>Hinweis</value></data>
+  <data name="Ph_ViaDespatch" xml:space="preserve"><value>Über „Versanddaten auswählen“</value></data>
+  <data name="Msg_SessionExpired" xml:space="preserve"><value>Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.</value></data>
+  <data name="Msg_CouldNotLoad" xml:space="preserve"><value>Daten konnten nicht geladen werden. Bitte erneut versuchen.</value></data>
+  <data name="Msg_SelectRowRemove" xml:space="preserve"><value>Wählen Sie mindestens eine Zeile zum Entfernen aus.</value></data>
+  <data name="Msg_NoDespatch" xml:space="preserve"><value>Keine nicht erhaltenen Zeilen ({0}) für AWR-Typ „{1}“ vorhanden.</value></data>
+  <data name="Msg_Blank" xml:space="preserve"><value>{0} darf nicht leer sein</value></data>
+  <data name="Msg_NoInvoice" xml:space="preserve"><value>Ohne Rechnungsdetails kann der Datensatz nicht gespeichert werden.</value></data>
+  <data name="Msg_BagRcvdRequired" xml:space="preserve"><value>Erhaltene Säcke müssen für jede Zeile eingegeben werden.</value></data>
+  <data name="Msg_Saved" xml:space="preserve"><value>Erfolgreich gespeichert.</value></data>
+  <data name="Msg_SaveFailed" xml:space="preserve"><value>Speichern fehlgeschlagen.</value></data>
+  <data name="Msg_Deleted" xml:space="preserve"><value>Erfolgreich gelöscht.</value></data>
+  <data name="Msg_DeleteFailed" xml:space="preserve"><value>Löschen fehlgeschlagen.</value></data>
+  <data name="Msg_LangReload" xml:space="preserve"><value>Beim Sprachwechsel wird die Seite neu geladen und nicht gespeicherte Änderungen gehen verloren. Fortfahren?</value></data>
+  <data name="Err_NoViewPerm" xml:space="preserve"><value>Sie sind nicht berechtigt, diesen Eintrag anzuzeigen.</value></data>
+  <data name="Err_NoAddPerm" xml:space="preserve"><value>Sie sind nicht berechtigt, einen neuen Eintrag hinzuzufügen.</value></data>
+  <data name="Err_RecordNotFound" xml:space="preserve"><value>Datensatz nicht gefunden.</value></data>
+  <data name="Err_NoUnitPerm" xml:space="preserve"><value>Sie haben keine Berechtigung für Einheit {0}.</value></data>
+  <data name="Err_ListLoad" xml:space="preserve"><value>AWR-Liste konnte nicht geladen werden (API lieferte {0}).</value></data>
+  <data name="Err_LoadData" xml:space="preserve"><value>Daten konnten nicht geladen werden (API lieferte {0}).</value></data>
+</root>

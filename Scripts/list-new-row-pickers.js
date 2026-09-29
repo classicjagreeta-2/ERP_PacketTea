@@ -2,7 +2,11 @@
 // Root UI convention (see CLAUDE.md): a jquery.inputpicker dropdown whose local data is
 // filtered on EVERY column shown (Code and Name), not a native <select>.
 //
-//   initNewRowPickers({ units: [{CODE,NAME}], types: { CODE: 'Name' }, onChange: fn, textField: 'NAME' })
+//   initNewRowPickers({ units: [{CODE,NAME}], types: { CODE: 'Name' }, onChange: fn, textField: 'NAME',
+//                       labels: { code: 'Code', name: 'Name' } })
+//
+// `labels` (optional) are the dropdown's column headings -- pass translated ones on a localized
+// page (AWR Entry); they default to English.
 //
 // Call it right after the "New" row (containing <input id="newRowUnit"> and
 // <input id="newRowPacketType">) has been added to the DOM. The box shows the picked row's
@@ -12,7 +16,8 @@
 function initNewRowPickers(cfg) {
     var units = (cfg.units || []).map(function (u) { return { CODE: u.CODE, NAME: u.NAME || u.CODE }; });
     var types = Object.keys(cfg.types || {}).map(function (k) { return { CODE: k, NAME: cfg.types[k] || k }; });
-    var fields = [{ name: 'CODE', text: 'Code' }, { name: 'NAME', text: 'Name' }];
+    var labels = cfg.labels || {};
+    var fields = [{ name: 'CODE', text: labels.code || 'Code' }, { name: 'NAME', text: labels.name || 'Name' }];
     var textField = cfg.textField || 'NAME';
 
     function init($input, data) {

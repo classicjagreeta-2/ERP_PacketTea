@@ -175,7 +175,7 @@
                         <div class="form-row">
                             <div class="form-col-100">
                                 <label>Remarks</label>
-                                <textarea id="Remarks" style="height:50px;">@head.Remarks</textarea>
+                                <textarea id="Remarks" style="height:50px;" maxlength="500">@head.Remarks</textarea>
                             </div>
                         </div>
 
@@ -318,7 +318,7 @@
             tr.append('<td><input type="text" class="f-cat" value="' + (r.CAT || '') + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" maxlength="10" /></td>');
             tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-season" value="' + (r.SEASON || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-season" value="' + (r.SEASON || '') + '" maxlength="10" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
             tr.append('<td><input type="number" class="f-chestf" value="' + (r.CHESTSLF || 0) + '" /></td>');
             tr.append('<td><input type="number" class="f-chestt" value="' + (r.CHESTSLT || 0) + '" /></td>');
@@ -326,16 +326,16 @@
             tr.append('<td><input type="number" step="0.01" class="f-net" value="' + net + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-tare" value="' + (r.TARE || 0) + '" readonly /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
-            tr.append('<td><input type="text" class="f-batchno" value="' + (r.BATCHNO || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-batchno" value="' + (r.BATCHNO || '') + '" maxlength="30" /></td>');
             tr.append('<td><input type="date" class="f-mfgfrom" value="' + (r.MFG_FROM ? r.MFG_FROM.substring(0, 10) : '') + '" /></td>');
             tr.append('<td class="col-size"><input type="text" class="f-szcode" value="' + esc(r.SZ_CODE) + '" placeholder="Code" />' +
                 '<span class="lk-name f-sz-name" title="' + esc(r.SzDesc) + '">' + esc(r.SzDesc) + '</span></td>');
             tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + (r.RATE || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + (r.AMOUNT || 0) + '" readonly /></td>');
             // Alloc / Item / MRP are hidden columns -- kept in the DOM so their values still Save.
-            tr.append('<td class="col-hide"><input type="text" class="f-alloc" value="' + esc(r.ALLOCATION) + '" /></td>');
-            tr.append('<td class="col-hide"><input type="text" class="f-itcd" value="' + esc(r.ITCD) + '" /></td>');
-            tr.append('<td class="col-hide"><input type="text" class="f-mrp" value="' + esc(r.MRP) + '" /></td>');
+            tr.append('<td class="col-hide"><input type="text" class="f-alloc" value="' + esc(r.ALLOCATION) + '" maxlength="6" /></td>');
+            tr.append('<td class="col-hide"><input type="text" class="f-itcd" value="' + esc(r.ITCD) + '" maxlength="10" /></td>');
+            tr.append('<td class="col-hide"><input type="text" class="f-mrp" value="' + esc(r.MRP) + '" maxlength="4" /></td>');
             $tb.append(tr);
         });
         $('#ftBag').text(round2(totBag));

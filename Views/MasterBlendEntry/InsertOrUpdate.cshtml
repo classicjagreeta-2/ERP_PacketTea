@@ -196,7 +196,7 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Blend No <span>(*)</span></label>
-                                <input type="text" id="BLEND_NO" value="@head.BLEND_NO" />
+                                <input type="text" id="BLEND_NO" value="@head.BLEND_NO" maxlength="20" />
                             </div>
                             <div class="form-col-20">
                                 <label>Blend Date <span>(*)</span></label>
@@ -260,7 +260,7 @@
                         <div class="form-row">
                             <div class="form-col-100">
                                 <label>Blend Details</label>
-                                <textarea id="BLEND_DESCN" style="height:50px;">@head.BLEND_DESCN</textarea>
+                                <textarea id="BLEND_DESCN" style="height:50px;" maxlength="500">@head.BLEND_DESCN</textarea>
                             </div>
                         </div>
 
@@ -275,7 +275,7 @@
                         <div class="form-row">
                             <div class="form-col-15">
                                 <label>Export Ref. No</label>
-                                <input type="text" id="EXPREF_NO" value="@head.EXPREF_NO" />
+                                <input type="text" id="EXPREF_NO" value="@head.EXPREF_NO" maxlength="20" />
                             </div>
                             <div class="form-col-15">
                                 <label>Transporter</label>
@@ -287,7 +287,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Shipping Mark</label>
-                                <input type="text" id="SHIP_MARK" value="@head.SHIP_MARK" />
+                                <input type="text" id="SHIP_MARK" value="@head.SHIP_MARK" maxlength="300" />
                             </div>
                             <div class="form-col-10">
                                 <label>Closed</label>
@@ -300,11 +300,11 @@
                         <div class="form-row">
                             <div class="form-col-50">
                                 <label>Notes</label>
-                                <textarea id="NOTES">@head.NOTES</textarea>
+                                <textarea id="NOTES" maxlength="1000">@head.NOTES</textarea>
                             </div>
                             <div class="form-col-50">
                                 <label>Special Instructions</label>
-                                <textarea id="SP_NOTES">@head.SP_NOTES</textarea>
+                                <textarea id="SP_NOTES" maxlength="1000">@head.SP_NOTES</textarea>
                             </div>
                         </div>
 
@@ -489,7 +489,7 @@
             // Mark/Garden, Grade, Category: plain, freely-typed cells -- no lookup in the
             // legacy grid (see the note above rows.forEach). Select Data still fills them
             // wholesale same as before.
-            tr.append('<td><input type="text" class="f-mark" value="' + (r.MarkName || r.MARK || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-mark" value="' + (r.MarkName || r.MARK || '') + '" maxlength="4" /></td>');
             // Inv No DOES have a real legacy lookup (datagrid1_ButtonClick's pINVNO case +
             // the F1 shortcut in datagrid1_KeyDown), both just reopening "Select Data".
             // Item 5: no free-typed lookup here any more -- readonly, filled only by
@@ -498,19 +498,19 @@
             // the cell itself (or F1) opens "Select Data", same as the click handler below.
             tr.append('<td><input type="text" class="f-invno" value="' + (r.INVNO || '') + '" placeholder="Via Select Data" readonly /></td>');
             tr.append('<td><input type="date" class="f-packdate" value="' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" maxlength="10" /></td>');
             tr.append('<td><input type="text" class="f-category" value="' + (r.CategoryDescn || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-sampleqty" value="' + (r.SAMPLE_QTY || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMOUNT).toFixed(2) + '" readonly /></td>');
-            tr.append('<td><input type="text" class="f-whloca" value="' + (r.WH_LOCA || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-whloca" value="' + (r.WH_LOCA || '') + '" maxlength="20" /></td>');
             tr.append('<td><input type="date" class="f-awrdate" value="' + (r.AWR_DATE ? r.AWR_DATE.substring(0, 10) : '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-awrno" value="' + (r.AWR_NO || '') + '" /></td>');
-            tr.append('<td><input type="text" class="f-warehouse" value="' + (r.WAREHOUSE || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-awrno" value="' + (r.AWR_NO || '') + '" maxlength="20" /></td>');
+            tr.append('<td><input type="text" class="f-warehouse" value="' + (r.WAREHOUSE || '') + '" maxlength="6" /></td>');
             tr.append('<td style="text-align:center;"><input type="checkbox" class="f-tag" ' + (r.TAG ? 'checked' : '') + ' /></td>');
-            tr.append('<td><input type="text" class="f-dono" value="' + (r.DONO || '') + '" /></td>');
+            tr.append('<td><input type="text" class="f-dono" value="' + (r.DONO || '') + '" maxlength="20" /></td>');
             tr.append('<td><input type="date" class="f-dodt" value="' + (r.DODT ? r.DODT.substring(0, 10) : '') + '" /></td>');
             // Trans Code also has a real legacy lookup (datagrid1_ButtonClick's pTransCode
             // case, hlpl.GETHELP against rsTransp) -- add the same button here, on top of the

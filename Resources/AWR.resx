@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>  <data name="Title" xml:space="preserve"><value>AWR Entry</value></data>
+  <data name="Back" xml:space="preserve"><value>Back</value></data>
+  <data name="New" xml:space="preserve"><value>New</value></data>
+  <data name="Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="View" xml:space="preserve"><value>View</value></data>
+  <data name="Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Lines" xml:space="preserve"><value>Lines</value></data>
+  <data name="ListBadge" xml:space="preserve"><value>LIST</value></data>
+  <data name="Language" xml:space="preserve"><value>Language</value></data>
+  <data name="LinesTitle" xml:space="preserve"><value>Show the ticked row&apos;s lines</value></data>
+  <data name="SearchPlaceholder" xml:space="preserve"><value>Search Doc No / AWR No</value></data>
+  <data name="SortBy" xml:space="preserve"><value>Sort by {0}</value></data>
+  <data name="Col_Unit" xml:space="preserve"><value>Unit</value></data>
+  <data name="Col_DocNo" xml:space="preserve"><value>Doc No</value></data>
+  <data name="Col_AwrDate" xml:space="preserve"><value>AWR Date</value></data>
+  <data name="Col_ArrivalDate" xml:space="preserve"><value>Arrival Date</value></data>
+  <data name="Col_Warehouse" xml:space="preserve"><value>Warehouse</value></data>
+  <data name="Col_SalesCentre" xml:space="preserve"><value>Sales Centre</value></data>
+  <data name="Col_TotalBag" xml:space="preserve"><value>Total Bag</value></data>
+  <data name="Col_TotalNetWt" xml:space="preserve"><value>Total Net Wt</value></data>
+  <data name="Col_TotalGrossWt" xml:space="preserve"><value>Total Gross Wt</value></data>
+  <data name="Col_TotalBagRcvd" xml:space="preserve"><value>Total Bag Rcvd</value></data>
+  <data name="NoRecords" xml:space="preserve"><value>No records found</value></data>
+  <data name="Loading" xml:space="preserve"><value>Loading...</value></data>
+  <data name="Showing" xml:space="preserve"><value>Showing {0} of {1}</value></data>
+  <data name="ShowLines" xml:space="preserve"><value>Show lines</value></data>
+  <data name="OpenAwr" xml:space="preserve"><value>Open AWR Entry</value></data>
+  <data name="Col_Sl" xml:space="preserve"><value>Sl</value></data>
+  <data name="Col_Mark" xml:space="preserve"><value>Mark</value></data>
+  <data name="Col_InvNo" xml:space="preserve"><value>Inv No</value></data>
+  <data name="Col_PackDate" xml:space="preserve"><value>Pack Date</value></data>
+  <data name="Col_Grade" xml:space="preserve"><value>Grade</value></data>
+  <data name="Col_BagChest" xml:space="preserve"><value>Bag/Chest</value></data>
+  <data name="Col_BagRcvd" xml:space="preserve"><value>Bag Rcvd</value></data>
+  <data name="Col_NetRcvd" xml:space="preserve"><value>Net Rcvd</value></data>
+  <data name="Col_GrossRcvd" xml:space="preserve"><value>Gross Rcvd</value></data>
+  <data name="Col_NetWt" xml:space="preserve"><value>Net Wt</value></data>
+  <data name="UnableLoadLines" xml:space="preserve"><value>Unable to load lines.</value></data>
+  <data name="NoLines" xml:space="preserve"><value>No lines</value></data>
+  <data name="SelectUnit" xml:space="preserve"><value>Select Unit</value></data>
+  <data name="SelectAwrType" xml:space="preserve"><value>Select AWR Type</value></data>
+  <data name="Msg_NoUnit" xml:space="preserve"><value>No unit is available to you (no Unit is linked to your user).</value></data>
+  <data name="Msg_SelectUnitFirst" xml:space="preserve"><value>Please select Unit first</value></data>
+  <data name="Msg_SelectTypeFirst" xml:space="preserve"><value>Please select AWR Type first</value></data>
+  <data name="Msg_SelectRecord" xml:space="preserve"><value>Please select a record {0}.</value></data>
+  <data name="Msg_SelectOnlyOne" xml:space="preserve"><value>Please select only one record {0}.</value></data>
+  <data name="Act_Edit" xml:space="preserve"><value>to edit</value></data>
+  <data name="Act_Delete" xml:space="preserve"><value>to delete</value></data>
+  <data name="Act_View" xml:space="preserve"><value>to view</value></data>
+  <data name="Act_ViewLines" xml:space="preserve"><value>to view its lines</value></data>
+  <data name="Msg_ConfirmDelete" xml:space="preserve"><value>Are you sure you want to delete AWR against Doc No {0} ?</value></data>
+  <data name="Pick_Code" xml:space="preserve"><value>Code</value></data>
+  <data name="Pick_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Pick_Destination" xml:space="preserve"><value>Destination</value></data>
+  <data name="Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Status" xml:space="preserve"><value>Status</value></data>
+  <data name="DocNoLabel" xml:space="preserve"><value>DOC NO.</value></data>
+  <data name="Sec_UnitType" xml:space="preserve"><value>Unit / AWR Type</value></data>
+  <data name="Lbl_AwrType" xml:space="preserve"><value>AWR Type</value></data>
+  <data name="Sec_Header" xml:space="preserve"><value>Header</value></data>
+  <data name="Lbl_AwrNo" xml:space="preserve"><value>AWR No</value></data>
+  <data name="Lbl_WarehouseName" xml:space="preserve"><value>Warehouse Name</value></data>
+  <data name="Lbl_SalesCentreName" xml:space="preserve"><value>Sales Centre Name</value></data>
+  <data name="Lbl_Source" xml:space="preserve"><value>Source</value></data>
+  <data name="Src_Purchase" xml:space="preserve"><value>Purchase</value></data>
+  <data name="Src_Transfer" xml:space="preserve"><value>Inter Transfer</value></data>
+  <data name="SelectDespatch" xml:space="preserve"><value>Select Despatch Data</value></data>
+  <data name="AddRow" xml:space="preserve"><value>Add Row</value></data>
+  <data name="RemoveSelected" xml:space="preserve"><value>Remove Selected</value></data>
+  <data name="Total" xml:space="preserve"><value>Total</value></data>
+  <data name="Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="SelectAll" xml:space="preserve"><value>Select All</value></data>
+  <data name="DeselectAll" xml:space="preserve"><value>De-Select All</value></data>
+  <data name="OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Notice" xml:space="preserve"><value>Notice</value></data>
+  <data name="Ph_ViaDespatch" xml:space="preserve"><value>Via Select Despatch Data</value></data>
+  <data name="Msg_SessionExpired" xml:space="preserve"><value>Your session has expired. Please log in again.</value></data>
+  <data name="Msg_CouldNotLoad" xml:space="preserve"><value>Could not load data. Please try again.</value></data>
+  <data name="Msg_SelectRowRemove" xml:space="preserve"><value>Select at least one row to remove.</value></data>
+  <data name="Msg_NoDespatch" xml:space="preserve"><value>No un-received {0} lines available for AWR Type &quot;{1}&quot;.</value></data>
+  <data name="Msg_Blank" xml:space="preserve"><value>{0} cannot be blank</value></data>
+  <data name="Msg_NoInvoice" xml:space="preserve"><value>Without Invoice Detail, Record Can Not be Saved.</value></data>
+  <data name="Msg_BagRcvdRequired" xml:space="preserve"><value>Bag Received must be entered for every line.</value></data>
+  <data name="Msg_Saved" xml:space="preserve"><value>Saved successfully.</value></data>
+  <data name="Msg_SaveFailed" xml:space="preserve"><value>Save failed.</value></data>
+  <data name="Msg_Deleted" xml:space="preserve"><value>Deleted successfully.</value></data>
+  <data name="Msg_DeleteFailed" xml:space="preserve"><value>Delete failed.</value></data>
+  <data name="Msg_LangReload" xml:space="preserve"><value>Changing the language reloads the page and unsaved changes will be lost. Continue?</value></data>
+  <data name="Err_NoViewPerm" xml:space="preserve"><value>You do not have permission to view this entry.</value></data>
+  <data name="Err_NoAddPerm" xml:space="preserve"><value>You do not have permission to add a new entry.</value></data>
+  <data name="Err_RecordNotFound" xml:space="preserve"><value>Record not found.</value></data>
+  <data name="Err_NoUnitPerm" xml:space="preserve"><value>You do not have permission for Unit {0}.</value></data>
+  <data name="Err_ListLoad" xml:space="preserve"><value>Unable to load AWR Entry list (API returned {0}).</value></data>
+  <data name="Err_LoadData" xml:space="preserve"><value>Unable to load data (API returned {0}).</value></data>
+</root>
