@@ -193,22 +193,31 @@
     <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <script>
         let isLoading = false;
-        $("#tableScroll").on("scroll", function () {
-            debugger;
-            let element = $(this)[0];
-            if (element.scrollTop + element.clientHeight >= element.scrollHeight - 10) {
+ let allLoaded = false;
 
-                if (!isLoading) {
-                    isLoading = true;
-                    $("#loading").show();
-                    let page = parseInt($("#page").val());
-                 /*   alert(page);*/
-                    $("#page").val(page + 1);
+ $("#tableScroll").on("scroll", function () {
 
-                    $("#loadMoreForm").submit();
-                }
-            }
-        });
+     let element = $(this)[0];
+
+     if (element.scrollTop + element.clientHeight >= element.scrollHeight - 10) {
+
+         if (isLoading || allLoaded) {
+             return;
+         }
+
+         isLoading = true;
+
+         // Show loading only while AJAX is running
+         $("#loading").show();
+         $("#noMoreData").hide();
+
+         let page = parseInt($("#page").val()) || 1;
+
+         $("#page").val(page + 1);
+
+         $("#loadMoreForm").submit();
+     }
+ });
         function onLoadSuccess() {
 
     let pageSize = parseInt("@Model.PageSize");
@@ -224,10 +233,18 @@
             $("#loading").hide();
             isLoading = false;
 
-            if (shown >= total) {
-                allLoaded = true;
-                $("#noMoreData").show();
-            }
+             // All records loaded
+ if (shown >= total) {
+
+     allLoaded = true;
+
+     // Only show this
+     $("#noMoreData").show();
+
+ } else {
+
+     $("#noMoreData").hide();
+ }
 
 }
 

@@ -48,7 +48,7 @@
 
 
 
-       <td>@ho.unit & @ho.UNIT_DESC</td>
+       <td>@ho.UNIT_DESC</td>
        
        <td>
            <a href="@(disabled || !ho.id.HasValue ? "#" : Url.Action("InsertOrUpdate", "PacketTeaPurchaseEntry") + "?id=" + HttpUtility.UrlEncode(PacketTea.Utility.Cryptography.Encrypt(ho.id.Value.ToString()))

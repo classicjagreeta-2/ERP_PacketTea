@@ -772,7 +772,7 @@ namespace PacketTea.Controllers.TEA
                     if (response != null && response.IsSuccessStatusCode)
                     {
                         TempData["toastrSuccess"] =
-                            $"{head.DOCNO} Packet Tea Purchase Entry Saved Successfully";
+                            $"{response.Data.FirstOrDefault()?.DOCNO} Packet Tea Purchase Entry Saved Successfully";
 
                         return RedirectToAction("Index");
                     }
