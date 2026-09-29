@@ -1,6 +1,8 @@
 ﻿
 
 @model PacketTea.Models.PT.PT_ALL_LIST
+@using PacketTea.Models.PT
+{
 @using PacketTea.Utility
 @{
     ViewBag.Title = "InsertOrUpdate";
@@ -372,6 +374,20 @@
                                              class="calendar-icon" data-target="EWayBillNoDate" />
                                     </div>
                                 </div>
+                                <div class="form-col-10">
+                                    <label style="display:block; text-align:center;">
+                                        Flavour Purchase
+                                    </label>
+                                    <div style="text-align:center; margin-top:5px;">
+                                        <input type="checkbox"
+                                               id="FLAVOUR"
+                                               @(Model.T_TEA_HEAD.FLAVOUR == "Y" ? "checked" : "") />
+                                    </div>
+                                    <input type="hidden"
+                                           id="FLAVOUR_VALUE"
+                                           name="T_TEA_HEAD.FLAVOUR"
+                                           value="@(Model.T_TEA_HEAD.FLAVOUR == "Y" ? "Y" : "N")" />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -488,7 +504,23 @@
 
                                         </tr>
                                     </thead>
-                                    <tbody></tbody>
+                                    <tbody>
+
+                                        @if (Model.T_TEA_DETAIL != null)
+                                        {
+                                            var model = new List<PT_ALL_LIST>
+                                                                                            {
+                                                new PT_ALL_LIST
+                                                {
+                                                    T_TEA_DETAIL = Model.T_TEA_DETAIL.Any()
+                                                        ? Model.T_TEA_DETAIL
+                                                        : new List<T_TEA_PURCHASE> { new T_TEA_PURCHASE() }
+                                                }
+                                            };
+                                            @Html.Partial("_Product_Details", model)
+                                        }
+
+                                    </tbody>
                                 </table>
                                 <div id="modalContainer"></div>
                             </div>
@@ -503,7 +535,7 @@
                             <div class="form-row">
                                 <div class="form-col-10">
                                     <label>Head</label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_CODE, new { @class = "form-control req head-code" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_CODE, new { @class = "form-control head-code" })
 
                                 </div>
                                 <div class="form-col-20">
@@ -511,16 +543,18 @@
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.REMARKS, new { @class = "form-control head-desc", @readonly = "readonly", tabindex = "-1" })
                                 </div>
                                 <div class="form-col-10">
-                                    <label>Detd. on Amt. <span>(*)</span></label>
+                                    <label>
+                                        Detd. on Amt. <span class="tds-required-star" style="display:none;">(*)</span>
+                                    </label>
+
                                     @Html.TextBoxFor(model => model.T_TEA_HEAD.TDS_DETD, new
-                               {
-                                   @class = "form-control DetdAmt decimal2",
-                                   type = "text",
-                                   inputmode = "decimal",
-                                   disabled = "disabled"
-                               ,
-                                   value = Model.T_TEA_HEAD.TDS_DETD?.ToString("0.00") ?? "0.00"
-                               })
+                                    {
+                                        @class = "form-control DetdAmt decimal2",
+                                        type = "text",
+                                        inputmode = "decimal",
+                                        disabled = "disabled",
+                                        value = Model.T_TEA_HEAD.TDS_DETD?.ToString("0.00") ?? "0.00"
+                                    })
                                 </div>
                                 <div class="form-col-10">
                                     <label>TDS %</label>
@@ -560,7 +594,7 @@
 
                                 <div class="form-col-10">
                                     <label>Total GST As Per Invoice </label>
-                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.TOT_GSTAMT_M, new { @class = "form-control" })
+                                    @Html.TextBoxFor(model => model.T_TEA_HEAD.DTAG, new { @class = "form-control" })
                                 </div>
 
                                 <div class="form-col-10">
@@ -739,7 +773,15 @@
     @*<script src="~/libraries/MULTI_SELECT_DROPDOWN/jquery.inputpicker.js"></script>*@
 
     <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
+    <script>
+        $(document).on('change', '#FLAVOUR', function () {
 
+            $('#FLAVOUR_VALUE').val(
+                $(this).is(':checked') ? 'Y' : 'N'
+            );
+
+        });
+    </script>
     <script>
         $(document).ready(function () {
 
@@ -837,65 +879,14 @@ function LoadPacketTeaPurchaseDetails() {
 }
 
 
-$(document).ready(function () {
+//$(document).ready(function () {
 
-    LoadPacketTeaPurchaseDetails();
+//    LoadPacketTeaPurchaseDetails();
 
-});
+//});
 
     </script>
-    @*<script>
 
-            function LoadPacketTeaPurchaseDetails() {
-
-        var unit = $('#UNIT').val();
-                var Docdt = $('#DOCDT').val() || '';
-
-                var docno = $('#DOCNO').val() || '';
-                $('#linesLoader').css('display', 'flex');
-
-        $.ajax({
-            url: '@Url.Action("LoadPacketTeaPurchaseDetails", "PacketTeaPurchaseEntry")',
-            type: 'GET',
-            data: {
-
-                 docno: docno,
-
-                unit: unit,
-                Docdt: Docdt
-            },
-            success: function (html) {
-                $('#mainTable tbody').html(html);
-
-                calculateAllRows();
-            },
-            error: function (xhr) {
-
-                console.log(xhr.responseText);
-
-                $('#mainTable tbody').html(
-                    '<tr>' +
-                    '<td colspan="28" style="text-align:center;color:red;">' +
-                    'Unable to load product details.' +
-                    '</td>' +
-                    '</tr>'
-                );
-            },
-
-            complete: function () {
-
-                // Hide loader after response/error
-                $('#linesLoader').hide();
-            }
-        });
-            }
-
-         // ✅ PAGE LOAD
-         $(document).ready(function () {
-             LoadPacketTeaPurchaseDetails();
-         });
-
-        </script>*@
     <script>
     function formatDateToYMD(date) {
         var year = date.getFullYear();
@@ -2435,273 +2426,7 @@ $(document).on('change', '.broker-code', function () {
 });
     </script>
 
-    <!--<script>
 
-        // =====================================================
-        // TDS HEAD INPUTPICKER
-        // =====================================================
-        $(document).on('click', '.head-code', function () {
-
-            var $input = $(this);
-
-            $('.inputpicker-wrapped-list').remove();
-
-            if ($input.data('inputpicker')) {
-                $input.inputpicker('show');
-                return;
-            }
-
-            $input.inputpicker({
-
-                url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
-
-                // TDS_ACODE is NOT displayed
-                fields: [
-                    { name: 'CODE', text: 'CODE' },
-                    { name: 'DESCN', text: 'NAME' },
-                    { name: 'TDS_PER', text: 'TDS PER' },
-                    { name: 'TDS_CODE', text: 'TDS CODE' }
-                ],
-
-                fieldText: 'CODE',
-                fieldValue: 'CODE',
-
-                headShow: true,
-                filterOpen: true,
-                autoOpen: true,
-
-                pagination: true,
-                pageField: 'p',
-                pageLimitField: 'limit',
-                pageLimit: 10,
-                pageCountField: 'count',
-
-                width: 'auto',
-                urlDelay: 1
-            });
-
-
-            // =====================================================
-            // SELECT
-            // =====================================================
-            $input
-                .off('inputpicker.select.tds')
-                .on('inputpicker.select.tds', function (e, item) {
-
-                    if (!item) return;
-
-                    var $this = $(this);
-
-                    var code = $.trim(item.CODE || '');
-                    var desc = $.trim(item.DESCN || '');
-
-                    // Hidden value returned by API
-                    var acode = $.trim(item.TDS_ACODE || '');
-
-
-                    // =================================================
-                    // TDS A/CODE NOT AVAILABLE
-                    // =================================================
-                    if (!acode) {
-
-                        $.alert({
-                            title: 'Warning',
-                            type: 'orange',
-                            content: 'A/C Code not available.'
-                        });
-
-                        // Clear TDS CODE
-                        $this.val('');
-
-                        // Clear description
-                        $('.head-desc').val('');
-
-                        $this.inputpicker('hide');
-
-                        return;
-                    }
-
-
-                    // =================================================
-                    // VALID TDS CODE
-                    // =================================================
-                    $this.val(code);
-
-                    $('.head-desc').val(desc);
-
-                    $this.inputpicker('hide');
-                });
-        });
-
-
-        // =====================================================
-        // CHANGE
-        // =====================================================
-    $(document).on('change', '.head-code', function () {
-
-        var $input = $(this);
-        var code = $.trim($input.val() || '');
-
-        if (!code) {
-            clearTdsHead($input);
-            return;
-        }
-
-        $.ajax({
-
-            url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
-            type: 'GET',
-
-            data: {
-                q: code,
-                limit: 1,
-                p: 1
-            },
-
-            success: function (res) {
-
-                if (!res || !res.data || res.data.length === 0) {
-
-                    clearTdsHead($input);
-
-                    return;
-                }
-
-                var item = res.data[0];
-
-                var acode = $.trim(item.TDS_ACODE || '');
-                var desc = $.trim(item.DESCN || '');
-
-                // =========================================
-                // A/C CODE NOT AVAILABLE
-                // =========================================
-                if (!acode) {
-
-                    $.alert({
-                        title: 'Warning',
-                        type: 'orange',
-                        content: 'A/C Code not available.',
-                        buttons: {
-                            ok: {
-                                text: 'OK',
-                                action: function () {
-                                    clearTdsHead($input);
-                                }
-                            }
-                        }
-                    });
-
-                    return;
-                }
-
-                // Valid
-                $('.head-desc').val(desc);
-            },
-
-            error: function () {
-                clearTdsHead($input);
-            }
-        });
-    });
-
-            function clearTdsHead($input) {
-
-                // Clear original input
-                $input.val('');
-
-                // Clear description
-                $('.head-desc').val('');
-
-                // Clear InputPicker value
-                try {
-                    if ($input.data('inputpicker')) {
-                        $input.inputpicker('val', '');
-                        $input.inputpicker('hide');
-                    }
-                } catch (e) {
-                    console.log('TDS InputPicker clear error:', e);
-                }
-
-                // Clear visible InputPicker textbox/clone
-                $('.head-code.inputpicker-input').val('');
-
-                // Also clear any inputpicker clone having same value
-                $('.inputpicker-input').filter(function () {
-                    return $(this).hasClass('head-code');
-                }).val('');
-            }
-        // =====================================================
-        // BLUR
-        // =====================================================-->
-    @*$(document).on('blur', '.head-code', function () {
-
-            var $input = $(this);
-            var code = $.trim($input.val() || '');
-
-            setTimeout(function () {
-
-                if (!code) {
-                    $('.head-desc').val('');
-                    return;
-                }
-
-                $.ajax({
-
-                    url: '@Url.Action("GetMasterTdsHead", "PacketTeaPurchaseEntry")',
-
-                    type: 'GET',
-
-                    data: {
-                        q: code,
-                        limit: 1,
-                        p: 1
-                    },
-
-                    success: function (res) {
-
-                        if (!res ||
-                            !res.data ||
-                            res.data.length === 0) {
-
-                            $input.val('');
-                            $('.head-desc').val('');
-
-                            return;
-                        }
-
-                        var item = res.data[0];
-
-                        var acode = $.trim(item.TDS_ACODE || '');
-                        var desc = $.trim(item.DESCN || '');
-
-
-                        // =================================================
-                        // NO A/C CODE
-                        // =================================================
-                        if (!acode) {
-
-                            $.alert({
-                                title: 'Warning',
-                                type: 'orange',
-                                content: 'A/C Code not available.'
-                            });
-
-                            $input.val('');
-                            $('.head-desc').val('');
-
-                            return;
-                        }
-
-
-                        // Valid
-                        $('.head-desc').val(desc);
-                    }
-                });
-
-            }, 200);
-        });*@
-
-    <!--</script>-->
     <script>
 
     // =========================================================
@@ -2808,7 +2533,8 @@ $(document).on('change', '.broker-code', function () {
                 // Enable manual entry
                 $('.DetdAmt').prop('disabled', false);
                 $('.tdspercentage').prop('disabled', false);
-
+                $('.DetdAmt').addClass('req');
+                $('.tds-required-star').show();
                 // Calculate TDS
                 calculateTDS();
 
@@ -2939,49 +2665,37 @@ $(document).on('change', '.broker-code', function () {
     });
 
 
-    // =========================================================
-    // CLEAR TDS
-    // =========================================================
-    function clearTdsHead($input) {
 
-        // Clear TDS Head
-        $input.val('');
+        function clearTdsHead($input) {
 
-        // Clear description
-        $('.head-desc').val('');
+            $input.val('');
 
-        // Clear TDS fields
-        $('.DetdAmt').val('0.00');
-        $('.tdspercentage').val('0.00');
+            $('.head-desc').val('');
 
-        // Clear TDS amount
-        $('.tdsAmt').val('0.00');
+            $('.DetdAmt').val('0.00');
+            $('.tdspercentage').val('0.00');
+            $('.tdsAmt').val('0.000');
 
+            $('.DetdAmt').prop('disabled', true);
+            $('.tdspercentage').prop('disabled', true);
 
-        // Disable fields
-        $('.DetdAmt').prop('disabled', true);
-        $('.tdspercentage').prop('disabled', true);
+            // Remove required validation
+            $('.DetdAmt').removeClass('req');
+            $('.tds-required-star').hide();
 
+            try {
 
-        // Clear InputPicker
-        try {
+                if ($input.data('inputpicker')) {
+                    $input.inputpicker('val', '');
+                    $input.inputpicker('hide');
+                }
 
-            if ($input.data('inputpicker')) {
-
-                $input.inputpicker('val', '');
-                $input.inputpicker('hide');
+            } catch (e) {
+                console.log('TDS InputPicker clear error:', e);
             }
 
-        } catch (e) {
-
-            console.log('TDS InputPicker clear error:', e);
+            $('.inputpicker-input').val('');
         }
-
-
-        // Clear visible InputPicker input
-        $('.inputpicker-input').val('');
-    }
-
 
     // =========================================================
     // CALCULATE TDS
@@ -3801,531 +3515,7 @@ $(document)
     });
     </script>
 
-    @*<script>
 
-                // ===============================
-        // GRADE PICKER + GST RATE LOGIC
-        // ===============================
-
-        $(document).on('click', '.grade-code', function () {
-
-            var $input = $(this);
-            var $row = $input.closest('tr');
-
-            $('.inputpicker-wrapped-list').remove();
-
-            if ($input.data('inputpicker')) {
-                $input.inputpicker('show');
-                return;
-            }
-
-            $input.inputpicker({
-                url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
-
-                fields: [
-                    { name: 'GCODE', text: 'CODE' },
-                    { name: 'NAME', text: 'NAME' },
-                    { name: 'cat', text: 'CAT' },
-                    { name: 'catdesc', text: 'CAT NAME' },
-                    { name: 'subcat', text: 'SUBCAT' },
-                    { name: 'subcatdesc', text: 'SUBCAT NAME' },
-                    { name: 'CGST_RATE', text: 'CGST RATE' },
-                    { name: 'SGST_RATE', text: 'SGST RATE' },
-                    { name: 'IGST_RATE', text: 'IGST RATE' }
-                ],
-
-                fieldText: 'GCODE',
-                fieldValue: 'GCODE',
-
-                headShow: true,
-                filterOpen: true,
-                autoOpen: true,
-
-                pagination: true,
-                pageField: 'p',
-                pageLimitField: 'limit',
-                pageLimit: 10,
-                pageCountField: 'count',
-
-                width: 'auto',
-                urlDelay: 1
-            });
-
-            $input.off('inputpicker.select').on(
-                'inputpicker.select',
-                function (e, item) {
-
-                    if (!item) return;
-
-                    var gradeCode = item.GCODE || '';
-
-                    $row.find('.grade-code').val(gradeCode);
-                    $row.find('.grade-desc').val(item.NAME || '');
-
-                    // Get complete Grade data including GST rates
-                    getGradeDetails($row, gradeCode);
-
-                    $(this).inputpicker('hide');
-                }
-            );
-        });
-
-
-        // =====================================
-        // GET COMPLETE GRADE DATA
-        // =====================================
-
-        function getGradeDetails($row, gradeCode) {
-
-            if (!gradeCode) {
-                clearGradeGST($row);
-                return;
-            }
-
-            $.ajax({
-                url: '@Url.Action("GetGrade", "PacketTeaPurchaseEntry")',
-                type: 'GET',
-
-                data: {
-                    q: gradeCode,
-                    limit: 1,
-                    p: 1
-                },
-
-                success: function (res) {
-
-                    if (
-                        res &&
-                        res.data &&
-                        res.data.length > 0
-                    ) {
-
-                        var grade = res.data[0];
-
-                        // Set description
-                        $row.find('.grade-desc')
-                            .val(grade.NAME || '');
-
-                        // Apply Grade GST rates
-                        applyGradeGST($row, grade);
-
-                    }
-                    else {
-
-                        clearGradeGST($row);
-
-                        $row.find('.grade-code').val('');
-                        $row.find('.grade-desc').val('');
-                    }
-                },
-
-                error: function (xhr) {
-
-                    console.log("GetGrade Error:", xhr.responseText);
-
-                    clearGradeGST($row);
-                }
-            });
-        }
-        function applyGradeGST($row, grade) {
-
-            if (!$row || !$row.length || !grade) {
-                clearGradeGST($row);
-                return;
-            }
-
-            // ==================================================
-            // VENDOR DATA
-            // ==================================================
-
-            var vendorGST = $.trim(
-                $('#VendorGSTNo').val() || ''
-            );
-
-            var vendorState = $.trim(
-                $('#VendorStateCode').val() || ''
-            );
-
-
-            // ==================================================
-            // LOCATION DATA
-            // ==================================================
-
-            var locationGST = $.trim(
-                $('#LocationGSTNo').val() || ''
-            );
-
-            var locationState = $.trim(
-                $('#LocationStateCode').val() || ''
-            );
-
-
-            // ==================================================
-            // GRADE MASTER GST
-            // ==================================================
-
-            var gradeCGST =
-                parseFloat(grade.CGST_RATE) || 0;
-
-            var gradeSGST =
-                parseFloat(grade.SGST_RATE) || 0;
-
-            var gradeIGST =
-                parseFloat(grade.IGST_RATE) || 0;
-
-
-            // ==================================================
-            // GST INPUTS
-            // ==================================================
-
-            var $cgstRate = $row.find(
-                'input[name$=".CGST_RT"]'
-            );
-
-            var $sgstRate = $row.find(
-                'input[name$=".SGST_RT"]'
-            );
-
-            var $igstRate = $row.find(
-                'input[name$=".IGST_RT"]'
-            );
-
-            var $cgstAmt = $row.find(
-                'input[name$=".CGST_AMT"]'
-            );
-
-            var $sgstAmt = $row.find(
-                'input[name$=".SGST_AMT"]'
-            );
-
-            var $igstAmt = $row.find(
-                'input[name$=".IGST_AMT"]'
-            );
-
-
-            // ==================================================
-            // ALWAYS CLEAR PREVIOUS GST FIRST
-            // ==================================================
-
-            $cgstRate.val('0.00');
-            $sgstRate.val('0.00');
-            $igstRate.val('0.00');
-
-            $cgstAmt.val('0.00');
-            $sgstAmt.val('0.00');
-            $igstAmt.val('0.00');
-
-
-            // ==================================================
-            // 1. BOTH VENDOR GST AND LOCATION GST EMPTY
-            //    ALL GST = ZERO
-            // ==================================================
-
-            if (
-                vendorGST === '' &&
-                locationGST === ''
-            ) {
-
-                $cgstRate.val('0.00');
-                $sgstRate.val('0.00');
-                $igstRate.val('0.00');
-
-                $cgstAmt.val('0.00');
-                $sgstAmt.val('0.00');
-                $igstAmt.val('0.00');
-
-                calculateRow($row);
-                return;
-            }
-
-
-            // ==================================================
-            // 2. REQUIRED GST / STATE DATA MISSING
-            //    ALL GST = ZERO
-            // ==================================================
-
-            if (
-                vendorGST === '' ||
-                vendorState === '' ||
-                locationGST === '' ||
-                locationState === ''
-            ) {
-
-                $cgstRate.val('0.00');
-                $sgstRate.val('0.00');
-                $igstRate.val('0.00');
-
-                $cgstAmt.val('0.00');
-                $sgstAmt.val('0.00');
-                $igstAmt.val('0.00');
-
-                calculateRow($row);
-                return;
-            }
-
-
-            // ==================================================
-            // 3. VENDOR GST == LOCATION GST
-            //    NO GST
-            // ==================================================
-
-            if (vendorGST === locationGST) {
-
-                $cgstRate.val('0.00');
-                $sgstRate.val('0.00');
-                $igstRate.val('0.00');
-
-                $cgstAmt.val('0.00');
-                $sgstAmt.val('0.00');
-                $igstAmt.val('0.00');
-
-                calculateRow($row);
-                return;
-            }
-
-
-            // ==================================================
-            // 4. VENDOR GST != LOCATION GST
-            //    SAME STATE -> CGST + SGST
-            // ==================================================
-
-            if (vendorState === locationState) {
-
-                $cgstRate.val(
-                    gradeCGST.toFixed(2)
-                );
-
-                $sgstRate.val(
-                    gradeSGST.toFixed(2)
-                );
-
-                $igstRate.val('0.00');
-
-                calculateRow($row);
-                return;
-            }
-
-
-            // ==================================================
-            // 5. VENDOR GST != LOCATION GST
-            //    DIFFERENT STATE -> IGST
-            // ==================================================
-
-            $cgstRate.val('0.00');
-            $sgstRate.val('0.00');
-
-            $igstRate.val(
-                gradeIGST.toFixed(2)
-            );
-
-            calculateRow($row);
-        }
-
-                //function applyGradeGST($row, grade) {
-
-                //    if (!$row || !$row.length || !grade) {
-                //        clearGradeGST($row);
-                //        return;
-                //    }
-
-                //    // ==================================================
-                //    // VENDOR DATA
-                //    // ==================================================
-
-                //    var vendorGST = $.trim(
-                //        $('#VendorGSTNo').val() || ''
-                //    );
-
-                //    var vendorState = $.trim(
-                //        $('#VendorStateCode').val() || ''
-                //    );
-
-
-                //    // ==================================================
-                //    // LOCATION DATA
-                //    // ==================================================
-
-                //    var locationGST = $.trim(
-                //        $('#LocationGSTNo').val() || ''
-                //    );
-
-                //    var locationState = $.trim(
-                //        $('#LocationStateCode').val() || ''
-                //    );
-
-
-                //    // ==================================================
-                //    // GRADE MASTER GST
-                //    // ==================================================
-
-                //    var gradeCGST =
-                //        parseFloat(grade.CGST_RATE) || 0;
-
-                //    var gradeSGST =
-                //        parseFloat(grade.SGST_RATE) || 0;
-
-                //    var gradeIGST =
-                //        parseFloat(grade.IGST_RATE) || 0;
-
-
-                //    // ==================================================
-                //    // GST INPUTS
-                //    // ==================================================
-
-                //    var $cgstRate = $row.find(
-                //        'input[name$=".CGST_RT"]'
-                //    );
-
-                //    var $sgstRate = $row.find(
-                //        'input[name$=".SGST_RT"]'
-                //    );
-
-                //    var $igstRate = $row.find(
-                //        'input[name$=".IGST_RT"]'
-                //    );
-
-                //    var $cgstAmt = $row.find(
-                //        'input[name$=".CGST_AMT"]'
-                //    );
-
-                //    var $sgstAmt = $row.find(
-                //        'input[name$=".SGST_AMT"]'
-                //    );
-
-                //    var $igstAmt = $row.find(
-                //        'input[name$=".IGST_AMT"]'
-                //    );
-
-
-                //    // ==================================================
-                //    // ALWAYS CLEAR PREVIOUS GST FIRST
-                //    // ==================================================
-
-                //    $cgstRate.val('0.00');
-                //    $sgstRate.val('0.00');
-                //    $igstRate.val('0.00');
-
-                //    $cgstAmt.val('0.00');
-                //    $sgstAmt.val('0.00');
-                //    $igstAmt.val('0.00');
-
-
-                //    // ==================================================
-                //    // 1. REQUIRED GST / STATE DATA MISSING
-                //    // ==================================================
-
-                //    if (
-                //        vendorGST === '' ||
-                //        vendorState === '' ||
-                //        locationGST === '' ||
-                //        locationState === ''
-                //    ) {
-
-                //        calculateRow($row);
-                //        return;
-                //    }
-
-
-                //    // ==================================================
-                //    // 2. VENDOR GST == LOCATION GST
-                //    //    NO GST
-                //    // ==================================================
-
-                //    if (vendorGST === locationGST) {
-
-                //        calculateRow($row);
-                //        return;
-                //    }
-
-
-                //    // ==================================================
-                //    // 3. VENDOR GST != LOCATION GST
-                //    //    SAME STATE -> CGST + SGST
-                //    // ==================================================
-
-                //    if (vendorState === locationState) {
-
-                //        $cgstRate.val(
-                //            gradeCGST.toFixed(2)
-                //        );
-
-                //        $sgstRate.val(
-                //            gradeSGST.toFixed(2)
-                //        );
-
-                //        $igstRate.val('0.00');
-
-                //        calculateRow($row);
-                //        return;
-                //    }
-
-
-                //    // ==================================================
-                //    // 4. VENDOR GST != LOCATION GST
-                //    //    DIFFERENT STATE -> IGST
-                //    // ==================================================
-
-                //    $cgstRate.val('0.00');
-                //    $sgstRate.val('0.00');
-
-                //    $igstRate.val(
-                //        gradeIGST.toFixed(2)
-                //    );
-
-                //    calculateRow($row);
-                //}
-
-
-
-            // ======================================================
-            // CLEAR GST FOR CURRENT ROW
-            // ======================================================
-            function clearGradeGST($row) {
-
-                if (!$row || !$row.length) {
-                    return;
-                }
-
-                $row.find('input[name$=".CGST_RT"]').val('0.00');
-                $row.find('input[name$=".SGST_RT"]').val('0.00');
-                $row.find('input[name$=".IGST_RT"]').val('0.00');
-
-                $row.find('input[name$=".CGST_AMT"]').val('0.00');
-                $row.find('input[name$=".SGST_AMT"]').val('0.00');
-                $row.find('input[name$=".IGST_AMT"]').val('0.00');
-
-                if (typeof calculateRow === 'function') {
-                    calculateRow($row);
-                }
-            }
-
-
-
-
-        // =====================================
-        // VALIDATE GRADE WHEN USER TYPES / PASTES
-        // =====================================
-
-        $(document)
-            .off('blur.gradeValidation', '.grade-code')
-            .on('blur.gradeValidation', '.grade-code', function () {
-
-                var $input = $(this);
-                var $row = $input.closest('tr');
-                var code = $.trim($input.val() || '');
-
-                if (!code) {
-
-                    $row.find('.grade-desc').val('');
-                    clearGradeGST($row);
-                    return;
-                }
-
-                // One central Grade -> GST AJAX flow
-                getGradeDetails($row, code);
-            });
-
-            </script>*@
 
 
 
@@ -4698,622 +3888,28 @@ $(function () {
 
     </script>
 
-    @*<script>
 
-            // ======================================================
-            // CALCULATE ONE ROW
-            // ======================================================
-
-            function calculateRow($row) {
-
-                if (!$row || !$row.length) {
-                    return;
-                }
-
-
-                // ============================================
-                // 1. TOTAL NET WT
-                // ============================================
-
-                var totalNetWt =
-                    parseFloat(
-                        $row.find('.total-net-wt').val()
-                    ) || 0;
-
-
-                // ============================================
-                // 2. RATE
-                // ============================================
-
-                var rate =
-                    parseFloat(
-                        $row.find('.rate').val()
-                    ) || 0;
-
-
-                // ============================================
-                // 3. AMOUNT
-                // TOTAL NET WT × RATE
-                // ============================================
-
-                var amount =
-                    totalNetWt * rate;
-
-                $row.find('.amount')
-                    .val(amount.toFixed(2));
-
-
-                // ============================================
-                // 4. DISCOUNT %
-                // ============================================
-
-                var discPer =
-                    parseFloat(
-                        $row.find('.disc-per').val()
-                    ) || 0;
-
-
-                // ============================================
-                // 5. DISCOUNT VALUE
-                // AMOUNT × DISCOUNT % / 100
-                // ============================================
-
-                var discount =
-                    amount * discPer / 100;
-
-                $row.find('.discount')
-                    .val(discount.toFixed(2));
-
-
-                // ============================================
-                // 6. TAXABLE AMOUNT
-                // AMOUNT - DISCOUNT
-                // ============================================
-
-                var taxableAmount =
-                    amount - discount;
-
-                if (taxableAmount < 0) {
-                    taxableAmount = 0;
-                }
-
-                $row.find('.taxable-amt')
-                    .val(taxableAmount.toFixed(2));
-
-
-                // ============================================
-                // 7. GST RATES
-                // ============================================
-
-                var cgstRate =
-                    parseFloat(
-                        $row.find('.cgst-rate').val()
-                    ) || 0;
-
-                var sgstRate =
-                    parseFloat(
-                        $row.find('.sgst-rate').val()
-                    ) || 0;
-
-                var igstRate =
-                    parseFloat(
-                        $row.find('.igst-rate').val()
-                    ) || 0;
-
-
-                // ============================================
-                // 8. GST AMOUNT
-                // GST MUST USE TAXABLE AMOUNT
-                // ============================================
-
-                var cgstAmt =
-                    taxableAmount * cgstRate / 100;
-
-                var sgstAmt =
-                    taxableAmount * sgstRate / 100;
-
-                var igstAmt =
-                    taxableAmount * igstRate / 100;
-
-
-                // ============================================
-                // 9. SET GST AMOUNTS
-                // ============================================
-
-                $row.find('.cgst-amt')
-                    .val(cgstAmt.toFixed(2));
-
-                $row.find('.sgst-amt')
-                    .val(sgstAmt.toFixed(2));
-
-                $row.find('.igst-amt')
-                    .val(igstAmt.toFixed(2));
-
-
-                // ============================================
-                // 10. TOTAL AMOUNT
-                // TAXABLE + GST
-                // ============================================
-
-                var totalAmount =
-                    taxableAmount +
-                    cgstAmt +
-                    sgstAmt +
-                    igstAmt;
-
-                $row.find('.tot-amt')
-                    .val(totalAmount.toFixed(2));
-
-
-                // ============================================
-                // 11. HEADER TOTALS
-                // ============================================
-
-                calculateHeaderTotals();
-            }
-            // ======================================================
-            // CALCULATE ALL ROWS
-            // ======================================================
-
-            function calculateAllRows() {
-
-                $('#mainTable tbody tr').each(function () {
-
-                    calculateRow($(this));
-
-                });
-            }
-
-
-
-            // ======================================================
-            // HEADER TOTALS
-            // ======================================================
-
-            function calculateHeaderTotals() {
-
-                var totalGST = 0;
-                var totalAmount = 0;
-
-
-                $('#mainTable tbody tr').each(function () {
-
-                    var $row = $(this);
-
-
-                    var cgst =
-                        parseFloat(
-                            $row.find('.cgst-amt').val()
-                        ) || 0;
-
-                    var sgst =
-                        parseFloat(
-                            $row.find('.sgst-amt').val()
-                        ) || 0;
-
-                    var igst =
-                        parseFloat(
-                            $row.find('.igst-amt').val()
-                        ) || 0;
-
-                    var rowTotal =
-                        parseFloat(
-                            $row.find('.tot-amt').val()
-                        ) || 0;
-
-
-                    totalGST +=
-                        cgst +
-                        sgst +
-                        igst;
-
-                    totalAmount +=
-                        rowTotal;
-                });
-
-
-                // ==================================================
-                // HEADER GST
-                // ==================================================
-
-                $('#TotalGSTSystem')
-                    .val(totalGST.toFixed(2));
-
-
-                // ==================================================
-                // HEADER TOTAL AMOUNT
-                // ==================================================
-
-                $('#TotalAmount')
-                    .val(totalAmount.toFixed(2));
-            }
-
-
-
-            // ======================================================
-            // WHEN WEIGHT / RATE / DISCOUNT CHANGES
-            // ======================================================
-
-            // ======================================================
-            // GST CONFIRMATION FOR:
-            // BAGS / NET WT / TOTAL NET WT (QTY) / RATE / DISCOUNT %
-            // ======================================================
-
-            $(document)
-                .off(
-                    'focus.gstChange',
-                    '.bags, .net-wt, .total-net-wt, .rate, .disc-per'
-                )
-                .on(
-                    'focus.gstChange',
-                    '.bags, .net-wt, .total-net-wt, .rate, .disc-per',
-                    function () {
-
-                        var $row = $(this).closest('tr');
-
-                        // Store old values before user changes them.
-                        // Bags / Net Wt also rewrite Total Net Wt, so
-                        // keep all three weight fields for restore.
-                        $(this).data('gst-old-value', {
-                            bags: $row.find('.bags').val(),
-                            netWt: $row.find('.net-wt').val(),
-                            totalNetWt: $row.find('.total-net-wt').val(),
-                            self: $(this).val()
-                        });
-                    }
-                );
-
-
-            $(document)
-                .off(
-                    'change.gstChange',
-                    '.bags, .net-wt, .total-net-wt, .rate, .disc-per'
-                )
-                .on(
-                    'change.gstChange',
-                    '.bags, .net-wt, .total-net-wt, .rate, .disc-per',
-                    function () {
-
-                        var $input = $(this);
-
-                        var $row =
-                            $input.closest('tr');
-
-                        var newValue =
-                            $input.val();
-
-                        var old =
-                            $input.data('gst-old-value') || {};
-
-
-                        // ==========================================
-                        // VALUE DID NOT CHANGE
-                        // ==========================================
-
-                        if (
-                            (parseFloat(newValue) || 0) ===
-                            (parseFloat(old.self) || 0)
-                        ) {
-                            calculateRow($row);
-                            return;
-                        }
-
-
-                        // ==========================================
-                        // YES
-                        // ==========================================
-
-                        function applyChange() {
-
-                            calculateRow($row);
-                        }
-
-
-                        // ==========================================
-                        // NO
-                        // ==========================================
-
-                        function restoreChange() {
-
-                            if ($input.is('.bags, .net-wt, .total-net-wt')) {
-                                $row.find('.bags').val(old.bags);
-                                $row.find('.net-wt').val(old.netWt);
-                                $row.find('.total-net-wt').val(old.totalNetWt);
-                            } else {
-                                $input.val(old.self);
-                            }
-
-                            calculateRow($row);
-                        }
-
-
-                        // ==========================================
-                        // CONFIRM
-                        // ==========================================
-
-                        confirmGSTChange(
-                            applyChange,
-                            restoreChange
-                        );
-                    }
-                );
-            function isGSTAlreadyCalculated() {
-
-                var hasGST = false;
-
-                $('#mainTable tbody tr').each(function () {
-
-                    var $row = $(this);
-
-                    var cgstRate = parseFloat(
-                        $row.find('input[name$=".CGST_RT"]').val()
-                    ) || 0;
-
-                    var sgstRate = parseFloat(
-                        $row.find('input[name$=".SGST_RT"]').val()
-                    ) || 0;
-
-                    var igstRate = parseFloat(
-                        $row.find('input[name$=".IGST_RT"]').val()
-                    ) || 0;
-
-                    var cgstAmt = parseFloat(
-                        $row.find('input[name$=".CGST_AMT"]').val()
-                    ) || 0;
-
-                    var sgstAmt = parseFloat(
-                        $row.find('input[name$=".SGST_AMT"]').val()
-                    ) || 0;
-
-                    var igstAmt = parseFloat(
-                        $row.find('input[name$=".IGST_AMT"]').val()
-                    ) || 0;
-
-                    if (
-                        cgstRate > 0 ||
-                        sgstRate > 0 ||
-                        igstRate > 0 ||
-                        cgstAmt > 0 ||
-                        sgstAmt > 0 ||
-                        igstAmt > 0
-                    ) {
-                        hasGST = true;
-                        return false;
-                    }
-                });
-
-                return hasGST;
-            }
-
-
-
-
-            // Edit mode = existing document (DOCNO present)
-            function isEditMode() {
-                return $.trim($('#DOCNO').val() || '') !== '';
-            }
-
-
-            // askInAddMode: Vendor / Location changes ask in Add mode too
-            function confirmGSTChange(onYes, onNo, askInAddMode) {
-
-                // Add mode (unless asked for), or no GST calculated yet -> directly continue
-                if ((!askInAddMode && !isEditMode()) || !isGSTAlreadyCalculated()) {
-
-                    if (typeof onYes === 'function') {
-                        onYes();
-                    }
-
-                    return;
-                }
-
-                $.confirm({
-                    title: "GST Warning",
-                    type: "orange",
-
-                    content:
-                        "GST has already been calculated for this entry.<br><br>" +
-                        "If you changing the Vendor, Location, Total Net Wt, Rate, or Discount % " +
-                        "will require the GST to be recalculated.<br><br>" +
-                        "Do you want to continue?",
-
-                    buttons: {
-
-                        Yes: {
-                            text: "Yes",
-                            btnClass: "btn-orange",
-
-                            action: function () {
-
-                                if (typeof onYes === 'function') {
-                                    onYes();
-                                }
-                            }
-                        },
-
-                        No: {
-                            text: "No",
-
-                            action: function () {
-
-                                if (typeof onNo === 'function') {
-                                    onNo();
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-            // ======================================================
-            // REAL-TIME WEIGHT CALCULATION
-            // ======================================================
-
-            function calculateWeight($row, source) {
-
-                if (!$row || !$row.length) {
-                    return;
-                }
-
-                var bags = parseFloat($row.find('.bags').val()) || 0;
-                var netWt = parseFloat($row.find('.net-wt').val()) || 0;
-                var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
-
-
-                // ==================================================
-                // BAGS / NET WT CHANGED
-                // TOTAL NET WT = BAGS × NET WT
-                // ==================================================
-
-                if (source === 'bags' || source === 'net-wt') {
-
-                    if (bags > 0 && netWt > 0) {
-
-                        totalNetWt = bags * netWt;
-
-                        $row.find('.total-net-wt')
-                            .val(totalNetWt.toFixed(3));
-                    }
-                    else {
-
-                        // Clear total when calculation is not possible
-                        $row.find('.total-net-wt').val('');
-                    }
-                }
-
-
-                // ==================================================
-                // TOTAL NET WT CHANGED
-                // NET WT = TOTAL NET WT / BAGS
-                // ==================================================
-
-                else if (source === 'total-net-wt') {
-
-                    if (bags > 0 && totalNetWt > 0) {
-
-                        netWt = totalNetWt / bags;
-
-                        $row.find('.net-wt')
-                            .val(netWt.toFixed(3));
-                    }
-                    else {
-
-                        $row.find('.net-wt').val('');
-                    }
-                }
-
-
-                // ==================================================
-                // AFTER WEIGHT CALCULATION
-                // RECALCULATE AMOUNT / GST / TOTAL
-                // ==================================================
-
-                calculateRow($row);
-            }
-
-
-            // ======================================================
-            // BAGS - REAL TIME
-            // ======================================================
-
-            $(document)
-                .off('input.weightCalculation', '.bags')
-                .on('input.weightCalculation', '.bags', function () {
-
-                    calculateWeight(
-                        $(this).closest('tr'),
-                        'bags'
-                    );
-
-                });
-
-
-            // ======================================================
-            // NET WT - REAL TIME
-            // ======================================================
-
-            $(document)
-                .off('input.weightCalculation', '.net-wt')
-                .on('input.weightCalculation', '.net-wt', function () {
-
-                    calculateWeight(
-                        $(this).closest('tr'),
-                        'net-wt'
-                    );
-
-                });
-
-
-            // ======================================================
-            // TOTAL NET WT - REAL TIME
-            // ======================================================
-
-            $(document)
-                .off('input.weightCalculation', '.total-net-wt')
-                .on('input.weightCalculation', '.total-net-wt', function () {
-
-                    calculateWeight(
-                        $(this).closest('tr'),
-                        'total-net-wt'
-                    );
-
-                });
-
-            //function calculateWeight($row, source) {
-            //    var bags = parseFloat($row.find('.bags').val()) || 0;
-            //    var netWt = parseFloat($row.find('.net-wt').val()) || 0;
-            //    var totalNetWt = parseFloat($row.find('.total-net-wt').val()) || 0;
-
-            //    if (source === 'bags' || source === 'net-wt') {
-
-            //        // TOTAL NET WT = BAGS × NET WT
-            //        if (bags > 0 && netWt > 0) {
-            //            totalNetWt = bags * netWt;
-
-            //            $row.find('.total-net-wt')
-            //                .val(totalNetWt.toFixed(3));
-            //        }
-
-            //    } else if (source === 'total-net-wt') {
-
-            //        // NET WT = TOTAL NET WT ÷ BAGS
-            //        if (bags > 0 && totalNetWt > 0) {
-            //            netWt = totalNetWt / bags;
-
-            //            $row.find('.net-wt')
-            //                .val(netWt.toFixed(3));
-            //        }
-            //    }
-            //}
-
-
-            //// Bags change
-            //$(document)
-            //    .off('input.weightCalculation', '.bags')
-            //    .on('input.weightCalculation', '.bags', function () {
-            //        calculateWeight($(this).closest('tr'), 'bags');
-            //    });
-
-
-            //// Net Wt change
-            //$(document)
-            //    .off('input.weightCalculation', '.net-wt')
-            //    .on('input.weightCalculation', '.net-wt', function () {
-            //        calculateWeight($(this).closest('tr'), 'net-wt');
-            //    });
-
-
-            //// Total Net Wt change
-            //$(document)
-            //    .off('input.weightCalculation', '.total-net-wt')
-            //    .on('input.weightCalculation', '.total-net-wt', function () {
-            //        calculateWeight($(this).closest('tr'), 'total-net-wt');
-            //    });
-        </script>*@
 
     <script>
         // ✅ SINGLE UNIFIED SUBMIT HANDLER
         $('form').off('submit').on('submit', function (e) {
 
+            var tdsCode = $.trim($('.head-code').val() || '');
+
+            if (tdsCode !== '') {
+
+                $('.DetdAmt').prop('disabled', false);
+                $('.tdspercentage').prop('disabled', false);
+
+                $('.DetdAmt').addClass('req');
+
+            } else {
+
+                $('.DetdAmt').prop('disabled', true);
+                $('.tdspercentage').prop('disabled', true);
+
+                $('.DetdAmt').removeClass('req');
+            }
 
 
             // ─── STEP 3: Required validation ───
@@ -5497,52 +4093,7 @@ $(function () {
     </script>
 
 
-    <script>
-        $(document).on('focus click', '.decimal4', function () {
 
-            var el = this;
-
-            setTimeout(function () {
-                if (!el.readOnly && !el.disabled) {
-                    el.select();
-                }
-            }, 0);
-
-        });
-
-
-        $(document).on('input', '.decimal4', function () {
-
-            var val = this.value;
-
-            // allow only numbers + dot
-            if (!/^\d*\.?\d*$/.test(val)) {
-                this.value = val.slice(0, -1);
-                return;
-            }
-
-            var parts = val.split('.');
-
-            // limit to 4 decimal places
-            if (parts.length === 2 && parts[1].length > 4) {
-                this.value = parts[0] + '.' + parts[1].substring(0, 4);
-            }
-
-        });
-
-
-        $(document).on('blur', '.decimal4', function () {
-
-            var val = parseFloat(this.value);
-
-            if (!isNaN(val)) {
-                this.value = val.toFixed(4);
-            } else {
-                this.value = "0.0000";
-            }
-
-        });
-    </script>
     <script>
         $(document).ready(function () {
 
@@ -5742,72 +4293,7 @@ $(function () {
         }
 
 
-        // ======================================================
-        // HEADER TOTALS
-        // ======================================================
 
-        //function calculateHeaderTotals() {
-
-        //    var totalGST = 0;
-        //    var totalAmount = 0;
-
-
-        //    $('#mainTable tbody tr').each(function () {
-
-        //        var $row = $(this);
-
-
-        //        var cgst =
-        //            parseFloat(
-        //                $row.find('.cgst-amt').val()
-        //            ) || 0;
-
-
-        //        var sgst =
-        //            parseFloat(
-        //                $row.find('.sgst-amt').val()
-        //            ) || 0;
-
-
-        //        var igst =
-        //            parseFloat(
-        //                $row.find('.igst-amt').val()
-        //            ) || 0;
-
-
-        //        var rowTotal =
-        //            parseFloat(
-        //                $row.find('.tot-amt').val()
-        //            ) || 0;
-
-
-        //        totalGST +=
-        //            cgst +
-        //            sgst +
-        //            igst;
-
-
-        //        totalAmount +=
-        //            rowTotal;
-
-        //    });
-
-
-        //    // ==================================================
-        //    // HEADER GST
-        //    // ==================================================
-
-        //    $('#TotalGSTSystem')
-        //        .val(totalGST.toFixed(2));
-
-
-        //    // ==================================================
-        //    // HEADER TOTAL AMOUNT
-        //    // ==================================================
-
-        //    $('#TotalAmount')
-        //        .val(totalAmount.toFixed(2));
-        //}
 
         function calculateHeaderTotals() {
 
@@ -6391,41 +4877,7 @@ $(function () {
             calculateAllRows();
 
         });
-        //function calculateRoundOff() {
 
-        //    var totalAmount = parseFloat($('#TotalAmount').val()) || 0;
-        //    var roundedAmount = Math.round(totalAmount);
-        //    var roundOff = roundedAmount - totalAmount;
-
-        //    $('.roundedoff').val(roundOff.toFixed(2));
-        //}
-        //$(document).on('input', '.roundoff-field', function () {
-
-        //    var val = this.value;
-
-        //    if (!/^-?\d*\.?\d*$/.test(val)) {
-        //        this.value = val.slice(0, -1);
-        //        return;
-        //    }
-
-        //    var parts = val.split('.');
-
-        //    if (parts.length === 2 && parts[1].length > 2) {
-        //        this.value =
-        //            parts[0] + '.' + parts[1].substring(0, 2);
-        //    }
-        //});
-
-        //$(document).on('blur', '.roundoff-field', function () {
-
-        //    var val = parseFloat(this.value);
-
-        //    if (!isNaN(val)) {
-        //        this.value = val.toFixed(2);
-        //    } else {
-        //        this.value = "0.00";
-        //    }
-        //});
 
         function calculateRoundOff() {
 
@@ -6540,47 +4992,7 @@ $(function () {
 
     </script>
 
-    @*<script>
-            // ======================================================
-            // REAL-TIME TOTAL GST SYSTEM
-            // CGST Amt + SGST Amt + IGST Amt
-            // ======================================================
 
-            $(document).on(
-                'input change keyup',
-                '.cgst-amt, .sgst-amt, .igst-amt',
-                function () {
-
-                    var totalGST = 0;
-
-                    $('#mainTable tbody tr').each(function () {
-
-                        var cgst =
-                            parseFloat($(this).find('.cgst-amt').val()) || 0;
-
-                        var sgst =
-                            parseFloat($(this).find('.sgst-amt').val()) || 0;
-
-                        var igst =
-                            parseFloat($(this).find('.igst-amt').val()) || 0;
-
-                        totalGST += cgst + sgst + igst;
-                    });
-
-                    $('#TotalGSTSystem').val(totalGST.toFixed(2));
-                }
-            );
-            $(document).on(
-                'input change keyup',
-                '.bags, .net-wt, .total-net-wt, .rate, .disc-per, .cgst-rate, .sgst-rate, .igst-rate',
-                function () {
-
-                    var $row = $(this).closest('tr');
-
-                    calculateRow($row);
-                }
-            );
-        </script>*@
     <script>
         $(document).on('keydown', 'input', function (e) {
             if (e.key === 'Enter') {
