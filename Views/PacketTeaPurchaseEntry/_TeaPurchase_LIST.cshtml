@@ -44,7 +44,7 @@
 
 
        <td>@ho.UNIT_DESC</td>
-       
+
        <td>
            <a href="@(disabled || !ho.id.HasValue ? "#" : Url.Action("InsertOrUpdate", "PacketTeaPurchaseEntry") + "?id=" + HttpUtility.UrlEncode(PacketTea.Utility.Cryptography.Encrypt(ho.id.Value.ToString()))
           + "&docno=" + HttpUtility.UrlEncode(ho.docno) + "&unit=" + HttpUtility.UrlEncode(ho.unit) + "&docdt=" + HttpUtility.UrlEncode(ho.docdt?.ToString("yyyy-MM-dd")) )"
@@ -79,10 +79,15 @@
        <td>@DateHelper.DateFormatter(ho.conS_DT)</td>
 
        <td>@ho.ewaybillno</td>
+       <td style="text-align:center;">
+           <input type="checkbox"
+                  disabled
+                  style="width:14px;height:14px;"
+                  @(ho.flavour == "Y" ? "checked" : "") />
+       </td>
 
        <td>@ho.ewaybilldt</td>
 
-       <td>@ho.flavour</td>
 
 
 

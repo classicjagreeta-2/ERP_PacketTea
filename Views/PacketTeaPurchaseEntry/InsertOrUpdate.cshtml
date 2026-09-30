@@ -2,7 +2,6 @@
 
 @model PacketTea.Models.PT.PT_ALL_LIST
 @using PacketTea.Models.PT
-{
 @using PacketTea.Utility
 @{
     ViewBag.Title = "InsertOrUpdate";
@@ -2694,7 +2693,19 @@ $(document).on('change', '.broker-code', function () {
                 console.log('TDS InputPicker clear error:', e);
             }
 
-            $('.inputpicker-input').val('');
+            var $pickerInput = $input
+                .siblings('.inputpicker-input');
+
+            $pickerInput.val('');
+
+            // In case the plugin places the clone inside the same parent
+            if ($pickerInput.length === 0) {
+                $pickerInput = $input
+                    .parent()
+                    .find('.inputpicker-input');
+
+                $pickerInput.val('');
+            }
         }
 
     // =========================================================
