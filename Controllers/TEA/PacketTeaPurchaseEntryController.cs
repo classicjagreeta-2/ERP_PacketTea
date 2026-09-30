@@ -3,6 +3,7 @@ using Finance.Models.PT;
 using PacketTea.Models;
 using PacketTea.Models.Master;
 using PacketTea.Models.PT;
+using PacketTea.Utility;
 using PagedList;
 using System;
 using System.Collections.Generic;
@@ -70,6 +71,9 @@ namespace PacketTea.Controllers.TEA
                     hoList, pageNumber, pageSize, hoResponse.Data.value.rowCount
                 );
 
+
+                // Rows another user is editing are greyed out (see Utility/RecordLock.cs).
+                ViewBag.Locks = await RecordLock.LocksAsync("PacketTeaPurchaseEntry");
 
                 if (Request.IsAjaxRequest())
                 {
@@ -588,6 +592,17 @@ namespace PacketTea.Controllers.TEA
                 T_TEA_DETAIL = details
             };
 
+            // Edit lock: refused while another user has this document open for editing.
+            var lockUnit = !string.IsNullOrEmpty(head.UNIT) ? head.UNIT : unit;
+            var lockDocNo = !string.IsNullOrEmpty(head.DOCNO) ? head.DOCNO : docno;
+            var lockDate = (object)head.DOCDT ?? formattedDate;
+            var lockErr = await RecordLock.AcquireAsync("PacketTeaPurchaseEntry", lockUnit, lockDocNo, lockDate);
+            if (lockErr != null)
+            {
+                TempData["toastrError"] = lockErr;
+                return RedirectToAction("Index");
+            }
+            ViewBag.RecordLock = RecordLock.ClientConfig("PacketTeaPurchaseEntry", lockUnit, lockDocNo, lockDate);
 
             return View(editModel);
         }
@@ -720,8 +735,9 @@ namespace PacketTea.Controllers.TEA
                 detail.OS_USER = Environment.UserName;
                 detail.TERMINAL_ID = Environment.MachineName;
 
-                detail.LOCKEDBYUSERID = user.getUserName;
-                detail.LOCKEDUNTIL = DateTime.Now;
+                // The edit lock is managed by RecordLock (Utility/RecordLock.cs); a save clears it.
+                detail.LOCKEDBYUSERID = null;
+                detail.LOCKEDUNTIL = null;
 
                 slNo++;
             }
@@ -755,6 +771,22 @@ namespace PacketTea.Controllers.TEA
             //        }
 
             //        return RedirectToAction("Index");
+
+            // Edit lock: an edit (head.ID != 0, same test as below) may only be saved while no
+            // other user holds the document. The re-rendered page on a failed save keeps the lock
+            // alive (ViewBag.RecordLock), and a successful save releases it.
+            bool isEdit = head.ID != 0 && !string.IsNullOrEmpty(head.DOCNO);
+            if (isEdit)
+            {
+                var lockErr = await RecordLock.AcquireAsync("PacketTeaPurchaseEntry", head.UNIT, head.DOCNO, head.DOCDT);
+                if (lockErr != null)
+                {
+                    ViewBag.toastrError = lockErr;
+                    return View("InsertOrUpdate", model);
+                }
+                ViewBag.RecordLock = RecordLock.ClientConfig("PacketTeaPurchaseEntry", head.UNIT, head.DOCNO, head.DOCDT);
+            }
+
             try
             {
                 var json = JsonSerializer.Serialize(details);
@@ -763,6 +795,8 @@ namespace PacketTea.Controllers.TEA
                     "/api/TeaPurchase/SaveOrUpdateAll",
                     details
                 );
+                if (isEdit && response != null && response.IsSuccessStatusCode)
+                    await RecordLock.ReleaseAsync("PacketTeaPurchaseEntry", head.UNIT, head.DOCNO, head.DOCDT);
 
                 // =========================
                 // NEW ENTRY

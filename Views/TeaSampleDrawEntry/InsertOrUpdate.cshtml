@@ -238,13 +238,7 @@
 
 <script>
     function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
-    function showAlert(message, onOk) {
-        $('#appAlertTitle').text('Notice');
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').hide();
-        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
-    }
+    function showAlert(message, onOk) { AppMsg.show(message, onOk); }
     function handleLookupFail(jqXHR) {
         if (jqXHR.status === 440) {
             showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || 'Your session has expired. Please log in again.',
@@ -522,5 +516,6 @@
         $('#btnSelectStock, #btnRemoveRows').css({ opacity: .4, 'pointer-events': 'none' });
     }
 </script>
+@Html.Partial("_RecordLock")
 </body>
 </html>

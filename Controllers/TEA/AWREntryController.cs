@@ -130,6 +130,8 @@ namespace Finance.Controllers.TEA
             var wrapper = json != null ? JsonConvert.DeserializeObject<GetByPageResult>(json) : null;
             var list = wrapper?.value?.results ?? new List<AWRDocRow>();
             ViewBag.RowCount = wrapper?.value?.rowCount ?? 0;
+            // Rows another user is editing are greyed out (see Utility/RecordLock.cs).
+            ViewBag.Locks = await RecordLock.LocksAsync("AWREntry");
 
             if (isChunkRequest)
             {
@@ -259,6 +261,20 @@ namespace Finance.Controllers.TEA
                     TempData["toastrError"] = editErr;
                     return RedirectToAction("Index", new { awrType });
                 }
+
+                // Edit lock: refused while another user has this document open for editing.
+                var first = editModel.T_AWR.FirstOrDefault();
+                var lockUnit = !string.IsNullOrEmpty(first?.UNIT) ? first.UNIT : unit;
+                var lockDocNo = !string.IsNullOrEmpty(first?.DOCNO) ? first.DOCNO : docno;
+                var lockDate = (object)first?.AWR_DATE ?? awrDate;
+                var lockType = !string.IsNullOrEmpty(first?.TRAN_TYPE) ? first.TRAN_TYPE : awrType;
+                var lockErr = await RecordLock.AcquireAsync("AWREntry", lockUnit, lockDocNo, lockDate, lockType);
+                if (lockErr != null)
+                {
+                    TempData["toastrError"] = lockErr;
+                    return RedirectToAction("Index", new { awrType });
+                }
+                ViewBag.RecordLock = RecordLock.ClientConfig("AWREntry", lockUnit, lockDocNo, lockDate, lockType);
             }
 
             ViewBag.IsEdit = true;
@@ -327,7 +343,16 @@ namespace Finance.Controllers.TEA
                 r.UNIT = string.IsNullOrWhiteSpace(r.UNIT) ? UnitForAWRType(r.TRAN_TYPE) : r.UNIT;
             }
 
+            // Edit lock: an edit may only be saved while no other user holds the document.
+            if (!isNew && firstRow != null)
+            {
+                var lockErr = await RecordLock.AcquireAsync("AWREntry", firstRow.UNIT, firstRow.DOCNO, firstRow.AWR_DATE, firstRow.TRAN_TYPE);
+                if (lockErr != null) return Json(new { success = false, message = lockErr });
+            }
+
             var response = await Services.PostAsync<dynamic>("/api/TeaAWR/SaveOrUpdate", model);
+            if (response.IsSuccessStatusCode && !isNew && firstRow != null)
+                await RecordLock.ReleaseAsync("AWREntry", firstRow.UNIT, firstRow.DOCNO, firstRow.AWR_DATE, firstRow.TRAN_TYPE);
             return Json(new
             {
                 success = response.IsSuccessStatusCode,
@@ -356,8 +381,19 @@ namespace Finance.Controllers.TEA
                 return RedirectToAction("Index", new { awrType });
             }
 
+            // Not while another user has the document open for editing.
+            var lockUnit = !string.IsNullOrEmpty(unit) ? unit : CurrentUnit;
+            var lockErr = await RecordLock.AcquireAsync("AWREntry", lockUnit, docno, awrDate, awrType);
+            if (lockErr != null)
+            {
+                TempData["toastrError"] = lockErr;
+                return RedirectToAction("Index", new { awrType });
+            }
+
             var response = await Services.PostAsync<dynamic>(
                 $"/api/TeaAWR/Delete?docno={Uri.EscapeDataString(docno ?? "")}&awrDate={Uri.EscapeDataString(awrDate ?? "")}&awrType={Uri.EscapeDataString(awrType ?? "")}&unit={Uri.EscapeDataString(!string.IsNullOrEmpty(unit) ? unit : CurrentUnit)}", new { });
+            if (!response.IsSuccessStatusCode)
+                await RecordLock.ReleaseAsync("AWREntry", lockUnit, docno, awrDate, awrType);
 
             TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 response.IsSuccessStatusCode ? AwrText.T("Msg_Deleted") : (response.Message ?? AwrText.T("Msg_DeleteFailed"));

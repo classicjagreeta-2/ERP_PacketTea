@@ -75,6 +75,8 @@
          below, but persisted as R_DOCNO/R_DOCDT per T_TEA_BLEND). -->
     <input type="hidden" id="R_DOCNO" value="@head.R_DOCNO" />
     <input type="hidden" id="R_DOCDT" value="@(head.R_DOCDT?.ToString("yyyy-MM-dd"))" />
+    <!-- The Master Blend's own Blend Date (yyyy-MM-dd): the Final Blend Date must be after it. -->
+    <input type="hidden" id="MST_BLEND_DATE_ISO" value="@(PacketTea.DateText.Parse(head.MasterBlendDate)?.ToString("yyyy-MM-dd"))" />
     <!-- Baseline for the Blend-Qty proportional rescale (spec §3.5.2): the
          Master Blend's own qty at the moment it was picked/cloned, NOT
          whatever Blend Qty currently shows -- ratios are always computed
@@ -172,7 +174,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Master Blend Date</label>
-                                <input type="text" id="MST_BLEND_DATE" value="@(head.R_DOCDT?.ToString("dd/MM/yyyy"))" readonly />
+                                <input type="text" id="MST_BLEND_DATE" value="@(PacketTea.DateText.Parse(head.MasterBlendDate)?.ToString("dd/MM/yyyy") ?? head.R_DOCDT?.ToString("dd/MM/yyyy"))" readonly />
                             </div>
                             <div class="form-col-20">
                                 <label>Final Blend No <span>(*)</span></label>
@@ -387,13 +389,7 @@
     // In-page alert/confirm (see MasterBlendEntry's InsertOrUpdate for why).
     // =========================================================
     function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
-    function showAlert(message, onOk) {
-        $('#appAlertTitle').text('Notice');
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').hide();
-        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
-    }
+    function showAlert(message, onOk) { AppMsg.show(message, onOk); }
     function showConfirm(message, onYes) {
         $('#appAlertTitle').text('Confirm');
         $('#appAlertMessage').text(message || '');
@@ -432,6 +428,8 @@
         return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
     }
     function toIso(dmy) { return dmy || null; }
+    // "2026-09-24" -> "24/09/2026" (string split, so no time-zone shift).
+    function isoToDmy(iso) { var p = (iso || '').substring(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : (iso || ''); }
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
 
@@ -703,6 +701,7 @@
                 $('#R_DOCDT').val((h.DOCDT || '').substring(0, 10));
                 $('#MST_BLEND_NO').val(h.BLEND_NO || '');
                 $('#MST_BLEND_DATE').val(fmtDate(h.BLEND_DATE));
+                $('#MST_BLEND_DATE_ISO').val((h.BLEND_DATE || '').substring(0, 10));
                 $('#masterCloneQty').val(h.BLEND_QTY || 0);
                 $('#BLEND_QTY').val(h.BLEND_QTY || 0);
                 showBalanceHint(h.BLEND_QTY, h.RemainingQty != null ? num(h.BLEND_QTY) - num(h.RemainingQty) : 0, h.RemainingQty);
@@ -894,6 +893,11 @@
         if (!$('#BLEND_MARK').val()) { showAlert('Blend Mark cannot be blank'); return; }
         if (!$('#BLEND_NO').val()) { showAlert('Blend No cannot be blank'); return; }
         if (!$('#BLEND_DATE').val()) { showAlert('Blend Date cannot be blank'); return; }
+        var mstBlendDt = $('#MST_BLEND_DATE_ISO').val();
+        if (mstBlendDt && $('#BLEND_DATE').val() <= mstBlendDt) {
+            showAlert('Final Blend Date (' + isoToDmy($('#BLEND_DATE').val()) + ') must be after the Master Blend Date (' + isoToDmy(mstBlendDt) + ').');
+            return;
+        }
 
         var netWt = num($('#BLEND_CHEST_WT').val()), grossWt = num($('#BLEND_CHEST_GROSSWT').val());
         if (netWt > grossWt) { showAlert("Gross Weight Can't Be Less Than Net Weight Or Blank. Please Check It."); return; }
@@ -1033,5 +1037,6 @@
             .addClass('is-disabled').prop('disabled', true);
     }
 </script>
+@Html.Partial("_RecordLock")
 </body>
 </html>

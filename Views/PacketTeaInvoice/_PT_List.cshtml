@@ -11,7 +11,7 @@
     var encryptedId = PacketTea.Utility.Cryptography.Encrypt(pt.id);
     var urlEncodedId = HttpUtility.UrlEncode(encryptedId);
 
-    <tr class="parent-row" data-id="@pt.id">
+    <tr class="parent-row" data-id="@pt.id"@PacketTea.Utility.RecordLock.RowAttrs(ViewBag.Locks, pt.unit, pt.blno)>
         <td> <input type="checkbox" class="row-check" value="@encryptedId" data-unit="@pt.unit" data-bldt="@pt.bldt" data-blno="@pt.blno" /> </td>
         <td><i class="fa fa-plus toggle-details" data-unit="@pt.unit" data-bldt="@pt.bldt" data-blno="@pt.blno" style="cursor:pointer"></i> </td>
         <td title="@pt.unit">@PacketTea.UnitScope.Name(pt.unit, ViewBag.UnitList as List<PacketTea.Models.PT.UnitOption>)</td>

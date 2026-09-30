@@ -6,6 +6,7 @@ using System.Web.Mvc;
 using System.Web.Optimization;
 using System.Web.Routing;
 using System.Configuration;
+using PacketTea.Utility;
 
 namespace HRMS
 {
@@ -123,36 +124,70 @@ namespace HRMS
             }
         }
 
-        //protected void Application_Error()
-        //{
-        //    Exception exception = Server.GetLastError();
-        //    Response.Clear();
-        //    HttpException httpException = exception as HttpException;
-        //    if (httpException != null)
-        //    {
-        //        string action;
-        //        switch (httpException.GetHttpCode())
-        //        {
-        //            case 404:
-        //                // page not found
-        //                action = "HttpError404";
-        //                break;
-        //            case 500:
-        //                // server error
-        //                action = "HttpError500";
-        //                break;
-        //            default:
-        //                action = "General";
-        //                break;
-        //        }
-        //        // clear error on server
-        //        Server.ClearError();
-        //        //Response.Redirect(String.Format("~/Error/{0}/?message={1}", action, exception.Message));
-        //    }
-        //    else
-        //    {
-        //        Response.Redirect("~/Auth/Login");
-        //    }
-        //}
+        /// <summary>
+        /// Last-chance handler for errors that never reach GlobalExceptionFilter:
+        /// unknown URLs (404), errors in the Application_* events above, HTTP
+        /// modules, request validation, etc. Logs with a reference id and answers
+        /// with JSON (AJAX callers) or a minimal self-contained HTML page.
+        /// </summary>
+        protected void Application_Error(object sender, EventArgs e)
+        {
+            Exception ex = Server.GetLastError();
+            if (ex == null)
+            {
+                return;
+            }
+            if (ex is HttpUnhandledException && ex.InnerException != null)
+            {
+                ex = ex.InnerException;
+            }
+
+            var http = new HttpContextWrapper(Context);
+            RouteData routeData = null;
+            try
+            {
+                routeData = RouteTable.Routes.GetRouteData(http);
+            }
+            catch
+            {
+                // Route lookup is only for the log line.
+            }
+
+            string errorId = ErrorReporting.Log(ex, http, routeData);
+            string message = ErrorReporting.UserMessage(ex, http, errorId);
+            int statusCode = ErrorReporting.GetStatusCode(ex);
+
+            try
+            {
+                Server.ClearError();
+                Response.Clear();
+                Response.TrySkipIisCustomErrors = true;
+                Response.StatusCode = statusCode;
+
+                if (ErrorReporting.WantsJson(http.Request))
+                {
+                    Response.ContentType = "application/json";
+                    Response.Write(Newtonsoft.Json.JsonConvert.SerializeObject(new { success = false, message = message, errorId = errorId }));
+                }
+                else
+                {
+                    string home = VirtualPathUtility.ToAbsolute("~/");
+                    Response.ContentType = "text/html";
+                    Response.Write(
+                        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Error " + statusCode + "</title></head>" +
+                        "<body style=\"font-family:Segoe UI,Arial,sans-serif;background:#0028a9;color:#fff;text-align:center;padding:10vh 16px\">" +
+                        "<h1 style=\"font-size:4rem;font-weight:300;margin:0\">" + statusCode + "</h1>" +
+                        "<p style=\"max-width:640px;margin:16px auto;font-family:Consolas,monospace\">" + HttpUtility.HtmlEncode(message) + "</p>" +
+                        "<p><a style=\"color:#fff\" href=\"javascript:history.back()\">Go Back</a> &nbsp; " +
+                        "<a style=\"color:#fff\" href=\"" + HttpUtility.HtmlAttributeEncode(home) + "\">Home</a></p>" +
+                        "</body></html>");
+                }
+            }
+            catch
+            {
+                // Headers were already sent - nothing more can be written. The
+                // error itself has been logged above.
+            }
+        }
     }
 }

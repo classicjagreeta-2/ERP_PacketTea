@@ -21,7 +21,7 @@
         // Each row's own type, not the toolbar filter's -- the list can show
         // every type when no filter has been applied yet (blendType is null).
         var rowBlendType = string.IsNullOrEmpty(row.BLEND_TYPE) ? currentBlendType : row.BLEND_TYPE;
-        <tr class="data-row">
+        <tr class="data-row"@PacketTea.Utility.RecordLock.RowAttrs(ViewBag.Locks, row.UNIT, row.DOCNO, row.DOCDT, rowBlendType)>
             <td>
                 <input type="checkbox" class="row-check"
                        value="@row.DOCNO"

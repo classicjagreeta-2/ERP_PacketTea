@@ -84,6 +84,8 @@ namespace Finance.Controllers.TEA
 
             var list = response?.Data?.value?.results ?? new List<BLEND_PACKING_DATA>();
             ViewBag.RowCount = response?.Data?.value?.rowCount ?? 0;
+            // Rows another user is editing are greyed out (see Utility/RecordLock.cs).
+            ViewBag.Locks = await RecordLock.LocksAsync("Packing");
 
             if (isChunkRequest)
             {
@@ -216,6 +218,20 @@ namespace Finance.Controllers.TEA
             var editModel = wrapper.head ?? new BLEND_PACKING_DATA();
             editModel.BLEND_TYPE = blendType;
             editModel.Details = wrapper.details ?? new List<T_BLEND_PACKING>();
+
+            // Edit lock: refused while another user has this document open for editing.
+            if (!view)
+            {
+                var lockUnit = !string.IsNullOrEmpty(editModel.UNIT) ? editModel.UNIT : unit;
+                var lockDate = (object)editModel.DOCDT ?? docdt;
+                var lockErr = await RecordLock.AcquireAsync("Packing", lockUnit, docno, lockDate, blendType);
+                if (lockErr != null)
+                {
+                    TempData["toastrError"] = lockErr;
+                    return RedirectToAction("Index", new { blendType });
+                }
+                ViewBag.RecordLock = RecordLock.ClientConfig("Packing", lockUnit, docno, lockDate, blendType);
+            }
             ViewBag.IsEdit = true;
             return View(editModel);
         }
@@ -253,7 +269,16 @@ namespace Finance.Controllers.TEA
                 model.UNIT = string.IsNullOrEmpty(model.UNIT) ? UnitForBlendType(model.BLEND_TYPE) : model.UNIT;
             }
 
+            // Edit lock: an edit may only be saved while no other user holds the document.
+            if (!isNew && model != null)
+            {
+                var lockErr = await RecordLock.AcquireAsync("Packing", model.UNIT, model.DOCNO, model.DOCDT, model.BLEND_TYPE);
+                if (lockErr != null) return Json(new { success = false, message = lockErr });
+            }
+
             var response = await Services.PostAsync<dynamic>("/api/BlendPacking/SaveOrUpdate", model);
+            if (response.IsSuccessStatusCode && !isNew && model != null)
+                await RecordLock.ReleaseAsync("Packing", model.UNIT, model.DOCNO, model.DOCDT, model.BLEND_TYPE);
             return Json(new
             {
                 success = response.IsSuccessStatusCode,
@@ -282,8 +307,19 @@ namespace Finance.Controllers.TEA
                 return RedirectToAction("Index", new { blendType });
             }
 
+            // Not while another user has the document open for editing.
+            var lockUnit = !string.IsNullOrEmpty(unit) ? unit : CurrentUnit;
+            var lockErr = await RecordLock.AcquireAsync("Packing", lockUnit, docno, docdt, blendType);
+            if (lockErr != null)
+            {
+                TempData["toastrError"] = lockErr;
+                return RedirectToAction("Index", new { blendType });
+            }
+
             var response = await Services.PostAsync<dynamic>(
                 $"/api/BlendPacking/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={Uri.EscapeDataString(!string.IsNullOrEmpty(unit) ? unit : CurrentUnit)}", new { });
+            if (!response.IsSuccessStatusCode)
+                await RecordLock.ReleaseAsync("Packing", lockUnit, docno, docdt, blendType);
 
             TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");

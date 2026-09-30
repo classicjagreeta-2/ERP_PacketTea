@@ -93,6 +93,8 @@ namespace Finance.Controllers.TEA
             var wrapper = json != null ? JsonConvert.DeserializeObject<GetByPageResult>(json) : null;
             var list = wrapper?.value?.results ?? new List<SampleDrawDocRow>();
             ViewBag.RowCount = wrapper?.value?.rowCount ?? 0;
+            // Rows another user is editing are greyed out (see Utility/RecordLock.cs).
+            ViewBag.Locks = await RecordLock.LocksAsync("TeaSampleDrawEntry");
 
             if (isChunkRequest)
             {
@@ -228,6 +230,19 @@ namespace Finance.Controllers.TEA
                     TempData["toastrError"] = editErr;
                     return RedirectToAction("Index", new { awrType });
                 }
+
+                // Edit lock: refused while another user has this document open for editing.
+                var lockUnit = !string.IsNullOrEmpty(head?.UNIT) ? head.UNIT : unit;
+                var lockDocNo = !string.IsNullOrEmpty(head?.DOCNO) ? head.DOCNO : docno;
+                var lockDate = (object)head?.DOCDT ?? docdt;
+                var lockType = !string.IsNullOrEmpty(head?.TRAN_CODE) ? head.TRAN_CODE : awrType;
+                var lockErr = await RecordLock.AcquireAsync("TeaSampleDrawEntry", lockUnit, lockDocNo, lockDate, lockType);
+                if (lockErr != null)
+                {
+                    TempData["toastrError"] = lockErr;
+                    return RedirectToAction("Index", new { awrType });
+                }
+                ViewBag.RecordLock = RecordLock.ClientConfig("TeaSampleDrawEntry", lockUnit, lockDocNo, lockDate, lockType);
             }
 
             ViewBag.IsEdit = true;
@@ -287,7 +302,16 @@ namespace Finance.Controllers.TEA
                 r.UNIT = unit;
             }
 
+            // Edit lock: an edit may only be saved while no other user holds the document.
+            if (!isNew && head != null)
+            {
+                var lockErr = await RecordLock.AcquireAsync("TeaSampleDrawEntry", unit, head.DOCNO, head.DOCDT, head.TRAN_CODE);
+                if (lockErr != null) return Json(new { success = false, message = lockErr });
+            }
+
             var response = await Services.PostAsync<dynamic>("/api/TeaSampleDraw/SaveOrUpdate", model);
+            if (response.IsSuccessStatusCode && !isNew && head != null)
+                await RecordLock.ReleaseAsync("TeaSampleDrawEntry", unit, head.DOCNO, head.DOCDT, head.TRAN_CODE);
             return Json(new
             {
                 success = response.IsSuccessStatusCode,
@@ -318,8 +342,18 @@ namespace Finance.Controllers.TEA
                 return RedirectToAction("Index", new { awrType });
             }
 
+            // Not while another user has the document open for editing.
+            var lockErr = await RecordLock.AcquireAsync("TeaSampleDrawEntry", unit, docno, docdt, awrType);
+            if (lockErr != null)
+            {
+                TempData["toastrError"] = lockErr;
+                return RedirectToAction("Index", new { awrType });
+            }
+
             var response = await Services.PostAsync<dynamic>(
                 $"/api/TeaSampleDraw/Delete?docno={Uri.EscapeDataString(docno ?? "")}&docdt={Uri.EscapeDataString(docdt ?? "")}&awrType={Uri.EscapeDataString(awrType ?? "")}&unit={Uri.EscapeDataString(unit.Trim())}", new { });
+            if (!response.IsSuccessStatusCode)
+                await RecordLock.ReleaseAsync("TeaSampleDrawEntry", unit, docno, docdt, awrType);
 
             TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");

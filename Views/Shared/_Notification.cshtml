@@ -36,7 +36,8 @@
         });
        
         @*//toastr["error"]("@TempData["toastrError"] <br/><br/> <button type='button' class='btn btn-warning close-toastr'>CLOSE</button>", "Error")*@
-        toastr["error"]("@TempData["toastrError"] ", "Error")
+        // Shown as the same dialog as every other validation message (Scripts/app-msg.js).
+        AppMsg.show(@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Convert.ToString(TempData["toastrError"]))), null, 'warning');
         @*toastr["error"]("@TempData["toastrError"] <br/><br/> <button type='button' class='btn btn-warning clear' style='width:20%;'>OK</button>", "Error")*@
     </script>
 }

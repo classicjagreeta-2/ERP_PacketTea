@@ -75,6 +75,8 @@ namespace Finance.Controllers.TEA
             var wrapper = json != null ? JsonConvert.DeserializeObject<GetByPageResult>(json) : null;
             var list = wrapper?.value?.results ?? new List<ProdDocRow>();
             ViewBag.RowCount = wrapper?.value?.rowCount ?? 0;
+            // Rows another user is editing are greyed out (see Utility/RecordLock.cs).
+            ViewBag.Locks = await RecordLock.LocksAsync("ProductionEntry");
 
             if (isChunkRequest)
             {
@@ -207,6 +209,16 @@ namespace Finance.Controllers.TEA
                     TempData["toastrError"] = editErr;
                     return RedirectToAction("Index", new { type });
                 }
+
+                // Edit lock: refused while another user has this document open for editing.
+                var lockDocNo = !string.IsNullOrEmpty(editModel.T_PROD.DOCNO) ? editModel.T_PROD.DOCNO : docno;
+                var lockErr = await RecordLock.AcquireAsync("ProductionEntry", recordUnit, lockDocNo);
+                if (lockErr != null)
+                {
+                    TempData["toastrError"] = lockErr;
+                    return RedirectToAction("Index", new { type });
+                }
+                ViewBag.RecordLock = RecordLock.ClientConfig("ProductionEntry", recordUnit, lockDocNo);
             }
 
             ViewBag.IsEdit = true;
@@ -273,7 +285,16 @@ namespace Finance.Controllers.TEA
             if (error != null)
                 return Json(new { success = false, message = error.Message, field = error.Field });
 
+            // Edit lock: an edit may only be saved while no other user holds the document.
+            if (!isNew)
+            {
+                var lockErr = await RecordLock.AcquireAsync("ProductionEntry", postedUnit, p.DOCNO);
+                if (lockErr != null) return Json(new { success = false, message = lockErr });
+            }
+
             var response = await Services.SalesPostAsync<dynamic>("/api/ProductionEntry/SaveOrUpdate", p);
+            if (response.IsSuccessStatusCode && !isNew)
+                await RecordLock.ReleaseAsync("ProductionEntry", postedUnit, p.DOCNO);
             return Json(new
             {
                 success = response.IsSuccessStatusCode,
@@ -304,7 +325,17 @@ namespace Finance.Controllers.TEA
                 return RedirectToAction("Index", new { type });
             }
 
+            // Not while another user has the document open for editing.
+            var lockErr = await RecordLock.AcquireAsync("ProductionEntry", unit, docno);
+            if (lockErr != null)
+            {
+                TempData["toastrError"] = lockErr;
+                return RedirectToAction("Index", new { type });
+            }
+
             var response = await Services.SalesPostAsync<dynamic>($"/api/ProductionEntry/Delete?docno={Uri.EscapeDataString(docno ?? "")}&unit={Uri.EscapeDataString(unit ?? "")}", new { });
+            if (!response.IsSuccessStatusCode)
+                await RecordLock.ReleaseAsync("ProductionEntry", unit, docno);
 
             TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");

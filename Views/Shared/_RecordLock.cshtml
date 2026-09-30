@@ -1,0 +1,95 @@
+@* Edit lock, browser side (see Utility/RecordLock.cs). Include once near the end of <body>
+   on every list and entry screen that has a lock:
+   - List page: rows another user is editing carry data-lockedby (RecordLock.RowAttrs in
+     _ListRows); they are greyed out and Edit / Delete on them is stopped here.
+   - Entry page in Edit mode (the controller set ViewBag.RecordLock = RecordLock.ClientConfig(..)):
+     renews the lock every 60 s and releases it when the page is left (Cancel, Back, closing
+     the tab). If another user took the record over, Save is disabled.
+   The controllers re-check the lock on Save / Delete; this is only the UX. *@
+@{
+    var recordLockCfg = ViewBag.RecordLock as string;
+}
+<style>
+    tr[data-lockedby] > td { background-color: #f2f2f2 !important; color: #808080 !important; }
+    tr[data-lockedby] a[href*="InsertOrUpdate"]:not([href*="view=true"]), tr[data-lockedby] .row-edit, tr[data-lockedby] .row-delete { cursor: not-allowed; opacity: .5; }
+</style>
+<script>
+    (function () {
+        var CFG = @Html.Raw(string.IsNullOrEmpty(recordLockCfg) ? "null" : recordLockCfg);
+        var RENEW_URL = '@Url.Action("Renew", "RecordLock")';
+        var RELEASE_URL = '@Url.Action("Release", "RecordLock")';
+
+        function say(msg, then) {
+            if (typeof showAlert === 'function') showAlert(msg, then);
+            else { alert(msg); if (then) then(); }
+        }
+
+        // ---- list page: no Edit / Delete on a row another user is editing ----
+        function lockedRowFor(el) {
+            if (el.matches('#editBtn, #deleteBtn')) {
+                var rows = Array.prototype.map.call(document.querySelectorAll('.row-check:checked'),
+                    function (c) { return c.closest('tr'); });
+                return rows.filter(function (tr) { return tr && tr.hasAttribute('data-lockedby'); })[0] || null;
+            }
+            var tr = el.closest('tr[data-lockedby]');
+            if (!tr) return null;
+            if (el.matches('.row-edit, .row-delete')) return tr;
+            var href = el.getAttribute('href') || '';
+            return href.indexOf('InsertOrUpdate') >= 0 && href.indexOf('view=true') < 0 ? tr : null;
+        }
+        // Capture phase, so it runs before the screen's own click handlers.
+        document.addEventListener('click', function (e) {
+            var el = e.target && e.target.closest ? e.target.closest('a, button') : null;
+            if (!el) return;
+            var tr = lockedRowFor(el);
+            if (!tr) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            say('This record is currently being edited by ' + tr.getAttribute('data-lockedby') + '. Try again later.');
+        }, true);
+
+        // Old entry screens call this from Back / Cancel; the pagehide handler below does the release.
+        if (typeof window.ReleaseLockAndRedirect !== 'function') {
+            window.ReleaseLockAndRedirect = function () { return true; };
+        }
+
+        // ---- entry page in Edit mode: keep the lock alive, release it on leaving ----
+        if (!CFG || !CFG.docno) return;
+
+        function form() {
+            var f = new FormData();
+            Object.keys(CFG).forEach(function (k) { f.append(k, CFG[k] == null ? '' : CFG[k]); });
+            return f;
+        }
+        var released = false, lost = false;
+
+        function renew() {
+            if (lost) return;
+            fetch(RENEW_URL, { method: 'POST', body: form(), credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (r) {
+                    if (!r || r.ok !== false) return;
+                    lost = true;
+                    clearInterval(timer);
+                    var save = document.getElementById('btnSave');
+                    if (save) { save.disabled = true; save.style.pointerEvents = 'none'; save.style.opacity = '0.5'; }
+                    say((r.message || 'This record is now being edited by another user.') +
+                        ' Your changes can no longer be saved; reopen the record from the list.');
+                })
+                .catch(function () { /* network blip: the next beat tries again */ });
+        }
+        var timer = setInterval(renew, 60000);
+
+        function release() {
+            if (released || lost) return;
+            released = true;
+            if (navigator.sendBeacon) navigator.sendBeacon(RELEASE_URL, form());
+            else fetch(RELEASE_URL, { method: 'POST', body: form(), credentials: 'same-origin', keepalive: true });
+        }
+        window.addEventListener('pagehide', release);
+        // Coming back through the browser's Back/Forward cache: take the lock again.
+        window.addEventListener('pageshow', function (e) {
+            if (e.persisted) { released = false; renew(); }
+        });
+    })();
+</script>

@@ -14,7 +14,7 @@
     {
         rowIndex++;
         var detailId = "rowDetail" + rowIndex;
-        <tr class="data-row">
+        <tr class="data-row"@PacketTea.Utility.RecordLock.RowAttrs(ViewBag.Locks, row.UNIT, row.DOCNO, row.DOCDT, row.BLEND_TYPE)>
             <td>
                 <input type="checkbox" class="row-check"
                        value="@row.DOCNO"

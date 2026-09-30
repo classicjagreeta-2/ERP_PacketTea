@@ -60,6 +60,8 @@ namespace PacketTea.Controllers.PacketTea
             var unitResp = await Services.FinanceGetAsync<List<UNIT>>("/api/MasterUnit/GetAll");
             ViewBag.UnitList = (unitResp?.Data ?? new List<UNIT>())
                 .Select(u => new UnitOption { CODE = u.CODE, NAME = u.NAME }).ToList();
+            // Invoices another user is editing are greyed out (see Utility/RecordLock.cs).
+            ViewBag.Locks = await global::PacketTea.Utility.RecordLock.LocksAsync(LockScreen);
 
             if (Request.IsAjaxRequest())
                 return PartialView("_PT_List", pagedList);
@@ -109,8 +111,20 @@ namespace PacketTea.Controllers.PacketTea
                 unblplt = freeResp
             };
             vm.unbL_HED.flag = vm.unbl.FirstOrDefault()?.flag ?? "";
+
+            // Edit lock (this screen has no View mode, so opening an invoice is editing it):
+            // refused while another user has the same invoice (Unit + Bill No) open.
+            var lockErr = await global::PacketTea.Utility.RecordLock.AcquireAsync(LockScreen, header?.unit, header?.blno);
+            if (lockErr != null)
+            {
+                TempData["toastrError"] = lockErr;
+                return RedirectToAction("Index");
+            }
+            ViewBag.RecordLock = global::PacketTea.Utility.RecordLock.ClientConfig(LockScreen, header?.unit, header?.blno);
             return View(vm);
         }
+
+        private const string LockScreen = "PacketTeaInvoice";
         //public async Task<> getFreeTeaDetailsByItc (string itc)
         //{
         //    var deResponse = await Services.GetAsync<UNBLDATA>($"/api/Invoice/GetByID?id={decryptedId}");
@@ -288,10 +302,24 @@ namespace PacketTea.Controllers.PacketTea
 
                 var json = JsonSerializer.Serialize(model);
 
+                // Edit lock: an existing invoice (Bill No already set) may only be saved while
+                // no other user has it open.
+                var head = model?.unbL_HED;
+                bool isEdit = !string.IsNullOrWhiteSpace(head?.blno);
+                if (isEdit)
+                {
+                    var lockErr = await global::PacketTea.Utility.RecordLock.AcquireAsync(LockScreen, head.unit, head.blno);
+                    if (lockErr != null)
+                        return Json(new { success = false, message = lockErr });
+                }
+
                 var response = await Services.FinancePostAsync<UNBLDATA>(
                     $"/api/Invoice/SaveOrUpdateAll?Stdt1={startYear}&Stdt2={finalYear}",
                     model
                 );
+
+                if (response.IsSuccessStatusCode && isEdit)
+                    await global::PacketTea.Utility.RecordLock.ReleaseAsync(LockScreen, head.unit, head.blno);
 
                 if (response.IsSuccessStatusCode)
                 {

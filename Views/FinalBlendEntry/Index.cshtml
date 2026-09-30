@@ -374,5 +374,6 @@
             $('#blendTable').on('click', 'a.row-delete', function () { var d = $(this).data(); doDelete(d.docno, d.docdt, d.blendtype); });
         });
     </script>
+    @Html.Partial("_RecordLock")
 </body>
 </html>

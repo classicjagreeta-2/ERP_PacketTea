@@ -104,6 +104,8 @@ namespace Finance.Controllers.TEA
             var value = response?.Data?["value"];
             var list = value?["results"]?.ToObject<List<InvDocRow>>() ?? new List<InvDocRow>();
             ViewBag.RowCount = value?["rowCount"]?.Value<int>() ?? 0;
+            // Rows another user is editing are greyed out (see Utility/RecordLock.cs).
+            ViewBag.Locks = await RecordLock.LocksAsync(Screen);
 
             if (isChunkRequest)
             {
@@ -247,6 +249,19 @@ namespace Finance.Controllers.TEA
                     TempData["toastrError"] = editErr;
                     return RedirectToAction(TranActions[tran]);
                 }
+
+                // Edit lock: refused while another user has this document open for editing.
+                // Key (no date): Unit, Doc No, Doc Type, Doc Year.
+                var lockDocNo = !string.IsNullOrEmpty(head.DOCNO) ? head.DOCNO : docno;
+                var lockType = !string.IsNullOrEmpty(head.DOCTYPE) ? head.DOCTYPE : doctype;
+                var lockYear = !string.IsNullOrEmpty(head.DOC_YEAR) ? head.DOC_YEAR : docYear;
+                var lockErr = await RecordLock.AcquireAsync(Screen, docUnit, lockDocNo, null, lockType, lockYear);
+                if (lockErr != null)
+                {
+                    TempData["toastrError"] = lockErr;
+                    return RedirectToAction(TranActions[tran]);
+                }
+                ViewBag.RecordLock = RecordLock.ClientConfig(Screen, docUnit, lockDocNo, null, lockType, lockYear);
             }
 
             ViewBag.IsEdit = true;
@@ -285,7 +300,20 @@ namespace Finance.Controllers.TEA
         {
             var deny = await CheckSaveAllowedAsync(model);
             if (deny != null) return JsonExact(new { success = false, message = deny });
+
+            // Edit lock: an edit may only be saved while no other user holds the document
+            // (checked here only -- Preview writes nothing). Same isNew as CheckSaveAllowedAsync.
+            var head = model.TRN_INV_HEAD;
+            bool isNew = model.IsNew ?? string.IsNullOrWhiteSpace(head.DOCNO);
+            if (!isNew)
+            {
+                var lockErr = await RecordLock.AcquireAsync(Screen, head.UNIT, head.DOCNO, null, head.DOCTYPE, head.DOC_YEAR);
+                if (lockErr != null) return JsonExact(new { success = false, message = lockErr });
+            }
+
             var r = await Services.SalesPostAsync<JObject>("/api/OtherInvoice/SaveOrUpdate", model);
+            if (r.IsSuccessStatusCode && !isNew)
+                await RecordLock.ReleaseAsync(Screen, head.UNIT, head.DOCNO, null, head.DOCTYPE, head.DOC_YEAR);
             return JsonExact(new { success = r.IsSuccessStatusCode, message = r.IsSuccessStatusCode ? "Saved successfully." : (r.Message ?? "Save failed."), data = r.Data });
         }
 
@@ -308,8 +336,18 @@ namespace Finance.Controllers.TEA
                 return RedirectToAction(TranActions[tran]);
             }
 
+            // Not while another user has the document open for editing.
+            var lockErr = await RecordLock.AcquireAsync(Screen, unit, docno, null, doctype, docYear);
+            if (lockErr != null)
+            {
+                TempData["toastrError"] = lockErr;
+                return RedirectToAction(TranActions[tran]);
+            }
+
             var r = await Services.SalesPostAsync<JObject>(
                 $"/api/OtherInvoice/Delete?docYear={E(docYear)}&unit={E(unit)}&doctype={E(doctype)}&docno={E(docno)}", new { });
+            if (!r.IsSuccessStatusCode)
+                await RecordLock.ReleaseAsync(Screen, unit, docno, null, doctype, docYear);
 
             TempData[r.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 r.IsSuccessStatusCode ? $"{docno} deleted." : (r.Message ?? "Delete failed.");

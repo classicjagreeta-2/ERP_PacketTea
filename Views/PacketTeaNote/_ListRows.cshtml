@@ -17,7 +17,7 @@
         rowIndex++;
         var detailId = "rowDetail" + rowIndex;
         var dt = row.DOCDT?.ToString("yyyy-MM-dd");
-        <tr class="data-row">
+        <tr class="data-row"@PacketTea.Utility.RecordLock.RowAttrs(ViewBag.Locks, row.UNIT, row.DOCNO, row.DOCDT, tran)>
             <td>
                 <input type="checkbox" class="row-check" value="@row.DOCNO" data-docdt="@dt" data-unit="@row.UNIT" data-irn="@(string.IsNullOrEmpty(row.IRN) ? "" : "Y")" />
             </td>

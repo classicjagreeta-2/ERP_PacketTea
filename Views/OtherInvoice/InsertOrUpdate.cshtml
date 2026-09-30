@@ -426,14 +426,7 @@
     // Alerts / confirm
     // =========================================================
     function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
-    function showAlert(message, onOk) {
-        $('#appAlertTitle').text('Notice');
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').hide();
-        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
-        setTimeout(function () { $('#appAlertOk').focus(); }, 130);
-    }
+    function showAlert(message, onOk) { AppMsg.show(message, onOk); }
     function showConfirm(message, onYes) {
         $('#appAlertTitle').text('Confirm');
         $('#appAlertMessage').text(message || '');
@@ -1104,5 +1097,6 @@
         else if (!IS_EDIT) $('#PCD').focus();
     });
 </script>
+@Html.Partial("_RecordLock")
 </body>
 </html>

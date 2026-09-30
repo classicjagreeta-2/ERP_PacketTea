@@ -318,14 +318,7 @@
     function esc(s) { return $('<div>').text(s == null ? '' : s).html(); }
 
     function closeAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
-    function showAlert(message, onOk) {
-        $('#appAlertTitle').text('Notice');
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').hide();
-        $('#appAlertOk').off('click').on('click', function () { closeAlert(); if (onOk) onOk(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
-        setTimeout(function () { $('#appAlertOk').focus(); }, 150);
-    }
+    function showAlert(message, onOk) { AppMsg.show(message, onOk); }
     function showConfirm(message, onYes, onNo) {
         $('#appAlertTitle').text('Confirm');
         $('#appAlertMessage').text(message || '');
@@ -978,5 +971,6 @@
     $(window).on('beforeunload pagehide', function () { $('.inputpicker-wrapped-list').hide(); });
 })();
 </script>
+@Html.Partial("_RecordLock")
 </body>
 </html>

@@ -231,6 +231,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controllers\DefaultController.cs" />
+    <Compile Include="Controllers\ErrorController.cs" />
+    <Compile Include="Helper\ErrorReporting.cs" />
+    <Compile Include="Helper\GlobalExceptionFilter.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\AuthController.cs" />
     <Compile Include="Controllers\TEA\BlendEntryController.cs" />
@@ -246,6 +249,7 @@
     <Compile Include="Controllers\TEA\TeaPurchaseNoteController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaNoteController.cs" />
     <Compile Include="Controllers\TEA\PackingController.cs" />
+    <Compile Include="Controllers\TEA\RecordLockController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaInvoiceController.cs" />
     <Compile Include="Controllers\TEA\PacketTeaPurchaseEntryController.cs" />
     <Compile Include="Controllers\MenuController.cs" />
@@ -343,6 +347,7 @@
     <Compile Include="Utility\ClassicExcel.cs" />
     <Compile Include="Utility\DateHelper.cs" />
     <Compile Include="Utility\Helpers.cs" />
+    <Compile Include="Utility\RecordLock.cs" />
     <Compile Include="Utility\ActionFilterSessionCheck.cs" />
     <Compile Include="Utility\Enum.cs" />
     <Compile Include="Utility\Conversion.cs" />
@@ -5405,6 +5410,8 @@
     <Content Include="Scripts\jquery.userTimeout.js" />
     <Content Include="Scripts\jquery.validate.js" />
     <Content Include="Scripts\jquery.validate.min.js" />
+    <Content Include="Scripts\app-msg.js" />
+    <Content Include="Scripts\global-error-handler.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.js" />
     <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
     <Content Include="Scripts\notify.min.js" />
@@ -5499,6 +5506,7 @@
     <Content Include="Views\TeaPurchaseNote\_ListRows.cshtml" />
     <Content Include="Views\MarketReturn\_ListRows.cshtml" />
     <Content Include="Scripts\list-infinite-scroll.js" />
+    <Content Include="Views\Shared\_RecordLock.cshtml" />
     <Content Include="Scripts\list-new-row-pickers.js" />
     <Content Include="Views\Packing\InsertOrUpdate.cshtml" />
     <Content Include="Views\BlendEntry\Index.cshtml" />

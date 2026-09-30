@@ -1,4 +1,5 @@
-﻿using System.Web;
+﻿using PacketTea.Utility;
+using System.Web;
 using System.Web.Mvc;
 
 namespace HRMS
@@ -7,7 +8,9 @@ namespace HRMS
     {
         public static void RegisterGlobalFilters(GlobalFilterCollection filters)
         {
-            filters.Add(new HandleErrorAttribute());
+            // Logs every unhandled action exception and returns JSON to AJAX
+            // callers / the Error view to page requests. See GlobalExceptionFilter.
+            filters.Add(new GlobalExceptionFilter());
         }
     }
 }

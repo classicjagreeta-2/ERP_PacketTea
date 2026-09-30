@@ -12,17 +12,12 @@
 @foreach (var ho in Model)
 {
 
-    var LockedByUserId = ho.lockedbyuserid;
-    var LockedUntil = ho.lockeduntil;
-    //var IsLock = ho.isLock;
-    var currentUser = SessionHelper.GetUser().getUserName;
-    var disabled = !string.IsNullOrEmpty(ho.lockedbyuserid)
-       && ho.lockedbyuserid != currentUser
-       && ho.lockeduntil.HasValue
-       && ho.lockeduntil > DateTime.Now;
-    var disabled1 = !string.IsNullOrEmpty(LockedByUserId) && ho.lockedbyuserid != @SessionHelper.GetUser().getUserName;
-   <tr class="main-row @(disabled ? "disabled-row" : "")"
-       title="@(disabled ? "This record is currently being edited by - " + ho.lockedbyuserid : "")"
+    // Held by another user's edit lock (ViewBag.Locks, see Utility/RecordLock.cs) -- the
+    // API list carries no lock fields, so the old lockedbyuserid test never fired.
+    string lockedBy = PacketTea.Utility.RecordLock.LockedBy(ViewBag.Locks, ho.unit, ho.docno, ho.docdt);
+    bool disabled = lockedBy != null;
+   @* RowAttrs supplies the "Being edited by ..." tooltip and data-lockedby for _RecordLock's click guard. *@
+   <tr class="main-row @(disabled ? "disabled-row" : "")"@PacketTea.Utility.RecordLock.RowAttrs(ViewBag.Locks, ho.unit, ho.docno, ho.docdt)
        data-id="@ho.id"
        data-encrypted-id="@(ho.id.HasValue
         ? PacketTea.Utility.Cryptography.Encrypt(ho.id.Value.ToString())

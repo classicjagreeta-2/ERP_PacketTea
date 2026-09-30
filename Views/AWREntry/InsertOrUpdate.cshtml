@@ -262,13 +262,7 @@
     function esc(s) { return $('<div>').text(s == null ? '' : s).html().replace(/"/g, '&quot;'); }
 
     function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
-    function showAlert(message, onOk) {
-        $('#appAlertTitle').text(L.Notice);
-        $('#appAlertMessage').text(message || '');
-        $('#appAlertCancel').hide();
-        $('#appAlertOk').off('click').on('click', function () { closeAppAlert(); if (onOk) onOk(); });
-        $('#appAlertOverlay, #appAlertBox').fadeIn(120);
-    }
+    function showAlert(message, onOk) { AppMsg.show(message, onOk); }
     function handleLookupFail(jqXHR) {
         if (jqXHR.status === 440) {
             showAlert((jqXHR.responseJSON && jqXHR.responseJSON.message) || L.Msg_SessionExpired,
@@ -554,5 +548,6 @@
         $('#btnSelectStock, #btnAddRow, #btnRemoveRows').css({ opacity: .4, 'pointer-events': 'none' });
     }
 </script>
+@Html.Partial("_RecordLock")
 </body>
 </html>

@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using PacketTea;
 using PacketTea.Models;
 using PacketTea.Models.PT;
+using PacketTea.Utility;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -92,6 +93,8 @@ namespace Finance.Controllers.TEA
             var value = response?.Data?["value"];
             var list = value?["results"]?.ToObject<List<PtNoteRow>>() ?? new List<PtNoteRow>();
             ViewBag.RowCount = value?["rowCount"]?.Value<int>() ?? 0;
+            // Rows another user is editing are greyed out (see Utility/RecordLock.cs).
+            ViewBag.Locks = await RecordLock.LocksAsync(Screen);
 
             if (isChunkRequest)
             {
@@ -223,6 +226,17 @@ namespace Finance.Controllers.TEA
                     TempData["toastrError"] = editErr;
                     return RedirectToAction(TranActions[tran]);
                 }
+
+                // Edit lock: refused while another user has this note open for editing.
+                var lockUnit = !string.IsNullOrEmpty(noteUnit) ? noteUnit : unit;
+                var lockDate = (object)(DateTime?)head?["DOCDT"] ?? docdt;
+                var lockErr = await RecordLock.AcquireAsync(Screen, lockUnit, docno, lockDate, tran);
+                if (lockErr != null)
+                {
+                    TempData["toastrError"] = lockErr;
+                    return RedirectToAction(TranActions[tran]);
+                }
+                ViewBag.RecordLock = RecordLock.ClientConfig(Screen, lockUnit, docno, lockDate, tran);
             }
 
             ViewBag.IsEdit = true;
@@ -260,7 +274,17 @@ namespace Finance.Controllers.TEA
             if (!UnitScope.IsAllowed(model.UNIT, await GetUnitsForUserAsync()))
                 return JsonExact(new { success = false, message = $"You do not have permission for Unit {model.UNIT}." });
 
+            // Edit lock: an edit may only be saved while no other user holds the note.
+            if (!isNew)
+            {
+                var lockErr = await RecordLock.AcquireAsync(Screen, model.UNIT, model.DOCNO, model.DOCDT, model.TRAN_CODE);
+                if (lockErr != null) return JsonExact(new { success = false, message = lockErr });
+            }
+
             var r = await Services.SalesPostAsync<JObject>(Api + "SaveOrUpdate" + (dryRun ? "?dryRun=true" : ""), model);
+            // A dry run rolls back -- the user is still editing, so the lock stays.
+            if (r.IsSuccessStatusCode && !isNew && !dryRun)
+                await RecordLock.ReleaseAsync(Screen, model.UNIT, model.DOCNO, model.DOCDT, model.TRAN_CODE);
             return JsonExact(new
             {
                 success = r.IsSuccessStatusCode,
@@ -288,8 +312,18 @@ namespace Finance.Controllers.TEA
                 return RedirectToAction(TranActions[tran]);
             }
 
+            // Not while another user has the note open for editing.
+            var lockErr = await RecordLock.AcquireAsync(Screen, unit, docno, docdt, tran);
+            if (lockErr != null)
+            {
+                TempData["toastrError"] = lockErr;
+                return RedirectToAction(TranActions[tran]);
+            }
+
             var r = await Services.SalesPostAsync<JObject>(
                 $"{Api}Delete?tran={tran}&unit={E(unit)}&docno={E(docno)}&docdt={E(docdt)}", new { });
+            if (!r.IsSuccessStatusCode)
+                await RecordLock.ReleaseAsync(Screen, unit, docno, docdt, tran);
             TempData[r.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 r.IsSuccessStatusCode ? $"{docno} deleted." : (r.Message ?? "Delete failed.");
             return RedirectToAction(TranActions[tran]);

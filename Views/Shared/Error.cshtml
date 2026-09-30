@@ -1,202 +1,110 @@
-﻿<!DOCTYPE html>
+@model System.Web.Mvc.HandleErrorInfo
+@{
+    // Rendered by GlobalExceptionFilter. No layout on purpose: _Layout reads
+    // session/menu data, and if that is what failed the error page would fail too.
+    Layout = null;
+
+    int statusCode = ViewData["StatusCode"] as int? ?? 500;
+    string errorMessage = ViewData["ErrorMessage"] as string ?? "An unexpected error occurred while processing your request.";
+    string errorId = ViewData["ErrorId"] as string;
+    string heading = statusCode == 404 ? "Page not found" : "Something went wrong";
+}
+<!DOCTYPE html>
 <html>
 <head>
-    <meta name="viewport" content="width=device-width" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Error @statusCode</title>
     <style>
-    *,
-    *::after,
-    *::before {
-        box-sizing: border-box;
-    }
-
-    html,
-    body {
-        align-items: center;
-        background: linear-gradient(#003eff, #0028a9);
-        color: white;
-        display: flex;
-        font-family: "Poiret One", sans-serif;
-        font-size: 2rem;
-        height: 100vh;
-        justify-content: center;
-        margin: 0;
-        padding: 0;
-    }
-
-    .box {
-        height: 100px;
-        margin: 0 10px;
-        overflow: hidden;
-        position: relative;
-        transform: rotateZ(-90deg) scale(1.05);
-        width: 100px;
-    }
-
-    .box:nth-of-type(2) {
-        left: -28px;
-        transform: rotateX(180deg) rotateY(180deg) rotateZ(-90deg) scale(1.05);
-    }
-
-    .box span {
-        animation: loader 4.8s infinite both;
-        display: block;
-        height: 100%;
-        position: absolute;
-        width: 100%;
-    }
-
-    .box span:nth-child(1) {
-        animation-delay: 0.2s;
-    }
-
-    .box span:nth-child(2) {
-        animation-delay: 0.4s;
-    }
-
-    .box span:nth-child(3) {
-        animation-delay: 0.6s;
-    }
-
-    .box span:nth-child(4) {
-        animation-delay: 0.8s;
-    }
-
-    .box span:nth-child(5) {
-        animation-delay: 1s;
-    }
-
-    .box span:nth-child(6) {
-        animation-delay: 1.2s;
-    }
-
-    .box span::after {
-        background: #fff;
-        border-radius: 50%;
-        content: "";
-        left: 50%;
-        padding: 6px;
-        position: absolute;
-        top: 0;
-        transform: translateX(-50%);
-    }
-
-    keyframes loader {
-        0% {
-            opacity: 0;
-            transform: rotate(180deg);
-            animation-timing-function: ease-out;
+        *, *::after, *::before {
+            box-sizing: border-box;
         }
 
-        5% {
-            opacity: 1;
-            transform: rotate(300deg);
-            animation-timing-function: linear;
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
         }
 
-        30% {
-            transform: rotate(420deg);
-            animation-timing-function: ease-in-out;
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(#003eff, #0028a9);
+            color: #fff;
+            font-family: "Segoe UI", Arial, sans-serif;
         }
 
-        35% {
-            transform: rotate(625deg);
-            animation-timing-function: linear;
+        .error-card {
+            max-width: 640px;
+            width: calc(100% - 32px);
+            text-align: center;
+            padding: 32px 16px;
         }
 
-        70% {
-            transform: rotate(800deg);
-            animation-timing-function: ease-out;
-            opacity: 1;
+        .error-code {
+            font-size: 5rem;
+            font-weight: 300;
+            margin: 0;
+            text-shadow: 0 0 10px #fff;
+            animation: blink 4.8s infinite both;
         }
 
-        75% {
-            opacity: 0;
-            transform: rotate(900deg);
-            animation-timing-function: ease-out;
+        .error-heading {
+            font-size: 1.5rem;
+            margin: 8px 0 16px;
         }
 
-        100% {
-            opacity: 0;
-            transform: rotate(900deg);
-        }
-    }
-
-    h1 {
-        text-shadow: 0 0 10px #fff;
-        animation: blink 4.8s infinite both;
-    }
-
-    h1:nth-of-type(2) {
-        animation: none;
-        letter-spacing: -14px;
-        margin: 0 auto;
-        opacity: 0.1;
-        padding-left: 41px;
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-    }
-
-    keyframes blink {
-        0%, 50%, 100% {
-            opacity: 0.2;
+        .error-message {
+            font-family: Consolas, monospace;
+            font-size: .95rem;
+            background: rgba(0, 0, 0, .25);
+            border-radius: 6px;
+            padding: 12px 16px;
+            word-break: break-word;
         }
 
-        25%, 75% {
-            opacity: 1;
+        .error-ref {
+            font-size: .85rem;
+            opacity: .85;
+            margin-top: 12px;
         }
-    }
 
-    h5,
-    p {
-        position: absolute;
-        font-family: monospace;
-    }
+        .error-actions a {
+            display: inline-block;
+            margin: 20px 8px 0;
+            padding: 8px 20px;
+            color: #0028a9;
+            background: #fff;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 600;
+        }
 
-    h5 {
-        top: 10%;
-        font-size: 0.4em;
-    }
+        @@keyframes blink {
+            0%, 50%, 100% {
+                opacity: .4;
+            }
 
-    p {
-        font-size: 0.3em;
-        bottom: 10%;
-        width: 50%;
-        text-align: center;
-    }
-
-    p a {
-        color: cyan;
-    }
+            25%, 75% {
+                opacity: 1;
+            }
+        }
     </style>
-
-    <title>Error</title>
 </head>
 <body>
-    <hgroup>
-        <h1>Error.</h1>
-        <h2>An error occurred while processing your request.</h2>
-    </hgroup>
-    
-
-    <h5>Internal Server error !</h5>
-    <h1>5</h1>
-    <h1>00</h1>
-    <div class="box">
-        <span></span><span></span>
-        <span></span><span></span>
-        <span></span>
+    <div class="error-card">
+        <h1 class="error-code">@statusCode</h1>
+        <div class="error-heading">@heading</div>
+        <div class="error-message">@errorMessage</div>
+        @if (!string.IsNullOrEmpty(errorId))
+        {
+            <div class="error-ref">Please quote reference <strong>@errorId</strong> when reporting this problem.</div>
+        }
+        <div class="error-actions">
+            <a href="javascript:history.back()">Go Back</a>
+            <a href="@Url.Content("~/")">Home</a>
+        </div>
     </div>
-    <div class="box">
-        <span></span><span></span>
-        <span></span><span></span>
-        <span></span>
-    </div>
-    <p>
-        We're unable to find out what's happening! We suggest you to
-        <br />
-        <a href="#">Go Back</a>
-        or visit here later.
-    </p>
 </body>
 </html>

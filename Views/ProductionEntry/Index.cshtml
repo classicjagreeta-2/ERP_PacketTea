@@ -177,13 +177,7 @@
         // native alert()/confirm(), which shows as "localhost says...".
         $('#appAlertOverlay, #appAlertBox').appendTo(document.body);
         function closeAppAlert() { $('#appAlertOverlay, #appAlertBox').fadeOut(120); }
-        function showAlert(message) {
-            $('#appAlertTitle').text('Notice');
-            $('#appAlertMessage').text(message || '');
-            $('#appAlertCancel').hide();
-            $('#appAlertOk').off('click').on('click', closeAppAlert);
-            $('#appAlertOverlay, #appAlertBox').fadeIn(120);
-        }
+        function showAlert(message) { AppMsg.show(message); }
         function showConfirm(message, onYes) {
             $('#appAlertTitle').text('Confirm');
             $('#appAlertMessage').text(message || '');
@@ -370,5 +364,6 @@
             });
         });
     </script>
+    @Html.Partial("_RecordLock")
 </body>
 </html>

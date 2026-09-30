@@ -143,6 +143,8 @@ namespace Finance.Controllers.TEA
             if (!(response?.IsSuccessStatusCode ?? false))
                 error = !string.IsNullOrEmpty(response?.Message) ? response.Message : $"API returned {response?.StatusCode}";
             ViewBag.RowCount = rowCount;
+            // Rows another user is editing are greyed out (see Utility/RecordLock.cs).
+            ViewBag.Locks = await RecordLock.LocksAsync("MasterBlendEntry");
 
             if (isChunkRequest)
             {
@@ -279,6 +281,23 @@ namespace Finance.Controllers.TEA
                 T_TEA_BLEND = wrapper.head,
                 T_TEA_BLEND_DET = wrapper.details ?? new List<T_TEA_BLEND_DET>()
             };
+
+            // Edit lock: refused while another user has this document open for editing.
+            if (!view)
+            {
+                var head = wrapper.head;
+                var lockUnit = !string.IsNullOrEmpty(head?.UNIT) ? head.UNIT : unit;
+                var lockDocNo = !string.IsNullOrEmpty(head?.DOCNO) ? head.DOCNO : docno;
+                var lockDate = (object)head?.DOCDT ?? docdt;
+                var lockType = !string.IsNullOrEmpty(head?.BLEND_TYPE) ? head.BLEND_TYPE : blendType;
+                var lockErr = await RecordLock.AcquireAsync("MasterBlendEntry", lockUnit, lockDocNo, lockDate, lockType);
+                if (lockErr != null)
+                {
+                    TempData["toastrError"] = lockErr;
+                    return RedirectToAction("Index", new { blendType });
+                }
+                ViewBag.RecordLock = RecordLock.ClientConfig("MasterBlendEntry", lockUnit, lockDocNo, lockDate, lockType);
+            }
             ViewBag.IsEdit = true;
             return View(editModel);
         }
@@ -318,7 +337,17 @@ namespace Finance.Controllers.TEA
                     : model.T_TEA_BLEND.UNIT;
             }
 
+            // Edit lock: an edit may only be saved while no other user holds the document.
+            var h = model?.T_TEA_BLEND;
+            if (!isNew && h != null)
+            {
+                var lockErr = await RecordLock.AcquireAsync("MasterBlendEntry", h.UNIT, h.DOCNO, h.DOCDT, h.BLEND_TYPE);
+                if (lockErr != null) return Json(new { success = false, message = lockErr });
+            }
+
             var response = await Services.PostAsync<dynamic>("/api/TeaBlend/SaveOrUpdate", model);
+            if (response.IsSuccessStatusCode && !isNew && h != null)
+                await RecordLock.ReleaseAsync("MasterBlendEntry", h.UNIT, h.DOCNO, h.DOCDT, h.BLEND_TYPE);
             return Json(new
             {
                 success = response.IsSuccessStatusCode,
@@ -340,8 +369,19 @@ namespace Finance.Controllers.TEA
                 return RedirectToAction("Index", new { blendType });
             }
 
+            // Not while another user has the document open for editing (the list posts no
+            // Unit here; the API treats a blank Unit as any unit for this screen).
+            var lockErr = await RecordLock.AcquireAsync("MasterBlendEntry", "", docno, docdt, blendType);
+            if (lockErr != null)
+            {
+                TempData["toastrError"] = lockErr;
+                return RedirectToAction("Index", new { blendType });
+            }
+
             var response = await Services.PostAsync<dynamic>(
                 $"/api/TeaBlend/Delete?docno={docno}&docdt={docdt}&blendType={blendType}&unit={CurrentUnit}", new { });
+            if (!response.IsSuccessStatusCode)
+                await RecordLock.ReleaseAsync("MasterBlendEntry", "", docno, docdt, blendType);
 
             TempData[response.IsSuccessStatusCode ? "toastrSuccess" : "toastrError"] =
                 response.IsSuccessStatusCode ? "Deleted successfully." : (response.Message ?? "Delete failed.");
