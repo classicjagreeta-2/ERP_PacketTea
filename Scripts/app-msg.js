@@ -30,6 +30,7 @@
         '.am-title{margin:0;font-size:17px;font-weight:600;color:#111;line-height:1.2}' +
         '.am-msg{color:#111;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow-y:auto}' +
         '.am-msg b{font-weight:700}' +
+        '.am-user{margin-top:10px;font-size:12px;color:#666}' +
         '.am-actions{display:flex;justify-content:flex-end;margin-top:14px}' +
         '.am-btn{border:0;border-radius:4px;padding:6px 16px;min-width:70px;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;background:var(--am);color:#fff}' +
         '.am-btn:hover,.am-btn:focus{background:var(--am-dark);outline:none;box-shadow:0 0 0 3px rgba(232,87,74,.3)}';
@@ -72,6 +73,13 @@
             '<div class="am-msg"></div><div class="am-actions"><button type="button" class="am-btn">Okay</button></div></div>';
         ov.querySelector('.am-title').textContent = title || titleOf(text, kind);
         ov.querySelector('.am-msg').innerHTML = format(text);
+        if (kind !== 'success' && window.AppUserName) {
+            var who = document.createElement('div');
+            who.className = 'am-user';
+            who.innerHTML = 'User: <b></b>';
+            who.querySelector('b').textContent = window.AppUserName;
+            ov.querySelector('.am-msg').parentNode.insertBefore(who, ov.querySelector('.am-actions'));
+        }
         var ok = ov.querySelector('.am-btn');
 
         function close() {

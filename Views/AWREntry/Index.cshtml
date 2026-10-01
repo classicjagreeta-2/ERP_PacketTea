@@ -1,10 +1,7 @@
 @model List<Finance.Controllers.TEA.AWRDocRow>
-@using PacketTea.Utility
-@* Texts are localized (AwrText -> Resources\AWR*.resx); the language is picked in the toolbar
-   (_LanguagePicker). Data values (unit / type / party names) are shown as stored. *@
 
 @{
-    ViewBag.Title = AwrText.T("Title");
+    ViewBag.Title = "AWR Entry";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var awrTypes = (Dictionary<string, string>)ViewBag.AWRTypes;
     var unitList = (List<PacketTea.Models.PT.UnitOption>)ViewBag.UnitList ?? new List<PacketTea.Models.PT.UnitOption>();
@@ -12,10 +9,8 @@
 
 @{
     // Same server-side sortable-header pattern as Master Blend Entry's Index.cshtml.
-    Func<string, string, MvcHtmlString> SortTh = (key, text) =>
+    Func<string, string, MvcHtmlString> SortTh = (key, label) =>
     {
-        var label = HttpUtility.HtmlEncode(text);
-        var sortTitle = HttpUtility.HtmlEncode(AwrText.F("SortBy", text));
         var cur = (string)(ViewBag.SortBy ?? "");
         var dir = (string)(ViewBag.SortDir ?? "");
         var active = string.Equals(cur, key, StringComparison.OrdinalIgnoreCase);
@@ -25,14 +20,14 @@
         var down = (active && dir != "asc") ? "feather icon-arrow-down on" : "feather icon-arrow-down";
         return MvcHtmlString.Create(
             "<th class=\"" + thClass + "\" data-sort=\"" + key + "\" data-dir=\"" + next +
-            "\" title=\"" + sortTitle + "\"><span class=\"th-label\">" + label +
+            "\" title=\"Sort by " + label + "\"><span class=\"th-label\">" + label +
             "</span><span class=\"sort-arrows\"><i class=\"" + up + "\"></i><i class=\"" +
             down + "\"></i></span></th>");
     };
 }
 
 <!doctype html>
-<html lang="@UiLanguage.Current">
+<html lang="en">
 <head>
     <link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
@@ -86,48 +81,47 @@
     <div class="general-container">
         <div class="action-btns">
             <ul>
-                <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> @AwrText.T("Back")</a></li>
+                <li><a href="@Url.Action("Index", "Menu")"><i class="fa fa-arrow-left"></i> Back</a></li>
                 <li>
                     <a href="javascript:void(0)" id="btnNew"
                        style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Add ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
-                        <i class="fa fa-plus"></i> @AwrText.T("New")
+                        <i class="fa fa-plus"></i> New
                     </a>
                 </li>
                 <li>
                     <a href="javascript:void(0)" id="editBtn"
                        style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Edit ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
-                        <i class="fa fa-pencil"></i> @AwrText.T("Edit")
+                        <i class="fa fa-pencil"></i> Edit
                     </a>
                 </li>
                 <li>
                     <a href="javascript:void(0)" id="deleteBtn"
                        style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.Delete ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
-                        <i class="fa fa-trash-o"></i> @AwrText.T("Delete")
+                        <i class="fa fa-trash-o"></i> Delete
                     </a>
                 </li>
                 <li>
                     <a href="javascript:void(0)" id="viewBtn"
                        style="@(!((ViewBag.Permission as PacketTea.Helpers.AEDV)?.View ?? false) ? "pointer-events:none; opacity:0.5;" : "")">
-                        <i class="fa fa-eye"></i> @AwrText.T("View")
+                        <i class="fa fa-eye"></i> View
                     </a>
                 </li>
                 <li>
-                    <a href="javascript:void(0)" id="linesBtn" title="@AwrText.T("LinesTitle")">
-                        <i class="fa fa-list"></i> @AwrText.T("Lines")
+                    <a href="javascript:void(0)" id="linesBtn" title="Show the ticked row's lines">
+                        <i class="fa fa-list"></i> Lines
                     </a>
                 </li>
                 <li style="margin-left:auto">
-                    <span class="list-badge">@AwrText.T("ListBadge")</span>
+                    <span class="list-badge">LIST</span>
                 </li>
-                @Html.Partial("_LanguagePicker")
             </ul>
         </div>
 
-        <div class="title-heading">@AwrText.T("Title")</div>
+        <div class="title-heading">AWR Entry</div>
 
         <div style="display: flex; justify-content: flex-end; width: 100%; margin-bottom: 15px;">
             <div style="position: relative; width: 250px;">
-                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="@AwrText.T("SearchPlaceholder")"
+                <input type="text" id="searchInput" value="@ViewBag.CurrentFilter" placeholder="Search Doc No / AWR No"
                        style="width: 100%; padding: 6px 40px 6px 10px; border: 1px solid #ccc; border-radius: 4px;" />
                 <i class="fa fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #333;"></i>
             </div>
@@ -139,22 +133,22 @@
                     <tr>
                         <th style="width:26px;"></th>
                         <th style="width:26px;"></th>
-                        <th>@AwrText.T("Col_Unit")</th>
-                        @SortTh("DOCNO", AwrText.T("Col_DocNo"))
-                        @SortTh("AWRDATE", AwrText.T("Col_AwrDate"))
-                        <th>@AwrText.T("Col_ArrivalDate")</th>
-                        <th>@AwrText.T("Col_Warehouse")</th>
-                        <th>@AwrText.T("Col_SalesCentre")</th>
-                        <th style="text-align:right;">@AwrText.T("Col_TotalBag")</th>
-                        <th style="text-align:right;">@AwrText.T("Col_TotalNetWt")</th>
-                        <th style="text-align:right;">@AwrText.T("Col_TotalBagRcvd")</th>
+                        <th>Unit</th>
+                        @SortTh("DOCNO", "Doc No")
+                        @SortTh("AWRDATE", "AWR Date")
+                        <th>Arrival Date</th>
+                        <th>Warehouse</th>
+                        <th>Sales Centre</th>
+                        <th style="text-align:right;">Total Bag</th>
+                        <th style="text-align:right;">Total Net Wt</th>
+                        <th style="text-align:right;">Total Bag Rcvd</th>
                     </tr>
                 </thead>
                 <tbody id="listBody">
                     @Html.Partial("_ListRows", Model)
                     @if (Model == null || Model.Count == 0)
                     {
-                        <tr><td colspan="11" style="text-align:center;">@AwrText.T("NoRecords")</td></tr>
+                        <tr><td colspan="11" style="text-align:center;">No records found</td></tr>
                     }
                 </tbody>
             </table>
@@ -163,23 +157,14 @@
             int pageSize = (int)ViewBag.PageSize;
             int rowCount = (int)ViewBag.RowCount;
         }
-        <div id="listLoading" style="display:none;text-align:center;padding:8px 0 0;color:#6b7280;font-size:12.5px;">@AwrText.T("Loading")</div>
-        @* "Showing {0} of {1}": {0} is the live count span the infinite-scroll loader updates. *@
-        <div class="dataTables_info">@Html.Raw(string.Format(HttpUtility.HtmlEncode(AwrText.T("Showing")),
-            "<span id=\"shownCount\">" + (Model?.Count ?? 0) + "</span>", rowCount))</div>
+        <div id="listLoading" style="display:none;text-align:center;padding:8px 0 0;color:#6b7280;font-size:12.5px;">Loading...</div>
+        <div class="dataTables_info">Showing <span id="shownCount">@(Model?.Count ?? 0)</span> of @rowCount</div>
     </div>
 
     <script src="~/Controllers/Test/assets/js/jquery.inputpicker.js"></script>
     <script src="~/Scripts/list-new-row-pickers.js?v=@System.IO.File.GetLastWriteTimeUtc(Server.MapPath("~/Scripts/list-new-row-pickers.js")).Ticks"></script>
     <script src="~/Scripts/list-infinite-scroll.js"></script>
     <script>
-        // Localized texts for this script (Resources\AWR*.resx, current UI language).
-        var L = @Html.Raw(AwrText.Json("UnableLoadLines", "NoLines", "SelectUnit", "SelectAwrType", "OpenAwr",
-            "Msg_NoUnit", "Msg_SelectUnitFirst", "Msg_SelectTypeFirst", "Msg_SelectRecord", "Msg_SelectOnlyOne",
-            "Act_Edit", "Act_Delete", "Act_View", "Act_ViewLines", "Msg_ConfirmDelete", "Pick_Code", "Pick_Name"));
-        function fmt(s) { var a = arguments; return String(s).replace(/\{(\d+)\}/g, function (m, i) { return a[+i + 1] != null ? a[+i + 1] : ''; }); }
-        function esc(s) { return $('<div>').text(s).html().replace(/"/g, '&quot;'); }
-
         $(function () {
             var searchTimer;
             $('#searchInput').on('input', function () {
@@ -227,12 +212,12 @@
                     unit: $detail.data('unit')
                 }).done(function (r) {
                     if (!r || !r.success) {
-                        $body.html('<tr><td colspan="9" style="text-align:center;color:#666;">' + esc(L.UnableLoadLines) + '</td></tr>');
+                        $body.html('<tr><td colspan="9" style="text-align:center;color:#666;">Unable to load lines.</td></tr>');
                         return;
                     }
                     var items = r.rows || [];
                     if (items.length === 0) {
-                        $body.html('<tr><td colspan="9" style="text-align:center;color:#666;">' + esc(L.NoLines) + '</td></tr>');
+                        $body.html('<tr><td colspan="9" style="text-align:center;color:#666;">No lines</td></tr>');
                         return;
                     }
                     $body.empty();
@@ -251,7 +236,7 @@
                         ).appendTo($body);
                     });
                 }).fail(function () {
-                    $body.html('<tr><td colspan="9" style="text-align:center;color:#666;">' + esc(L.UnableLoadLines) + '</td></tr>');
+                    $body.html('<tr><td colspan="9" style="text-align:center;color:#666;">Unable to load lines.</td></tr>');
                 });
             }
             function closeDetail($btn) {
@@ -273,11 +258,11 @@
 
             function buildNewRow() {
                 return '<tr id="newUnitRow" class="new-entry-row">' +
-                    '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="' + esc(L.OpenAwr) + '"></i></td>' +
+                    '<td colspan="2" style="text-align:center;"><i class="fa fa-pencil go-new" title="Open AWR Entry"></i></td>' +
                     // Unit picker spans 3 columns (Doc No / AWR Date / Arrival Date) so the "CODE - Name" text isn't
                     // clipped; the table's own columns are untouched.
-                    '<td colspan="3"><input type="text" id="newRowUnit" class="new-row-pick" placeholder="' + esc(L.SelectUnit) + '" autocomplete="off" /></td>' +
-                    '<td colspan="2"><input type="text" id="newRowPacketType" class="new-row-pick" placeholder="' + esc(L.SelectAwrType) + '" autocomplete="off" /></td>' +
+                    '<td colspan="3"><input type="text" id="newRowUnit" class="new-row-pick" placeholder="Select Unit" autocomplete="off" /></td>' +
+                    '<td colspan="2"><input type="text" id="newRowPacketType" class="new-row-pick" placeholder="Select AWR Type" autocomplete="off" /></td>' +
                     '<td colspan="4"></td>' +
                     '</tr>';
             }
@@ -289,9 +274,9 @@
 
             $('#btnNew').on('click', function () {
                 if ($('#newUnitRow').length) return;
-                if (!UNIT_LIST.length) { alert(L.Msg_NoUnit); return; }
+                if (!UNIT_LIST.length) { alert('No unit is available to you (no Unit is linked to your user).'); return; }
                 $('#listBody').prepend(buildNewRow());
-                initNewRowPickers({ units: UNIT_LIST, types: AWR_TYPES, textField: 'CODE', labels: { code: L.Pick_Code, name: L.Pick_Name } });   // AWR keeps showing codes; also pre-selects a single Unit
+                initNewRowPickers({ units: UNIT_LIST, types: AWR_TYPES, textField: 'CODE' });   // AWR keeps showing codes; also pre-selects a single Unit
                 refreshGoNewState();
             });
 
@@ -299,8 +284,8 @@
 
             $('#awrTable').on('click', '.go-new', function () {
                 var unit = $('#newRowUnit').val(), awrType = $('#newRowPacketType').val();
-                if (!unit) { alert(L.Msg_SelectUnitFirst); return; }
-                if (!awrType) { alert(L.Msg_SelectTypeFirst); return; }
+                if (!unit) { alert('Please select Unit first'); return; }
+                if (!awrType) { alert('Please select AWR Type first'); return; }
                 window.location.href = '@Url.Action("InsertOrUpdate", "AWREntry")'
                     + '?unit=' + encodeURIComponent(unit)
                     + '&awrType=' + encodeURIComponent(awrType);
@@ -308,11 +293,10 @@
 
             // Row selection is checkboxes (so more than one can be ticked at once) -- Edit/View/
             // Delete/Lines only make sense against exactly one row.
-            // `action` is the already-localized phrase (L.Act_*), e.g. "to edit".
             function getSingleChecked(action) {
                 var $c = $('.row-check:checked');
-                if ($c.length === 0) { alert(fmt(L.Msg_SelectRecord, action)); return null; }
-                if ($c.length > 1) { alert(fmt(L.Msg_SelectOnlyOne, action)); return null; }
+                if ($c.length === 0) { alert('Please select a record to ' + action + '.'); return null; }
+                if ($c.length > 1) { alert('Please select only one record to ' + action + '.'); return null; }
                 return $c;
             }
 
@@ -337,7 +321,7 @@
             }
 
             function doDelete(docno, awrDate, awrType, unit) {
-                if (!confirm(fmt(L.Msg_ConfirmDelete, docno))) return;
+                if (!confirm('Are you sure you want to delete AWR against Doc No ' + docno + ' ?')) return;
 
                 $('<form>', { method: 'POST', action: '@Url.Action("Delete", "AWREntry")' })
                     .append($('<input>', { type: 'hidden', name: 'docno', value: docno }))
@@ -348,23 +332,23 @@
             }
 
             $('#editBtn').on('click', function () {
-                var $c = getSingleChecked(L.Act_Edit);
+                var $c = getSingleChecked('edit');
                 if ($c) goEdit($c.val(), $c.data('awrdate'), $c.data('awrtype'), $c.data('unit'));
             });
 
             $('#deleteBtn').on('click', function () {
-                var $c = getSingleChecked(L.Act_Delete);
+                var $c = getSingleChecked('delete');
                 if ($c) doDelete($c.val(), $c.data('awrdate'), $c.data('awrtype'), $c.data('unit'));
             });
 
             $('#viewBtn').on('click', function () {
-                var $c = getSingleChecked(L.Act_View);
+                var $c = getSingleChecked('view');
                 if ($c) goView($c.val(), $c.data('awrdate'), $c.data('awrtype'), $c.data('unit'));
             });
 
             // Lines: open the ticked row's "+" expand panel (its AWR lines) and scroll it into view.
             $('#linesBtn').on('click', function () {
-                var $c = getSingleChecked(L.Act_ViewLines);
+                var $c = getSingleChecked('view its lines');
                 if (!$c) return;
                 var $btn = $c.closest('tr').find('.row-expand-btn');
                 if ($btn.hasClass('fa-plus')) $btn.trigger('click');

@@ -20,6 +20,7 @@
     .bx-title { margin: 0; font-size: 17px; font-weight: 600; color: #111; line-height: 1.2; }
     .bx-msg { color: #111; font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow-y: auto; }
     .bx-msg b { font-weight: 700; }
+    .bx-user { margin-top: 10px; font-size: 12px; color: #666; }
     .bx-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
     .bx-btn { border: 0; border-radius: 4px; padding: 6px 16px; min-width: 70px; font-size: 13px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; cursor: pointer; }
     .bx-btn.bx-ok { background: var(--bx-accent); color: #fff; }
@@ -57,6 +58,13 @@
                 '<div class="bx-msg"></div><div class="bx-actions"></div></div>';
             ov.querySelector('.bx-title').textContent = o.title;
             ov.querySelector('.bx-msg').innerHTML = format(message);
+            if (kind !== 'success' && o.icon !== 'confirm' && window.AppUserName) {
+                var who = document.createElement('div');
+                who.className = 'bx-user';
+                who.innerHTML = 'User: <b></b>';
+                who.querySelector('b').textContent = window.AppUserName;
+                ov.querySelector('.bx-box').insertBefore(who, ov.querySelector('.bx-actions'));
+            }
             var actions = ov.querySelector('.bx-actions');
 
             function close(cb) {

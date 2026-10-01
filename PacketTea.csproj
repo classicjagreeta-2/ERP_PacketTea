@@ -340,8 +340,6 @@
     <Compile Include="SessionExpireFilterAttribute.cs" />
     <Compile Include="UnAuthorize.cs" />
     <Compile Include="Utility\AuthAttribute.cs" />
-    <Compile Include="Utility\CultureCatalog.cs" />
-    <Compile Include="Utility\UiLanguage.cs" />
     <Compile Include="Utility\Cryptography.cs" />
     <Compile Include="Utility\CrystalPdf.cs" />
     <Compile Include="Utility\ClassicExcel.cs" />
@@ -5500,8 +5498,6 @@
     <Content Include="Views\Packing\Index.cshtml" />
     <Content Include="Views\Packing\_ListRows.cshtml" />
     <Content Include="Views\AWREntry\_ListRows.cshtml" />
-    <Content Include="Views\AWREntry\_LanguagePicker.cshtml" />
-    <Content Include="Views\Shared\_CultureSwitcher.cshtml" />
     <Content Include="Views\TeaSampleDrawEntry\_ListRows.cshtml" />
     <Content Include="Views\TeaPurchaseNote\_ListRows.cshtml" />
     <Content Include="Views\MarketReturn\_ListRows.cshtml" />
@@ -5533,15 +5529,6 @@
     <Content Include="Views\TransferMemo\_VoucherView.cshtml" />
     <Content Include="Views\Default\Index.cshtml" />
     <Content Include="Views\Default\Index2.cshtml" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\AWR.resx" />
-    <EmbeddedResource Include="Resources\AWR.hi.resx" />
-    <EmbeddedResource Include="Resources\AWR.bn.resx" />
-    <EmbeddedResource Include="Resources\AWR.fr.resx" />
-    <EmbeddedResource Include="Resources\AWR.es.resx" />
-    <EmbeddedResource Include="Resources\AWR.de.resx" />
-    <EmbeddedResource Include="Resources\AWR.sw.resx" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

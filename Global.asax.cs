@@ -42,7 +42,6 @@ namespace HRMS
 
         protected void Application_BeginRequest(object sender, EventArgs e)
  {
-     PacketTea.Utility.UiLanguage.Apply(new HttpRequestWrapper(HttpContext.Current.Request));
      string user = HttpContext.Current.Request.QueryString["MId"];
      var url = HttpContext.Current.Request.Url;
      string subFolder = ConfigurationManager.AppSettings["AppSubfolder"] ?? "";
