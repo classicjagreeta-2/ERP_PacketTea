@@ -272,6 +272,12 @@ namespace Finance.Controllers.TEA
 
             // A NEW sheet is stamped with the Unit picked on the list (posted from the entry
             // screen), which must be one the user is linked to -- see MasterBlendEntryController.Save.
+            if (isNew && model?.T_TEA_BLEND != null)
+            {
+                var tu = await MasterBlendEntryController.ResolveTypeUnitAsync(model.T_TEA_BLEND.BLEND_TYPE, model.T_TEA_BLEND.UNIT);
+                if (tu.Error != null) return Json(new { success = false, message = tu.Error });
+                model.T_TEA_BLEND.UNIT = tu.Unit;
+            }
             if (isNew && !string.IsNullOrWhiteSpace(model?.T_TEA_BLEND?.UNIT)
                 && !UnitScope.IsAllowed(model.T_TEA_BLEND.UNIT, await GetUnitsForUserAsync()))
                 return Json(new { success = false, message = $"You do not have permission for Unit {model.T_TEA_BLEND.UNIT}." });

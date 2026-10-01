@@ -303,7 +303,7 @@
                 if ($('#newUnitRow').length) return;
                 if (!UNIT_LIST.length) { alert('No unit is available to you (no Unit is linked to your user).'); return; }
                 $('#listBody').prepend(buildNewRow());
-                initNewRowPickers({ units: UNIT_LIST, types: PACKET_TYPES });
+                initNewRowPickers({ units: UNIT_LIST, types: PACKET_TYPES, typeUnit: true });
                 refreshGoNewState();
             });
 

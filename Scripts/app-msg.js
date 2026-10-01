@@ -122,4 +122,17 @@
     }
     patchJqueryAlert();
     if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', patchJqueryAlert); }
+
+    // Direct toastr.error(msg) / toastr.warning(msg) calls (PacketTeaInvoice, Reference, ...) show
+    // the same dialog, so they carry the user name too. toastr.success / info stay toasts.
+    function patchToastr() {
+        var t = window.toastr;
+        if (!t || t.__appMsg) { return; }
+        t.__appMsg = true;
+        t.error = function (message, title) { show(message || title, null, 'warning'); };
+        t.warning = function (message, title) { show(message || title, null, 'warning'); };
+    }
+    patchToastr();
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', patchToastr); }
+    window.addEventListener('load', patchToastr);
 })(window);

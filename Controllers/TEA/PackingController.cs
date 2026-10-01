@@ -258,6 +258,12 @@ namespace Finance.Controllers.TEA
             // A NEW packing doc is stamped with the Unit picked on the list (posted from the
             // entry screen), which must be one the user is linked to -- see
             // MasterBlendEntryController.Save.
+            if (isNew && model != null)
+            {
+                var tu = await MasterBlendEntryController.ResolveTypeUnitAsync(model.BLEND_TYPE, model.UNIT);
+                if (tu.Error != null) return Json(new { success = false, message = tu.Error });
+                model.UNIT = tu.Unit;
+            }
             if (isNew && !string.IsNullOrWhiteSpace(model?.UNIT)
                 && !UnitScope.IsAllowed(model.UNIT, await GetUnitsForUserAsync()))
                 return Json(new { success = false, message = $"You do not have permission for Unit {model.UNIT}." });

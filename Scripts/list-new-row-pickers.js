@@ -32,4 +32,30 @@ function initNewRowPickers(cfg) {
     if (units.length === 1) $('#newRowUnit').val(units[0].CODE);
     init($('#newRowUnit'), units);
     init($('#newRowPacketType'), types);
+
+    // Picking a type takes its Unit from M_SALETYPE (CODE = type, TRN_TYPE = 'P'); a type with
+    // no such row leaves the Unit as picked. The Unit box follows the type, so it is always the
+    // one saved with the document.
+    // Opt-in (cfg.typeUnit): only Master Blend, Final Blend and Packing use it.
+    var seq = 0;
+    if (cfg.typeUnit) $('#newRowPacketType').off('change.typeunit').on('change.typeunit', function () {
+        var type = $(this).val(), mine = ++seq;
+        if (!type) return;
+        $.getJSON(unitLookupUrl(), { type: type }, function (r) {
+            if (mine !== seq || !r || !r.unit) return;
+            if (!r.allowed) {
+                $('#newRowUnit').val('').trigger('change');
+                alert('The Unit of this type (' + r.unit + ') is not linked to your user.');
+                return;
+            }
+            $('#newRowUnit').val(r.unit).trigger('change');
+        });
+    });
+}
+
+// App root = this script's own URL minus "Scripts/list-new-row-pickers.js" (works under a virtual directory).
+function unitLookupUrl() {
+    var src = $('script[src*="list-new-row-pickers.js"]').attr('src') || '/Scripts/list-new-row-pickers.js';
+    var root = src.split('?')[0].replace(/Scripts\/list-new-row-pickers\.js$/i, '');
+    return root + 'MasterBlendEntry/GetUnitForType';
 }

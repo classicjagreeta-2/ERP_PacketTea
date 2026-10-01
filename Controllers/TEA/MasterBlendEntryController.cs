@@ -96,6 +96,44 @@ namespace Finance.Controllers.TEA
             return (response.IsSuccessStatusCode ? response.Data : null) ?? new List<UnitOption>();
         }
 
+        // Save-time re-check shared by every entry screen: a NEW record's Unit must be the one
+        // M_SALETYPE gives its type (CODE = type, TRN_TYPE = 'P'). A blank Unit takes the type's
+        // own; a posted Unit that isn't one of the type's is refused. A type with no M_SALETYPE
+        // row (or an API failure reading it) leaves the posted Unit untouched.
+        // Returns (unit to store, error message or null).
+        internal static async Task<(string Unit, string Error)> ResolveTypeUnitAsync(string type, string postedUnit)
+        {
+            postedUnit = (postedUnit ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(type)) return (postedUnit, null);
+            var resp = await Services.GetAsync<List<string>>("/api/TeaBlend/GetUnitsForType?type=" + Uri.EscapeDataString(type.Trim()));
+            var typeUnits = (resp.IsSuccessStatusCode ? resp.Data : null) ?? new List<string>();
+            if (typeUnits.Count == 0) return (postedUnit, null);
+            if (postedUnit.Length == 0) return (typeUnits[0], null);
+            var match = typeUnits.FirstOrDefault(u => string.Equals(u.Trim(), postedUnit, StringComparison.OrdinalIgnoreCase));
+            return match != null
+                ? (match, null)
+                : (postedUnit, $"Unit {postedUnit} does not belong to type {type.Trim()} (Unit {string.Join(", ", typeUnits)} per the Sale Type master).");
+        }
+
+        // GET: MasterBlendEntry/GetUnitForType?type=PT
+        // Shared by every list's "New" row (Scripts/list-new-row-pickers.js): picking a Packet /
+        // Blend / AWR Type takes its Unit from M_SALETYPE (CODE = type, TRN_TYPE = 'P'). The
+        // user's own linked unit wins when the type has several; `allowed` is false when none of
+        // the type's units is one the user is linked to (the screen then refuses to continue).
+        // No M_SALETYPE row for the code -> unit "" (the caller keeps whatever Unit is picked).
+        [HttpGet]
+        public async Task<JsonResult> GetUnitForType(string type)
+        {
+            var resp = await Services.GetAsync<List<string>>("/api/TeaBlend/GetUnitsForType?type=" + Uri.EscapeDataString(type ?? ""));
+            var typeUnits = (resp.IsSuccessStatusCode ? resp.Data : null) ?? new List<string>();
+            if (typeUnits.Count == 0)
+                return Json(new { unit = "", allowed = true }, JsonRequestBehavior.AllowGet);
+
+            var mine = await GetUnitsForUserAsync();
+            var pick = typeUnits.FirstOrDefault(u => UnitScope.IsAllowed(u, mine));
+            return Json(new { unit = pick ?? typeUnits[0], allowed = pick != null }, JsonRequestBehavior.AllowGet);
+        }
+
         // GET: MasterBlendEntry
         // The list is scoped to the Units the user is linked to in USER_SCHEMA_LINK (and to the
         // one `unit` / `blendType` asked for, when given) -- never to "everything", which is what
@@ -324,6 +362,12 @@ namespace Finance.Controllers.TEA
             // A NEW sheet is stamped with the Unit picked on the list (posted from the entry
             // screen), which must be one the user is linked to; only when none was posted does
             // it fall back to the Blend-Type -> Unit table below. Edits keep the record's own Unit.
+            if (isNew && model?.T_TEA_BLEND != null)
+            {
+                var tu = await ResolveTypeUnitAsync(model.T_TEA_BLEND.BLEND_TYPE, model.T_TEA_BLEND.UNIT);
+                if (tu.Error != null) return Json(new { success = false, message = tu.Error });
+                model.T_TEA_BLEND.UNIT = tu.Unit;
+            }
             if (isNew && !string.IsNullOrWhiteSpace(model?.T_TEA_BLEND?.UNIT)
                 && !UnitScope.IsAllowed(model.T_TEA_BLEND.UNIT, await GetUnitsForUserAsync()))
                 return Json(new { success = false, message = $"You do not have permission for Unit {model.T_TEA_BLEND.UNIT}." });
