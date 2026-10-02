@@ -48,8 +48,8 @@
             </td>
             <td>@PacketTea.DateText.Display(row.BlendDocDate)</td>
             <td>@row.SaleCentreName</td>
-            <td class="text-right">@row.TotalQty</td>
-            <td class="text-right">@row.ShortExcess</td>
+            <td class="text-right">@(row.TotalQty?.ToString("0.000"))</td>
+            <td class="text-right">@(row.ShortExcess?.ToString("0.000"))</td>
             <td>@row.PartyName</td>
         </tr>
         <tr class="row-detail" id="@detailId" style="display:none;"

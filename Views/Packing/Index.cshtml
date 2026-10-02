@@ -218,6 +218,7 @@
                         if (items.length === 0) { $body.html(msg('No packing lines')); return; }
                         $body.empty();
                         var n2 = function (v) { return Number(v || 0).toFixed(2); };
+                        var n3 = function (v) { return Number(v || 0).toFixed(3); }; // quantities / weights (kg)
                         items.forEach(function (d, i) {
                             var packDate = d.PACK_DATE ? new Date(d.PACK_DATE).toLocaleDateString('en-GB') : '';
                             $('<tr>').append(
@@ -229,9 +230,9 @@
                                 '<td style="text-align:right;">' + (d.BAG_CHEST || 0) + '</td>',
                                 '<td style="text-align:right;">' + (d.CHESTSLF || 0) + '</td>',
                                 '<td style="text-align:right;">' + (d.CHESTSLT || 0) + '</td>',
-                                '<td style="text-align:right;">' + n2(d.GROSS) + '</td>',
-                                '<td style="text-align:right;">' + n2(d.NET != null ? d.NET : (d.GROSS || 0) - (d.TARE || 0)) + '</td>',
-                                '<td style="text-align:right;">' + (d.QTY || 0) + '</td>',
+                                '<td style="text-align:right;">' + n3(d.GROSS) + '</td>',
+                                '<td style="text-align:right;">' + n3(d.NET != null ? d.NET : (d.GROSS || 0) - (d.TARE || 0)) + '</td>',
+                                '<td style="text-align:right;">' + n3(d.QTY) + '</td>',
                                 '<td>' + (d.SzDesc || d.SZ_CODE || '') + '</td>',
                                 '<td style="text-align:right;">' + n2(d.RATE) + '</td>',
                                 '<td style="text-align:right;">' + n2(d.AMOUNT) + '</td>',

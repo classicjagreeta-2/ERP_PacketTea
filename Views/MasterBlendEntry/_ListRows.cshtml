@@ -38,7 +38,7 @@
             <td>@row.AllocationName</td>
             <td>@row.PartyName</td>
             <td class="text-right">@row.BLEND_CHEST</td>
-            <td class="text-right">@row.BLEND_CHEST_WT</td>
+            <td class="text-right">@(row.BLEND_CHEST_WT?.ToString("0.000"))</td>
             <td>@(row.CLOSED == "Y" ? "Yes" : "No")</td>
         </tr>
         <!-- Item lines shown on demand via the "+" toggle; re-fetched via GetRowDetail every

@@ -249,11 +249,11 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Net WT/Chest</label>
-                                <input type="number" step="0.01" id="BLEND_CHEST_WT" value="@head.BLEND_CHEST_WT" />
+                                <input type="number" step="0.001" id="BLEND_CHEST_WT" value="@(head.BLEND_CHEST_WT?.ToString("0.000"))" />
                             </div>
                             <div class="form-col-20">
                                 <label>Gross WT/Chest</label>
-                                <input type="number" step="0.01" id="BLEND_CHEST_GROSSWT" value="@head.BLEND_CHEST_GROSSWT" />
+                                <input type="number" step="0.001" id="BLEND_CHEST_GROSSWT" value="@(head.BLEND_CHEST_GROSSWT?.ToString("0.000"))" />
                             </div>
                         </div>
 
@@ -468,6 +468,9 @@
     }
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
+    // Quantities (kg) are kept/shown to 3 decimals; money (Rate/Amount) stays at 2.
+    function round3(v) { return Math.round(num(v) * 1000) / 1000; }
+    function fmt3(v) { return round3(v).toFixed(3); }
 
     function renderGrid() {
         var $tb = $('#gridBody').empty();
@@ -495,8 +498,8 @@
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" maxlength="10" /></td>');
             tr.append('<td><input type="text" class="f-category" value="' + (r.CategoryDescn || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-sampleqty" value="' + (r.SAMPLE_QTY || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-qty" value="' + fmt3(r.QTY) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-sampleqty" value="' + fmt3(r.SAMPLE_QTY) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + round2(r.RATE).toFixed(2) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + round2(r.AMOUNT).toFixed(2) + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-whloca" value="' + (r.WH_LOCA || '') + '" maxlength="20" /></td>');
@@ -514,7 +517,7 @@
             $tb.append(tr);
         });
         $('#ftBag').text(round2(totBag));
-        $('#ftQty').text(round2(totQty));
+        $('#ftQty').text(fmt3(totQty));
         $('#ftAmt').text(round2(totAmt).toFixed(2));
         updateDoPrintButton();
     }
@@ -559,8 +562,8 @@
         if ($(this).hasClass('f-qty')) {
             r.QTY = num($tr.find('.f-qty').val());
         } else if ($(this).hasClass('f-bag') && r._netWt) {
-            r.QTY = round2(r.BAG_CHEST * r._netWt);
-            $tr.find('.f-qty').val(r.QTY);
+            r.QTY = round3(r.BAG_CHEST * r._netWt);
+            $tr.find('.f-qty').val(fmt3(r.QTY));
         } else {
             r.QTY = num($tr.find('.f-qty').val());
         }
@@ -708,7 +711,7 @@
         var totBag = 0, totQty = 0, totAmt = 0;
         rows.forEach(function (r) { totBag += num(r.BAG_CHEST); totQty += num(r.QTY); totAmt += num(r.AMOUNT); });
         $('#ftBag').text(round2(totBag));
-        $('#ftQty').text(round2(totQty));
+        $('#ftQty').text(fmt3(totQty));
         $('#ftAmt').text(round2(totAmt).toFixed(2));
     }
 
@@ -914,7 +917,7 @@
             var html = '<table><thead><tr><th></th><th>Inv No</th><th>Garden/Mark</th><th>Grade</th><th>Pack Date</th><th>Bag</th><th>Available Qty</th><th style="text-align:right;">Rate</th></tr></thead><tbody>';
             data.forEach(function (r, i) {
                 html += '<tr data-i="' + i + '"><td><input type="checkbox" class="stockChk" /></td><td>' + (r.invno || '') + '</td><td>' + (r.markDescn || '') + '</td>' +
-                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td>' + r.bagChest + '</td><td>' + r.available + '</td><td style="text-align:right;">' + round2(r.rate).toFixed(2) + '</td></tr>';
+                    '<td>' + (r.gradeName || r.grade || '') + '</td><td>' + fmtDate(r.packDate) + '</td><td>' + r.bagChest + '</td><td>' + fmt3(r.available) + '</td><td style="text-align:right;">' + round2(r.rate).toFixed(2) + '</td></tr>';
             });
             html += '</tbody></table>';
             $('#stockBody').html(html);
@@ -1114,7 +1117,7 @@
             grp.forEach(function (r) {
                 html += '<tr><td>' + (r.INVNO || '') + '</td><td>' + (r.MarkName || r.MARK || '') + '</td>' +
                     '<td>' + (r.GRADE || '') + '</td><td>' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '</td>' +
-                    '<td>' + (r.BAG_CHEST || 0) + '</td><td>' + (r.QTY || 0) + '</td>' +
+                    '<td>' + (r.BAG_CHEST || 0) + '</td><td>' + fmt3(r.QTY) + '</td>' +
                     '<td>' + (r.RATE || 0) + '</td><td>' + (r.AMOUNT || 0) + '</td></tr>';
             });
             html += '</tbody></table></div>';

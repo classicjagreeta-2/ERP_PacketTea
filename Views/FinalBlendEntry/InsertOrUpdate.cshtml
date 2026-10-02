@@ -186,7 +186,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Blend Qty</label>
-                                <input type="number" step="0.01" id="BLEND_QTY" value="@head.BLEND_QTY" />
+                                <input type="number" step="0.001" id="BLEND_QTY" value="@(head.BLEND_QTY?.ToString("0.000"))" />
                                 <div id="remainingQtyHint"></div>
                             </div>
                         </div>
@@ -236,11 +236,11 @@
                         <div class="form-row">
                             <div class="form-col-20">
                                 <label>Net WT/Chest</label>
-                                <input type="number" step="0.01" id="BLEND_CHEST_WT" value="@head.BLEND_CHEST_WT" />
+                                <input type="number" step="0.001" id="BLEND_CHEST_WT" value="@(head.BLEND_CHEST_WT?.ToString("0.000"))" />
                             </div>
                             <div class="form-col-20">
                                 <label>Gross WT/Chest</label>
-                                <input type="number" step="0.01" id="BLEND_CHEST_GROSSWT" value="@head.BLEND_CHEST_GROSSWT" />
+                                <input type="number" step="0.001" id="BLEND_CHEST_GROSSWT" value="@(head.BLEND_CHEST_GROSSWT?.ToString("0.000"))" />
                             </div>
                         </div>
 
@@ -432,6 +432,9 @@
     function isoToDmy(iso) { var p = (iso || '').substring(0, 10).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : (iso || ''); }
     function num(v) { v = parseFloat(v); return isNaN(v) ? 0 : v; }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
+    // Quantities (kg) are kept/shown to 3 decimals; money (Rate/Amount) stays at 2.
+    function round3(v) { return Math.round(num(v) * 1000) / 1000; }
+    function fmt3(v) { return round3(v).toFixed(3); }
 
     function renderGrid() {
         var $tb = $('#gridBody').empty();
@@ -452,8 +455,8 @@
             tr.append('<td><input type="text" class="f-grade" value="' + (r.GRADE || '') + '" maxlength="10" /></td>');
             tr.append('<td><input type="text" class="f-category" value="' + (r.CategoryDescn || '') + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-sampleqty" value="' + (r.SAMPLE_QTY || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-qty" value="' + fmt3(r.QTY) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-sampleqty" value="' + fmt3(r.SAMPLE_QTY) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-rate" value="' + (r.RATE || 0) + '" /></td>');
             tr.append('<td><input type="number" step="0.01" class="f-amount" value="' + (r.AMOUNT || 0) + '" readonly /></td>');
             tr.append('<td><input type="text" class="f-whloca" value="' + (r.WH_LOCA || '') + '" maxlength="20" /></td>');
@@ -468,7 +471,7 @@
             $tb.append(tr);
         });
         $('#ftBag').text(round2(totBag));
-        $('#ftQty').text(round2(totQty));
+        $('#ftQty').text(fmt3(totQty));
         $('#ftAmt').text(round2(totAmt));
         updateDoPrintButton();
     }
@@ -485,7 +488,7 @@
     // opened, e.g. Master 500 with this Final's 175 issued -> Balance Qty 325.
     function showBalanceHint(master, issued, remaining) {
         if (remaining == null) { $('#remainingQtyHint').text(''); return; }
-        $('#remainingQtyHint').text('Balance Qty ' + round2(remaining) + '  (Master Blend Qty ' + round2(master) + ' - issued ' + round2(issued) + ')');
+        $('#remainingQtyHint').text('Balance Qty ' + fmt3(remaining) + '  (Master Blend Qty ' + fmt3(master) + ' - issued ' + fmt3(issued) + ')');
     }
     var savedBalance = @Html.Raw(JsonConvert.SerializeObject(new { master = head.MasterQty, issued = head.IssuedQty, remaining = head.RemainingQty }));
     if (IS_EDIT) showBalanceHint(savedBalance.master, savedBalance.issued, savedBalance.remaining);
@@ -517,8 +520,8 @@
         r.TRANS_CODE = $tr.find('.f-transcode').val();
 
         if ($(this).hasClass('f-bag') && r._netWt) {
-            r.QTY = round2(r.BAG_CHEST * r._netWt);
-            $tr.find('.f-qty').val(r.QTY);
+            r.QTY = round3(r.BAG_CHEST * r._netWt);
+            $tr.find('.f-qty').val(fmt3(r.QTY));
         } else {
             r.QTY = num($tr.find('.f-qty').val());
         }
@@ -643,7 +646,7 @@
         var totBag = 0, totQty = 0, totAmt = 0;
         rows.forEach(function (r) { totBag += num(r.BAG_CHEST); totQty += num(r.QTY); totAmt += num(r.AMOUNT); });
         $('#ftBag').text(round2(totBag));
-        $('#ftQty').text(round2(totQty));
+        $('#ftQty').text(fmt3(totQty));
         $('#ftAmt').text(round2(totAmt));
     }
 
@@ -675,7 +678,7 @@
             var html = '<table><thead><tr><th>Blend No</th><th>Doc No</th><th>Blend Date</th><th>Blend Qty</th><th>Remaining Qty</th></tr></thead><tbody>';
             data.forEach(function (m, i) {
                 html += '<tr data-i="' + i + '"><td>' + (m.BLEND_NO || '') + '</td><td>' + (m.DOCNO || '') + '</td>' +
-                    '<td>' + fmtDate(m.BLEND_DATE) + '</td><td>' + m.BLEND_QTY + '</td><td>' + m.REMAINING_QTY + '</td></tr>';
+                    '<td>' + fmtDate(m.BLEND_DATE) + '</td><td>' + fmt3(m.BLEND_QTY) + '</td><td>' + fmt3(m.REMAINING_QTY) + '</td></tr>';
             });
             html += '</tbody></table>';
             $('#masterPickerBody').html(html);
@@ -703,7 +706,7 @@
                 $('#MST_BLEND_DATE').val(fmtDate(h.BLEND_DATE));
                 $('#MST_BLEND_DATE_ISO').val((h.BLEND_DATE || '').substring(0, 10));
                 $('#masterCloneQty').val(h.BLEND_QTY || 0);
-                $('#BLEND_QTY').val(h.BLEND_QTY || 0);
+                $('#BLEND_QTY').val(fmt3(h.BLEND_QTY));
                 showBalanceHint(h.BLEND_QTY, h.RemainingQty != null ? num(h.BLEND_QTY) - num(h.RemainingQty) : 0, h.RemainingQty);
 
                 $('#PCODE').val(h.PCODE || ''); $('#PCODE_disp').val(h.PartyName || '');
@@ -712,8 +715,8 @@
                 $('#BLEND_MARK').val(h.BLEND_MARK || ''); $('#BLEND_MARK_disp').val(h.BlendMarkName || '');
                 $('#BLEND_GRADE').val(h.BLEND_GRADE || ''); $('#BLEND_GRADE_disp').val(h.BlendGradeName || '');
                 $('#BLEND_CHEST').val(h.BLEND_CHEST || 0);
-                $('#BLEND_CHEST_WT').val(h.BLEND_CHEST_WT || 0);
-                $('#BLEND_CHEST_GROSSWT').val(h.BLEND_CHEST_GROSSWT || 0);
+                $('#BLEND_CHEST_WT').val(fmt3(h.BLEND_CHEST_WT));
+                $('#BLEND_CHEST_GROSSWT').val(fmt3(h.BLEND_CHEST_GROSSWT));
                 $('#BLEND_DESCN').val(h.BLEND_DESCN || '');
                 $('#TPT').val(h.TPT || ''); $('#TPT_disp').val(h.TransporterName || '');
                 $('#SHIP_MARK').val(h.SHIP_MARK || '');
@@ -738,7 +741,7 @@
                 // through the same Blend Qty change handler so grid and header agree.
                 // masterCloneQty stays at the master's full qty as the rescale baseline.
                 if (h.RemainingQty != null && num(h.RemainingQty) < num(h.BLEND_QTY)) {
-                    $('#BLEND_QTY').val(Math.max(num(h.RemainingQty), 0)).trigger('change');
+                    $('#BLEND_QTY').val(fmt3(Math.max(num(h.RemainingQty), 0))).trigger('change');
                 }
             });
         }
@@ -759,8 +762,8 @@
         if (!baseline) return;
         var ratio = newQty / baseline;
         rows.forEach(function (r) {
-            r.QTY = round2(r._origQty * ratio);
-            r.SAMPLE_QTY = round2(r._origSample * ratio);
+            r.QTY = round3(r._origQty * ratio);
+            r.SAMPLE_QTY = round3(r._origSample * ratio);
             r.BAG_CHEST = round2(r._origBag * ratio);
             r.AMOUNT = round2(r._origAmount * ratio);
         });
@@ -894,8 +897,8 @@
         if (!$('#BLEND_NO').val()) { showAlert('Blend No cannot be blank'); return; }
         if (!$('#BLEND_DATE').val()) { showAlert('Blend Date cannot be blank'); return; }
         var mstBlendDt = $('#MST_BLEND_DATE_ISO').val();
-        if (mstBlendDt && $('#BLEND_DATE').val() <= mstBlendDt) {
-            showAlert('Final Blend Date (' + isoToDmy($('#BLEND_DATE').val()) + ') must be after the Master Blend Date (' + isoToDmy(mstBlendDt) + ').');
+        if (mstBlendDt && $('#BLEND_DATE').val() < mstBlendDt) {
+            showAlert('Final Blend Date (' + isoToDmy($('#BLEND_DATE').val()) + ') must be on or after the Master Blend Date (' + isoToDmy(mstBlendDt) + ').');
             return;
         }
 
@@ -1009,7 +1012,7 @@
             grp.forEach(function (r) {
                 html += '<tr><td>' + (r.INVNO || '') + '</td><td>' + (r.MarkName || r.MARK || '') + '</td>' +
                     '<td>' + (r.GRADE || '') + '</td><td>' + (r.PACK_DATE ? r.PACK_DATE.substring(0, 10) : '') + '</td>' +
-                    '<td>' + (r.BAG_CHEST || 0) + '</td><td>' + (r.QTY || 0) + '</td>' +
+                    '<td>' + (r.BAG_CHEST || 0) + '</td><td>' + fmt3(r.QTY) + '</td>' +
                     '<td>' + (r.RATE || 0) + '</td><td>' + (r.AMOUNT || 0) + '</td></tr>';
             });
             html += '</tbody></table></div>';

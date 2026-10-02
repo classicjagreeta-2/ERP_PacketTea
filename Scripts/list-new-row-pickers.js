@@ -34,20 +34,14 @@ function initNewRowPickers(cfg) {
     init($('#newRowPacketType'), types);
 
     // Picking a type takes its Unit from M_SALETYPE (CODE = type, TRN_TYPE = 'P'); a type with
-    // no such row leaves the Unit as picked. The Unit box follows the type, so it is always the
-    // one saved with the document.
+    // no such row -- or whose Unit isn't linked to the user -- silently leaves the Unit as picked.
     // Opt-in (cfg.typeUnit): only Master Blend, Final Blend and Packing use it.
     var seq = 0;
     if (cfg.typeUnit) $('#newRowPacketType').off('change.typeunit').on('change.typeunit', function () {
         var type = $(this).val(), mine = ++seq;
         if (!type) return;
         $.getJSON(unitLookupUrl(), { type: type }, function (r) {
-            if (mine !== seq || !r || !r.unit) return;
-            if (!r.allowed) {
-                $('#newRowUnit').val('').trigger('change');
-                alert('The Unit of this type (' + r.unit + ') is not linked to your user.');
-                return;
-            }
+            if (mine !== seq || !r || !r.unit || !r.allowed) return;
             $('#newRowUnit').val(r.unit).trigger('change');
         });
     });

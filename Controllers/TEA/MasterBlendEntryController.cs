@@ -96,11 +96,13 @@ namespace Finance.Controllers.TEA
             return (response.IsSuccessStatusCode ? response.Data : null) ?? new List<UnitOption>();
         }
 
-        // Save-time re-check shared by every entry screen: a NEW record's Unit must be the one
-        // M_SALETYPE gives its type (CODE = type, TRN_TYPE = 'P'). A blank Unit takes the type's
-        // own; a posted Unit that isn't one of the type's is refused. A type with no M_SALETYPE
-        // row (or an API failure reading it) leaves the posted Unit untouched.
-        // Returns (unit to store, error message or null).
+        // Save-time Unit for a NEW record, shared by Master / Final Blend and Packing: the record is
+        // stored under the Unit M_SALETYPE gives its type (CODE = type, TRN_TYPE = 'P') -- e.g. PT
+        // is saved as GORA even when the list's "New" row was opened under JSTI (user's request,
+        // 2026-10-02). The posted Unit wins only when it is one of the type's own units. A type with
+        // no M_SALETYPE row (or an API failure reading it) keeps the posted Unit. The caller checks
+        // the *posted* (list-picked) Unit against the user's USER_SCHEMA_LINK units.
+        // Returns (unit to store, error message or null -- currently always null).
         internal static async Task<(string Unit, string Error)> ResolveTypeUnitAsync(string type, string postedUnit)
         {
             postedUnit = (postedUnit ?? "").Trim();
@@ -110,9 +112,7 @@ namespace Finance.Controllers.TEA
             if (typeUnits.Count == 0) return (postedUnit, null);
             if (postedUnit.Length == 0) return (typeUnits[0], null);
             var match = typeUnits.FirstOrDefault(u => string.Equals(u.Trim(), postedUnit, StringComparison.OrdinalIgnoreCase));
-            return match != null
-                ? (match, null)
-                : (postedUnit, $"Unit {postedUnit} does not belong to type {type.Trim()} (Unit {string.Join(", ", typeUnits)} per the Sale Type master).");
+            return (match ?? typeUnits[0], null);
         }
 
         // GET: MasterBlendEntry/GetUnitForType?type=PT
@@ -362,15 +362,17 @@ namespace Finance.Controllers.TEA
             // A NEW sheet is stamped with the Unit picked on the list (posted from the entry
             // screen), which must be one the user is linked to; only when none was posted does
             // it fall back to the Blend-Type -> Unit table below. Edits keep the record's own Unit.
+            // The permission check is on the Unit picked on the list; the record itself is then
+            // stored under the Blend Type's own Unit (ResolveTypeUnitAsync).
+            if (isNew && !string.IsNullOrWhiteSpace(model?.T_TEA_BLEND?.UNIT)
+                && !UnitScope.IsAllowed(model.T_TEA_BLEND.UNIT, await GetUnitsForUserAsync()))
+                return Json(new { success = false, message = $"You do not have permission for Unit {model.T_TEA_BLEND.UNIT}." });
             if (isNew && model?.T_TEA_BLEND != null)
             {
                 var tu = await ResolveTypeUnitAsync(model.T_TEA_BLEND.BLEND_TYPE, model.T_TEA_BLEND.UNIT);
                 if (tu.Error != null) return Json(new { success = false, message = tu.Error });
                 model.T_TEA_BLEND.UNIT = tu.Unit;
             }
-            if (isNew && !string.IsNullOrWhiteSpace(model?.T_TEA_BLEND?.UNIT)
-                && !UnitScope.IsAllowed(model.T_TEA_BLEND.UNIT, await GetUnitsForUserAsync()))
-                return Json(new { success = false, message = $"You do not have permission for Unit {model.T_TEA_BLEND.UNIT}." });
 
             if (model?.T_TEA_BLEND != null)
             {

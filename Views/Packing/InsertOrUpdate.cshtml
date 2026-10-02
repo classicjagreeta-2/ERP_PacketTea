@@ -50,7 +50,11 @@
         /* The plugin wraps a picked cell's input in a div with inline "overflow:auto; height:100%"; inside a
            table cell that can sprout scrollbars, so keep the wrapper exactly the size of its input. */
         #gridTable .inputpicker-div { overflow: hidden !important; height: auto !important; }
-        #gridTable .inputpicker-overflow-hidden { overflow: hidden; }
+        /* The plugin also puts that wrapper in a block-level div after the code box, which pushed the
+           name beside it onto a second line and made the whole row taller while editing; keep it
+           inline so an edited row stays one line, the same height as the others. */
+        #gridTable .inputpicker-overflow-hidden { overflow: hidden; display: inline-block; vertical-align: middle; }
+        #gridTable td { vertical-align: middle; }
         /* Hidden columns (Alloc / Item / MRP): still rendered so their values round-trip on Save. */
         #gridTable .col-hide { display: none; }
         .popup-box.alert-box { width: 420px; max-width: 92vw; display: none; }
@@ -164,7 +168,7 @@
                             </div>
                             <div class="form-col-20">
                                 <label>Short/Excess</label>
-                                <input type="number" step="0.01" id="ShortExcess" value="@head.ShortExcess" />
+                                <input type="number" step="0.001" id="ShortExcess" value="@(head.ShortExcess?.ToString("0.000"))" />
                             </div>
                             <div class="form-col-20">
                                 <label>Total Qty</label>
@@ -287,13 +291,16 @@
         return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
     function round2(v) { return Math.round(num(v) * 100) / 100; }
+    // Quantities / weights (kg) are kept/shown to 3 decimals; money (Rate/Amount) stays at 2.
+    function round3(v) { return Math.round(num(v) * 1000) / 1000; }
+    function fmt3(v) { return round3(v).toFixed(3); }
 
     function renderGrid() {
         var $tb = $('#gridBody').empty();
         var totBag = 0, totQty = 0, totAmt = 0;
         rows.forEach(function (r, idx) {
             r.SL_NO = String(idx + 1);
-            var net = round2((r.GROSS || 0) - (r.TARE || 0));
+            var net = fmt3((r.GROSS || 0) - (r.TARE || 0));
             totBag += num(r.BAG_CHEST);
             totQty += num(r.QTY);
             totAmt += num(r.AMOUNT);
@@ -316,10 +323,10 @@
             tr.append('<td><input type="number" step="0.01" class="f-bag" value="' + (r.BAG_CHEST || 0) + '" /></td>');
             tr.append('<td><input type="number" class="f-chestf" value="' + (r.CHESTSLF || 0) + '" /></td>');
             tr.append('<td><input type="number" class="f-chestt" value="' + (r.CHESTSLT || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-gross" value="' + (r.GROSS || 0) + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-net" value="' + net + '" /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-tare" value="' + (r.TARE || 0) + '" readonly /></td>');
-            tr.append('<td><input type="number" step="0.01" class="f-qty" value="' + (r.QTY || 0) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-gross" value="' + fmt3(r.GROSS) + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-net" value="' + net + '" /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-tare" value="' + fmt3(r.TARE) + '" readonly /></td>');
+            tr.append('<td><input type="number" step="0.001" class="f-qty" value="' + fmt3(r.QTY) + '" /></td>');
             tr.append('<td><input type="text" class="f-batchno" value="' + (r.BATCHNO || '') + '" maxlength="30" /></td>');
             tr.append('<td><input type="date" class="f-mfgfrom" value="' + (r.MFG_FROM ? r.MFG_FROM.substring(0, 10) : '') + '" /></td>');
             tr.append('<td class="col-size"><input type="text" class="f-szcode" value="' + esc(r.SZ_CODE) + '" placeholder="Code" />' +
@@ -333,9 +340,9 @@
             $tb.append(tr);
         });
         $('#ftBag').text(round2(totBag));
-        $('#ftQty').text(round2(totQty));
+        $('#ftQty').text(fmt3(totQty));
         $('#ftAmt').text(round2(totAmt));
-        $('#TotalQty').val(round2(totQty + num($('#ShortExcess').val())));
+        $('#TotalQty').val(fmt3(totQty + num($('#ShortExcess').val())));
     }
 
     function findRow(cid) { return rows.find(function (r) { return r._cid == cid; }); }
@@ -370,13 +377,13 @@
         if ($(this).hasClass('f-qty')) {
             r.QTY = num($tr.find('.f-qty').val());
         } else if ($(this).hasClass('f-bag') || $(this).hasClass('f-net')) {
-            r.QTY = round2(r.BAG_CHEST * netWt);
-            $tr.find('.f-qty').val(r.QTY);
+            r.QTY = round3(r.BAG_CHEST * netWt);
+            $tr.find('.f-qty').val(fmt3(r.QTY));
         } else {
             r.QTY = num($tr.find('.f-qty').val());
         }
-        r.TARE = round2(r.GROSS - netWt);
-        $tr.find('.f-tare').val(r.TARE);
+        r.TARE = round3(r.GROSS - netWt);
+        $tr.find('.f-tare').val(fmt3(r.TARE));
 
         if (($(this).hasClass('f-chestf') || $(this).hasClass('f-bag')) && r.CHESTSLF) {
             r.CHESTSLT = r.CHESTSLF + r.BAG_CHEST - 1;
@@ -394,9 +401,9 @@
         var totBag = 0, totQty = 0, totAmt = 0;
         rows.forEach(function (r) { totBag += num(r.BAG_CHEST); totQty += num(r.QTY); totAmt += num(r.AMOUNT); });
         $('#ftBag').text(round2(totBag));
-        $('#ftQty').text(round2(totQty));
+        $('#ftQty').text(fmt3(totQty));
         $('#ftAmt').text(round2(totAmt));
-        $('#TotalQty').val(round2(totQty + num($('#ShortExcess').val())));
+        $('#TotalQty').val(fmt3(totQty + num($('#ShortExcess').val())));
     }
     $('#ShortExcess').on('input change', renderTotalsOnly);
 
@@ -554,7 +561,7 @@
         $('#MasterBlendDate').val(fmtDate(b.BLEND_DATE));
         $('#PartyName').val(b.PartyName || '');
         $('#ShipMark').val(b.SHIP_MARK || '');
-        $('#balanceHint').text('Balance Qty To Be Packed: ' + b.REMAINING_QTY);
+        $('#balanceHint').text('Balance Qty To Be Packed: ' + fmt3(b.REMAINING_QTY));
         // Auto-populate ONE summary row, same as VB's TxtBlendNo_Validate --
         // only when adding fresh with an empty grid, so re-picking the
         // header blend on an in-progress document never clobbers rows.
@@ -583,7 +590,7 @@
             r.INVNO = v.invno;
             r.BAG_CHEST = v.bagChest;
             r.GROSS = v.grossWt; // GrossWt seeded from the blend's own value; Net is what the header field represents
-            r.TARE = round2(v.grossWt - v.netWt);
+            r.TARE = round3(v.grossWt - v.netWt);
             r.QTY = v.qty;
             r.RATE = v.rate;
             r.AMOUNT = v.amount;

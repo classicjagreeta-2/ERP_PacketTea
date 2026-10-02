@@ -258,15 +258,17 @@ namespace Finance.Controllers.TEA
             // A NEW packing doc is stamped with the Unit picked on the list (posted from the
             // entry screen), which must be one the user is linked to -- see
             // MasterBlendEntryController.Save.
+            // Permission is checked on the list-picked Unit; the doc is stored under the Packing
+            // Type's own Unit (ResolveTypeUnitAsync).
+            if (isNew && !string.IsNullOrWhiteSpace(model?.UNIT)
+                && !UnitScope.IsAllowed(model.UNIT, await GetUnitsForUserAsync()))
+                return Json(new { success = false, message = $"You do not have permission for Unit {model.UNIT}." });
             if (isNew && model != null)
             {
                 var tu = await MasterBlendEntryController.ResolveTypeUnitAsync(model.BLEND_TYPE, model.UNIT);
                 if (tu.Error != null) return Json(new { success = false, message = tu.Error });
                 model.UNIT = tu.Unit;
             }
-            if (isNew && !string.IsNullOrWhiteSpace(model?.UNIT)
-                && !UnitScope.IsAllowed(model.UNIT, await GetUnitsForUserAsync()))
-                return Json(new { success = false, message = $"You do not have permission for Unit {model.UNIT}." });
 
             if (model != null)
             {
@@ -409,14 +411,33 @@ namespace Finance.Controllers.TEA
             if (string.IsNullOrWhiteSpace(blendType) || string.IsNullOrWhiteSpace(unit))
                 return PickerJson(null);
 
+            // Permission is on the list-picked Unit; final blends are stored under the type's own
+            // Unit (MasterBlendEntryController.ResolveTypeUnitAsync), so they are looked up there.
             var unitsTask = GetUnitsForUserAsync();
+            var typeUnit = (await MasterBlendEntryController.ResolveTypeUnitAsync(blendType, unit)).Unit;
             var listTask = Services.GetAsync<dynamic>(
-                $"/api/BlendPacking/GetFinalBlendList?blendType={Uri.EscapeDataString(blendType)}&unit={Uri.EscapeDataString(unit.Trim())}" +
+                $"/api/BlendPacking/GetFinalBlendList?blendType={Uri.EscapeDataString(blendType)}&unit={Uri.EscapeDataString(typeUnit.Trim())}" +
                 $"&search={Uri.EscapeDataString(q ?? "")}&top={(limit > 0 ? limit : 30)}");
             await Task.WhenAll(unitsTask, listTask);
 
             if (!UnitScope.IsAllowed(unit, unitsTask.Result)) return PickerJson(null);
+            FormatQty3(listTask.Result, "BLEND_QTY", "PACKED_QTY", "REMAINING_QTY");
             return PickerJson(listTask.Result);
+        }
+
+        // The inputpicker shows cell values as-is, so quantities (kg) are sent pre-formatted to
+        // 3 decimals (e.g. 621.4 -> "621.400"). Display only -- the picker's rows are not saved.
+        private static void FormatQty3(ResponseApiModel<dynamic> r, params string[] keys)
+        {
+            var arr = r?.IsSuccessStatusCode == true ? r.Data as Newtonsoft.Json.Linq.JArray : null;
+            if (arr == null) return;
+            foreach (var row in arr.OfType<Newtonsoft.Json.Linq.JObject>())
+                foreach (var k in keys)
+                {
+                    var t = row[k];
+                    if (t != null && (t.Type == Newtonsoft.Json.Linq.JTokenType.Float || t.Type == Newtonsoft.Json.Linq.JTokenType.Integer))
+                        row[k] = ((decimal)t).ToString("0.000", System.Globalization.CultureInfo.InvariantCulture);
+                }
         }
 
         // GET: Packing/GetRowDetail (AJAX, Index list's "+" toggle) -- the document's packing
@@ -438,6 +459,8 @@ namespace Finance.Controllers.TEA
         [HttpGet]
         public async Task<ActionResult> GetFinalBlendRowValues(string docno, string docdt, string blendType, string excludeDocNo = "", string excludeDocDt = "", string unit = "")
         {
+            // The final blend sits under the type's own Unit (as in GetFinalBlendList).
+            unit = (await MasterBlendEntryController.ResolveTypeUnitAsync(blendType, unit)).Unit;
             var r = await Services.GetAsync<dynamic>(
                 $"/api/BlendPacking/GetFinalBlendRowValues?docno={docno}&docdt={docdt}&blendType={blendType}&excludeDocNo={excludeDocNo}&excludeDocDt={excludeDocDt}&unit={Uri.EscapeDataString(unit ?? "")}");
             return JsonExact(r.Data);

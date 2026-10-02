@@ -128,8 +128,8 @@
                 <td style="width:50px;">
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].QTY"
-                           value="@(det.QTY?.ToString("F2") ?? "0.00")"
-                           class="form-control req text-right net-wt decimal2" style="width:50px;" />
+                           value="@(det.QTY?.ToString("F3") ?? "0.000")"
+                           class="form-control req text-right net-wt decimal3" style="width:50px;" />
                 </td>
 
 
@@ -137,16 +137,16 @@
                 <td>
                     <input type="text"
                            name="T_TEA_DETAIL[@(RowIndex + j)].GROSS"
-                           value="@(det.GROSS?.ToString("F2") ?? "0.00")"
-                           class="form-control text-right gross-wt decimal2" />
+                           value="@(det.GROSS?.ToString("F3") ?? "0.000")"
+                           class="form-control text-right gross-wt decimal3" />
                 </td>
 
 
                 <!-- Total Net Wt -->
                 <td>
                     <input type="text"
-                           value="@(det.QTY?.ToString("F2") ?? "0.00")"
-                           class="form-control req text-right total-net-wt decimal2" />
+                           value="@(det.QTY?.ToString("F3") ?? "0.000")"
+                           class="form-control req text-right total-net-wt decimal3" />
                 </td>
 
 

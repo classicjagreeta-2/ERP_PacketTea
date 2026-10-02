@@ -372,9 +372,9 @@ function onLoadSuccess() {
                      <td>${d.mrp ?? ""}</td>
                      <td>${d.mfgdt ? new Date(parseInt(d.mfgdt.replace(/[^0-9]/g, ''))).toLocaleDateString('en-GB') : ''}</td>
                      <td>${d.batchno ?? ""}</td>
-                     <td>${d.qty ?? ""}</td>
-                     <td>${d.grosS_WEIGHT ?? ""}</td>
-                     <td>${d.weight ?? ""}</td>
+                     <td>${d.qty != null && d.qty !== "" ? Number(d.qty).toFixed(3) : ""}</td>
+                     <td>${d.grosS_WEIGHT != null && d.grosS_WEIGHT !== "" ? Number(d.grosS_WEIGHT).toFixed(3) : ""}</td>
+                     <td>${d.weight != null && d.weight !== "" ? Number(d.weight).toFixed(3) : ""}</td>
                  </tr>`;
                  tbody.append(rowHtml);
              });

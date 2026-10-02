@@ -272,15 +272,17 @@ namespace Finance.Controllers.TEA
 
             // A NEW sheet is stamped with the Unit picked on the list (posted from the entry
             // screen), which must be one the user is linked to -- see MasterBlendEntryController.Save.
+            // Permission is checked on the list-picked Unit; the record is stored under the Blend
+            // Type's own Unit (ResolveTypeUnitAsync).
+            if (isNew && !string.IsNullOrWhiteSpace(model?.T_TEA_BLEND?.UNIT)
+                && !UnitScope.IsAllowed(model.T_TEA_BLEND.UNIT, await GetUnitsForUserAsync()))
+                return Json(new { success = false, message = $"You do not have permission for Unit {model.T_TEA_BLEND.UNIT}." });
             if (isNew && model?.T_TEA_BLEND != null)
             {
                 var tu = await MasterBlendEntryController.ResolveTypeUnitAsync(model.T_TEA_BLEND.BLEND_TYPE, model.T_TEA_BLEND.UNIT);
                 if (tu.Error != null) return Json(new { success = false, message = tu.Error });
                 model.T_TEA_BLEND.UNIT = tu.Unit;
             }
-            if (isNew && !string.IsNullOrWhiteSpace(model?.T_TEA_BLEND?.UNIT)
-                && !UnitScope.IsAllowed(model.T_TEA_BLEND.UNIT, await GetUnitsForUserAsync()))
-                return Json(new { success = false, message = $"You do not have permission for Unit {model.T_TEA_BLEND.UNIT}." });
 
             if (model?.T_TEA_BLEND != null)
             {
@@ -375,6 +377,9 @@ namespace Finance.Controllers.TEA
         {
             if (string.IsNullOrWhiteSpace(blendType) || !UnitScope.IsAllowed(unit, await GetUnitsForUserAsync()))
                 return JsonExact(new List<object>());
+            // Masters are stored under the Blend Type's own Unit (see MasterBlendEntryController
+            // .ResolveTypeUnitAsync), so look them up there rather than under the list-picked one.
+            unit = (await MasterBlendEntryController.ResolveTypeUnitAsync(blendType, unit)).Unit;
 
             var r = await Services.GetAsync<dynamic>(
                 $"/api/FinalBlend/GetMasterBlendList?blendType={Uri.EscapeDataString(blendType)}&unit={Uri.EscapeDataString(unit.Trim())}&search={Uri.EscapeDataString(search ?? "")}");
@@ -385,6 +390,8 @@ namespace Finance.Controllers.TEA
         public async Task<ActionResult> GetMasterBlendDetail(string docno, string docdt, string unit = "", string blendType = "")
         {
             // DOCNO is numbered per Unit + Blend Type, so both narrow which master is loaded.
+            // The master sits under the Blend Type's own Unit (as in GetMasterBlendList).
+            unit = (await MasterBlendEntryController.ResolveTypeUnitAsync(blendType, unit)).Unit;
             var r = await Services.GetAsync<dynamic>(
                 $"/api/FinalBlend/GetMasterBlendDetail?docno={docno}&docdt={docdt}&unit={Uri.EscapeDataString(unit ?? "")}&blendType={Uri.EscapeDataString(blendType ?? "")}");
             if (!r.IsSuccessStatusCode || r.Data == null)

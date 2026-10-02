@@ -1240,7 +1240,7 @@ model.unbL_HED.tm = 'T';
                                     </td>
                                     <td><input class="FreeTeaCode" value="${item ? item.PLCRCD : ''}" readonly></td>
                                     <td><input class="FreeTeaDescDDL" value="${item ? item.descC_ORA : ''}"></td>
-                                    <td><input class="txtFreeTeaQty" value="${item ? item.PLCRQTY : '0.000'}"></td>
+                                    <td><input class="txtFreeTeaQty" value="${item ? (Math.round((+item.PLCRQTY || 0) * 1000) / 1000).toFixed(3) : '0.000'}"></td>
                                     <td><input class="txtFreeTeaRate" value="${item ? item.PLCRRATE : '0.00'}"></td>
                                     <td><input class="txtFreeTeaAmount" value="${item ? item.PLCRVAL : '0.00'}"></td>
                                     </tr>
@@ -1402,6 +1402,14 @@ model.unbL_HED.tm = 'T';
 
         $(document).on("blur", ".txtFreeTeaRate, .txtFreeTeaAmount", function () {
             $(this).val((parseFloat($(this).val()) || 0).toFixed(2));
+        });
+
+        // Qty / weights are shown with 3 decimals (left blank when blank, so the
+        // stock / gross checks on blur can still clear a rejected value).
+        function fmt3(v) { return (Math.round((+v || 0) * 1000) / 1000).toFixed(3); }
+        $(document).on("blur", ".txtQuantity, .txtGross, .txtNet_Wt", function () {
+            var v = $.trim($(this).val());
+            if (v !== "" && !isNaN(parseFloat(v))) $(this).val(fmt3(v));
         });
     </script>
     <script>
@@ -1604,8 +1612,8 @@ model.unbL_HED.tm = 'T';
             if (!data) return;
 
             row.find(".txtMrp").val(data.mrp);
-            row.find(".txtGross").val(data.grosS_WEIGHT);
-            row.find(".txtNet_Wt").val(data.neT_WEIGHT);
+            row.find(".txtGross").val(data.grosS_WEIGHT != null && data.grosS_WEIGHT !== "" ? fmt3(data.grosS_WEIGHT) : "");
+            row.find(".txtNet_Wt").val(data.neT_WEIGHT != null && data.neT_WEIGHT !== "" ? fmt3(data.neT_WEIGHT) : "");
             row.find(".txtClStock").val(data.clstock);
 
             calculateRowAmount(row);
