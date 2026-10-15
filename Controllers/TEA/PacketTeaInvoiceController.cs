@@ -49,17 +49,18 @@ namespace PacketTea.Controllers.PacketTea
             int pageNumber = page ?? 1;
             ViewBag.Page = pageNumber;
             ViewBag.LOCA = Utility.SessionHelper.GetUser().Loca;
-            var response = await Services.FinanceGetAsync<PageModel<UNBL_HED>>($"/api/Invoice/GetByPage?page={pageNumber}&pageSize={pageSize}&search={searchString}");
+            // Only the units the user is linked to (USER_SCHEMA_LINK); none = an empty list.
+            var userUnits = await GetUnitsForUserAsync();
+            var unitFilter = UnitScope.ListFilter(null, userUnits);
+            var response = await Services.FinanceGetAsync<PageModel<UNBL_HED>>($"/api/Invoice/GetByPage?page={pageNumber}&pageSize={pageSize}&search={searchString}&units={HttpUtility.UrlEncode(unitFilter)}");
             var list = response.Data?.value?.results?.ToList() ?? new List<UNBL_HED>();
             var totalRows = response.Data?.value?.rowCount ?? 0;
 
             var pagedList = new StaticPagedList<UNBL_HED>(list, pageNumber, pageSize, totalRows);
 
-            // Unit names for the list's Unit column (UnitScope.Name) -- the same Unit master
-            // the "New" row's picker (GetUnit) reads.
-            var unitResp = await Services.FinanceGetAsync<List<UNIT>>("/api/MasterUnit/GetAll");
-            ViewBag.UnitList = (unitResp?.Data ?? new List<UNIT>())
-                .Select(u => new UnitOption { CODE = u.CODE, NAME = u.NAME }).ToList();
+            // Unit names for the list's Unit column (UnitScope.Name) -- the same units the
+            // "New" row's picker (GetUnit) offers.
+            ViewBag.UnitList = userUnits;
             // Invoices another user is editing are greyed out (see Utility/RecordLock.cs).
             ViewBag.Locks = await global::PacketTea.Utility.RecordLock.LocksAsync(LockScreen);
 
@@ -72,6 +73,12 @@ namespace PacketTea.Controllers.PacketTea
         {
             if (string.IsNullOrWhiteSpace(id))
             {
+                // A Unit picked on the list must be one the user is linked to (USER_SCHEMA_LINK).
+                if (!string.IsNullOrWhiteSpace(unit) && !UnitScope.IsAllowed(unit, await GetUnitsForUserAsync()))
+                {
+                    TempData["toastrError"] = $"You do not have permission for Unit '{unit}'.";
+                    return RedirectToAction("Index");
+                }
                 var sessionLoca = Utility.SessionHelper.GetUser().Loca;
 
                 var vm_new = new UNBLDATA
@@ -112,6 +119,12 @@ namespace PacketTea.Controllers.PacketTea
             };
             vm.unbL_HED.flag = vm.unbl.FirstOrDefault()?.flag ?? "";
 
+            if (!UnitScope.IsAllowed(header?.unit, await GetUnitsForUserAsync()))
+            {
+                TempData["toastrError"] = $"You do not have permission for Unit '{header?.unit}'.";
+                return RedirectToAction("Index");
+            }
+
             // Edit lock (this screen has no View mode, so opening an invoice is editing it):
             // refused while another user has the same invoice (Unit + Bill No) open.
             var lockErr = await global::PacketTea.Utility.RecordLock.AcquireAsync(LockScreen, header?.unit, header?.blno);
@@ -125,13 +138,23 @@ namespace PacketTea.Controllers.PacketTea
         }
 
         private const string LockScreen = "PacketTeaInvoice";
+
+        // The user's units (USER_SCHEMA_LINK for the Finance schema, API Invoice/GetUnitsForUser).
+        // No grants = empty: nothing is listed, opened or saved.
+        private async Task<List<UnitOption>> GetUnitsForUserAsync()
+        {
+            var resp = await Services.FinanceGetAsync<List<UNIT>>("/api/Invoice/GetUnitsForUser");
+            return (resp?.Data ?? new List<UNIT>())
+                .Select(u => new UnitOption { CODE = u.CODE, NAME = u.NAME }).ToList();
+        }
         //public async Task<> getFreeTeaDetailsByItc (string itc)
         //{
         //    var deResponse = await Services.GetAsync<UNBLDATA>($"/api/Invoice/GetByID?id={decryptedId}");
         //}
         public async Task<JsonResult> GetUnit(string q = "", int limit = 10, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var resp = await Services.FinanceGetAsync<List<UNIT>>("/api/MasterUnit/GetAll");
+            // Only the units the user is linked to (USER_SCHEMA_LINK); none = an empty list.
+            var resp = await Services.FinanceGetAsync<List<UNIT>>("/api/Invoice/GetUnitsForUser");
             var all = resp?.Data ?? new List<UNIT>();
 
             // 🔍 Search filter
@@ -305,6 +328,10 @@ namespace PacketTea.Controllers.PacketTea
                 // Edit lock: an existing invoice (Bill No already set) may only be saved while
                 // no other user has it open.
                 var head = model?.unbL_HED;
+                // The Unit must be one the user is linked to (USER_SCHEMA_LINK) -- the picker
+                // only steers, this is the gate.
+                if (!UnitScope.IsAllowed(head?.unit, await GetUnitsForUserAsync()))
+                    return Json(new { success = false, message = $"You do not have permission for Unit '{head?.unit}'." });
                 bool isEdit = !string.IsNullOrWhiteSpace(head?.blno);
                 if (isEdit)
                 {

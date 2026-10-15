@@ -61,7 +61,9 @@ namespace PacketTea.Controllers.TEA
 
                 
                 
-                var hoResponse = await Services.GetAsync<PageModel<TeaPurchase_LISTING>>($"/api/TeaPurchase/GetByPage?page={page}&pageSize={pageSize}&search={searchString}");
+                // Only the units the user is linked to (USER_SCHEMA_LINK); none = an empty list.
+                var unitFilter = UnitScope.ListFilter(null, await GetUnitsForUserAsync());
+                var hoResponse = await Services.GetAsync<PageModel<TeaPurchase_LISTING>>($"/api/TeaPurchase/GetByPage?page={page}&pageSize={pageSize}&search={searchString}&units={HttpUtility.UrlEncode(unitFilter)}");
 
 
                 var hoList = hoResponse.Data?.value?.results?.ToList()
@@ -195,7 +197,7 @@ namespace PacketTea.Controllers.TEA
 
         public async Task<JsonResult> GetUnit(string q = "", int limit = 10, string fieldValue = "", string fieldText = "", string value = "", int p = 1)
         {
-            var resp = await Services.GetAsync<List<M_UNIT>>("/api/TeaPurchase/GetUnit");
+            var resp = await Services.GetAsync<List<M_UNIT>>("/api/TeaPurchase/GetUnitsForUser");
 
             var all = resp?.Data ?? new List<M_UNIT>();
 
@@ -237,9 +239,8 @@ namespace PacketTea.Controllers.TEA
                 q = value;
             }
 
-            var resp = await Services.GetAsync<List<M_SALETYPE>>(
-                "/api/TeaPurchase/GetType?"
-            );
+            // Purchase Types the user may use: M_SALETYPE TRN_TYPE='P' + M_UNIT_USER_RIGHT.
+            var resp = await Services.GetAsync<List<M_SALETYPE>>("/api/TeaPurchase/GetAllowedPurTypes");
 
             var all = resp?.Data ?? new List<M_SALETYPE>();
 
@@ -520,6 +521,17 @@ namespace PacketTea.Controllers.TEA
             // ===============================
             if (string.IsNullOrEmpty(docno))
             {
+                // A New entry opened from the list's picker must use a Unit + Purchase Type the
+                // user holds; a bare "New" (nothing picked yet) is left to the form + Save check.
+                if (!string.IsNullOrEmpty(unit) || !string.IsNullOrEmpty(doctype))
+                {
+                    var newErr = await CheckUnitAndTypeAsync(unit, doctype);
+                    if (newErr != null)
+                    {
+                        TempData["toastrError"] = newErr;
+                        return RedirectToAction("Index");
+                    }
+                }
                 return View(new PT_ALL_LIST
                 {
                     T_TEA_HEAD = new T_TEA_PURCHASE
@@ -592,6 +604,14 @@ namespace PacketTea.Controllers.TEA
                 T_TEA_DETAIL = details
             };
 
+            // The stored Unit + Purchase Type must be ones the user holds.
+            var editErr = await CheckUnitAndTypeAsync(!string.IsNullOrEmpty(head.UNIT) ? head.UNIT : unit, head.PUR_TYPE);
+            if (editErr != null)
+            {
+                TempData["toastrError"] = editErr;
+                return RedirectToAction("Index");
+            }
+
             // Edit lock: refused while another user has this document open for editing.
             var lockUnit = !string.IsNullOrEmpty(head.UNIT) ? head.UNIT : unit;
             var lockDocNo = !string.IsNullOrEmpty(head.DOCNO) ? head.DOCNO : docno;
@@ -638,6 +658,32 @@ namespace PacketTea.Controllers.TEA
             return PartialView("_Product_Details", model);
         }
 
+
+        // The user's units (USER_SCHEMA_LINK, API TeaPurchase/GetUnitsForUser). No grants = empty.
+        private async Task<List<UnitOption>> GetUnitsForUserAsync()
+        {
+            var resp = await Services.GetAsync<List<M_UNIT>>("/api/TeaPurchase/GetUnitsForUser");
+            return (resp?.Data ?? new List<M_UNIT>())
+                .Select(u => new UnitOption { CODE = u.CODE, NAME = u.NAME }).ToList();
+        }
+
+        // null when the user holds both the Unit (USER_SCHEMA_LINK) and the Purchase Type
+        // (M_SALETYPE TRN_TYPE='P' + M_UNIT_USER_RIGHT, API TeaPurchase/GetAllowedPurTypes);
+        // otherwise the message to show. No grants = nothing allowed.
+        private async Task<string> CheckUnitAndTypeAsync(string unit, string purType)
+        {
+            unit = (unit ?? "").Trim();
+            purType = (purType ?? "").Trim();
+            var unitsTask = GetUnitsForUserAsync();
+            var typesTask = Services.GetAsync<List<M_SALETYPE>>("/api/TeaPurchase/GetAllowedPurTypes");
+            await Task.WhenAll(unitsTask, typesTask);
+            var types = typesTask.Result?.Data ?? new List<M_SALETYPE>();
+            if (!UnitScope.IsAllowed(unit, unitsTask.Result))
+                return $"You do not have permission for Unit '{unit}'.";
+            if (purType == "" || !types.Any(t => string.Equals((t.CODE ?? "").Trim(), purType, StringComparison.OrdinalIgnoreCase)))
+                return $"You do not have permission for Purchase Type '{purType}'.";
+            return null;
+        }
 
         [HttpPost]
         public async Task<ActionResult> SaveForm(PT_ALL_LIST model)
@@ -771,6 +817,15 @@ namespace PacketTea.Controllers.TEA
             //        }
 
             //        return RedirectToAction("Index");
+
+            // Unit (USER_SCHEMA_LINK) + Purchase Type (M_SALETYPE TRN_TYPE='P' + M_UNIT_USER_RIGHT)
+            // re-checked here; the API's SaveOrUpdateAll checks them again.
+            var scopeErr = await CheckUnitAndTypeAsync(head.UNIT, head.PUR_TYPE);
+            if (scopeErr != null)
+            {
+                ViewBag.toastrError = scopeErr;
+                return View("InsertOrUpdate", model);
+            }
 
             // Edit lock: an edit (head.ID != 0, same test as below) may only be saved while no
             // other user holds the document. The re-rendered page on a failed save keeps the lock

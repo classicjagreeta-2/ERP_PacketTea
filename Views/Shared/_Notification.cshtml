@@ -7,6 +7,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet" />
 
+@{
+    // A failed save that re-renders the entry screen (no redirect) sets ViewBag.toastrError
+    // instead of TempData -- e.g. PacketTeaPurchaseEntry/SaveForm. Show it the same way.
+    if (TempData["toastrError"] == null && ViewBag.toastrError != null)
+    {
+        TempData["toastrError"] = Convert.ToString(ViewBag.toastrError);
+    }
+}
 @if (TempData["toastrError"] != null)
 {
     <script type="text/javascript">
