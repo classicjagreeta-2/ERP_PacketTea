@@ -259,9 +259,9 @@
     <Compile Include="Models\FundFlow.cs" />
     <Compile Include="Models\Model_Common.cs" />
     <Compile Include="Models\Product.cs" />
-    <Compile Include="Models\PT\App_Start\BundleConfig.cs" />
-    <Compile Include="Models\PT\App_Start\FilterConfig.cs" />
-    <Compile Include="Models\PT\App_Start\RouteConfig.cs" />
+    <Compile Include="App_Start\BundleConfig.cs" />
+    <Compile Include="App_Start\FilterConfig.cs" />
+    <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Models\PT\BLEND_PACKING_DATA.cs" />
     <Compile Include="Models\PT\FreeDetail.cs" />
     <Compile Include="Models\PT\ItemStock.cs" />
