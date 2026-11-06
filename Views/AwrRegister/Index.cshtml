@@ -1,0 +1,329 @@
+@{
+    ViewBag.Title = "AWR Register";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<link href="~/libraries/assetspo/css/font-awesome.min.css" rel="stylesheet">
+<link rel="stylesheet" href="~/libraries/assetspo/css/jquery-ui.css">
+<link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order.css">
+<link rel="stylesheet" href="~/libraries/assetspo/css/purchase-order-responsive.css">
+<link rel="stylesheet" href="~/libraries/MULTI_SELECT_DROPDOWN/jquery.inputpicker.css">
+
+<style>
+    .sr-radio { display: flex; flex-wrap: wrap; gap: 22px; align-items: center; min-height: 30px; }
+    .sr-radio label { font-weight: normal; margin: 0; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .sr-radio input { margin: 0; }
+    .rpt-btn { background-color: #404E67; color: #fff; }
+    .rpt-btn[disabled] { opacity: .5; cursor: wait; }
+    .inputpicker-div.inputpicker-multiple { box-sizing: border-box !important; overflow: hidden !important; width: 100% !important; max-width: 100% !important; height: 30px !important; max-height: 30px !important; }
+    .inputpicker-multiple { white-space: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; }
+    .inputpicker-multiple ul { display: flex !important; flex-wrap: nowrap !important; white-space: nowrap !important; overflow: hidden !important; margin: 0; padding: 0; }
+    .inputpicker-multiple ul > li { flex: 0 0 auto; }
+</style>
+
+<div class="general-container">
+    <div class="rpt-details">
+
+        <div class="header-content">
+            <div class="action-btns">
+                <ul>
+                    <li>
+                        <a href="@Url.Action("Index", "AwrRegister", new { area = "" })">
+                            <i class="fa fa-times"></i> Cancel
+                        </a>
+                    </li>
+                    <li>
+                        <a href="@Url.Action("Index", "Menu", new { area = "" })">
+                            <i class="fa fa-arrow-left"></i> Close
+                        </a>
+                    </li>
+                    <li style="margin-left:auto">
+                        <label class="btn btn-inverse pull-right" style="margin:10px;">REPORT</label>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="header-details">
+            <div class="row">
+                <div class="col-md-4 align-items-center">
+                    <div class="header-left">
+                        <div class="title-heading">AWR Register</div>
+                    </div>
+                </div>
+                <div class="col-md-8 d-flex justify-content-end align-items-center" style="padding-right:2.2%">
+                    <button type="button" id="graphics" class="btn btn-primary mr-2 rpt-btn" title="Crystal report (PDF)">Graphics</button>
+                    <button type="button" id="html" class="btn btn-primary mr-2 rpt-btn" title="Printable HTML page">HTML</button>
+                    <button type="button" id="excel" class="btn btn-primary mr-2 rpt-btn" title="Download as Excel (.xlsx)">Excel</button>
+                </div>
+            </div>
+
+            <div class="accordion-container">
+                <div class="accordion">
+                    <div class="accordion-header active">
+                        <span class="txt">Header</span>
+                    </div>
+                    <div class="accordion-body" style="display:block;">
+                        <div class="form-row">
+
+                            <div class="form-col-10">
+                                <label>From <span>(*)</span></label>
+                                <div class="date-field">
+                                    <input type="text" id="FromDate" class="form-control sr-date" autocomplete="off" />
+                                    <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
+                                         alt="calendar" class="calendar-icon sr-cal" data-target="#FromDate" />
+                                </div>
+                            </div>
+
+                            <div class="form-col-10">
+                                <label>To <span>(*)</span></label>
+                                <div class="date-field">
+                                    <input type="text" id="ToDate" class="form-control sr-date" autocomplete="off" />
+                                    <img src="@Url.Content("~/Controllers/Test/assets/images/calendar.png")"
+                                         alt="calendar" class="calendar-icon sr-cal" data-target="#ToDate" />
+                                </div>
+                            </div>
+
+                            <div class="form-col-20">
+                                <label>Unit <span>(*)</span></label>
+                                <input type="text" id="Unit" class="form-control multi-pick" data-src="units" autocomplete="off" />
+                            </div>
+
+                            <div class="form-col-20">
+                                <label>AWR From</label>
+                                <input type="text" id="AwrFrom" class="form-control awr-code" autocomplete="off" />
+                            </div>
+
+                            <div class="form-col-20">
+                                <label>AWR To</label>
+                                <input type="text" id="AwrTo" class="form-control awr-code" autocomplete="off" />
+                            </div>
+
+                        </div>
+                        <div class="form-row">
+
+                            <div class="form-col-20">
+                                <label>Warehouse</label>
+                                <input type="text" id="Warehouse" class="form-control multi-pick" data-src="warehouses" autocomplete="off" />
+                            </div>
+
+                            <div class="form-col-20">
+                                <label>Report Option</label>
+                                <div class="sr-radio">
+                                    <label><input type="radio" name="ReportOpt" value="gardenwise" checked /> Garden Wise</label>
+                                    <label><input type="radio" name="ReportOpt" value="sellerwise" /> Seller Wise</label>
+                                </div>
+                            </div>
+
+                            <div class="form-col-20" id="sellerBox" style="display:none;">
+                                <label>Seller</label>
+                                <input type="text" id="Seller" class="form-control multi-pick" data-src="sellers" autocomplete="off" />
+                            </div>
+
+                            <div class="form-col-20">
+                                <label>Garden</label>
+                                <input type="text" id="Garden" class="form-control multi-pick" data-src="gardens" autocomplete="off" />
+                            </div>
+
+                        </div>
+                    </div>
+                    <br />
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="~/Controllers/Test/assets/js/jquery-ui.js"></script>
+<script src="~/Controllers/Test/assets/js/custom.js"></script>
+<script src="~/libraries/MULTI_SELECT_DROPDOWN/jquery.inputpicker.js"></script>
+<script>
+    $(function () {
+
+        function pad(n) { return String(n).padStart(2, "0"); }
+        function fmt(d) { return pad(d.getDate()) + "/" + pad(d.getMonth() + 1) + "/" + d.getFullYear(); }
+
+        var today = new Date();
+        var start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
+        $("#FromDate").val(fmt(start));
+        $("#ToDate").val(fmt(today));
+        $("#Unit").val("All");
+
+        $(".sr-date").datepicker({
+            dateFormat: "dd/mm/yy",
+            changeMonth: true,
+            changeYear: true,
+            showAnim: "",
+            beforeShow: function () {
+                setTimeout(function () { $("#ui-datepicker-div").css("z-index", 99999); }, 0);
+            }
+        });
+        $(document).on("click", ".sr-cal", function () {
+            $($(this).data("target")).datepicker("show");
+        });
+
+        function alertBox(msg, type) {
+            $.confirm({ title: 'AWR Register', type: type || 'red', content: msg, typeAnimated: true, buttons: { Okay: function () { } } });
+        }
+
+        // The pick lists: units, and warehouses / sellers / gardens from the server.
+        var lists = { units: null, warehouses: null, sellers: null, gardens: null };
+
+        $.getJSON('@Url.Action("Units", "AwrPrinting")', function (list) {
+            if (list && list.error) { lists.units = []; alertBox(list.error); return; }
+            lists.units = $.map(list || [], function (u) { return { CODE: u.CODE, NAME: u.NAME }; });
+            if (lists.units.length === 0) { alertBox("No unit is linked to your login. Ask for unit access to be granted."); return; }
+            if (lists.units.length === 1) $("#Unit").val(lists.units[0].CODE);
+        }).fail(function (x) { lists.units = []; alertBox(failText(x, "Unable to load the unit list.")); })
+          .always(function () { loadLookups(""); });   // after Units, not alongside it (two calls at once raced on the API client)
+
+        function failText(x, fallback) {
+            var m = x && x.responseJSON && (x.responseJSON.message || x.responseJSON.error);
+            return fallback + (m ? " " + m : (x && x.status ? " (HTTP " + x.status + ")" : ""));
+        }
+
+        function loadLookups(seller, done, retried) {
+            $.getJSON('@Url.Action("Lookups", "AwrRegister")', { seller: seller || "" }, function (r) {
+                if (r && r.error) { alertBox(r.error); return; }
+                lists.warehouses = $.map(r.Warehouses || [], function (a) { return { CODE: a.CODE, NAME: a.DESCN }; });
+                lists.gardens = $.map(r.Gardens || [], function (a) { return { CODE: a.CODE, NAME: a.DESCN }; });
+                if (!seller) lists.sellers = $.map(r.Sellers || [], function (a) { return { CODE: a.CODE, NAME: a.DESCN }; });
+                if (done) done();
+            }).fail(function (x) {
+                if (!retried) { setTimeout(function () { loadLookups(seller, done, true); }, 500); return; }
+                alertBox(failText(x, "Unable to load the lists."));
+            });
+        }
+
+        $(document).on("click", ".multi-pick", function () {
+            var $input = $(this);
+            $(".inputpicker-wrapped-list").remove();
+            if ($input.data("inputpicker")) { $input.inputpicker("show"); return; }
+            var data = lists[$input.data("src")];
+            if (data === null || data === undefined) return;
+            if ($input.val() === "All") $input.val("");
+            $input.inputpicker({
+                data: data,
+                fields: [
+                    { name: "CODE", text: "CODE", width: "90px" },
+                    { name: "NAME", text: "NAME", width: "220px" }
+                ],
+                fieldValue: "CODE",
+                fieldText: "CODE",
+                multiple: true,
+                checkbox: true,
+                selectAll: true,
+                selectAllText: "All",
+                selectAllClears: true,
+                delimiter: ",",
+                filterOpen: true,
+                headShow: true,
+                autoOpen: true,
+                width: "auto",
+                height: "220px"
+            });
+        });
+
+        // Seller Wise shows the seller list; a seller narrows the garden list.
+        $("input[name='ReportOpt']").on("change", function () {
+            $("#sellerBox").toggle($("input[name='ReportOpt']:checked").val() === "sellerwise");
+        });
+        $("#Seller").on("change", function () {
+            var s = $.trim($(this).val() || "");
+            $("#Garden").val("");
+            if ($("#Garden").data("inputpicker")) $("#Garden").inputpicker("destroy");
+            loadLookups(s.indexOf(",") < 0 ? s : "");
+        });
+
+        function parseDate(s) {
+            var m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
+            return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+        }
+
+        // AWR From / To: the AWR numbers of the period and units, read again when the list is opened.
+        $(document).on("click", ".awr-code", function () {
+            var $input = $(this);
+            var from = $.trim($("#FromDate").val()), to = $.trim($("#ToDate").val());
+            if (!parseDate(from) || !parseDate(to)) { alertBox("Enter the From and To dates first."); return; }
+            $(".inputpicker-wrapped-list").remove();
+            if ($input.data("inputpicker")) $input.inputpicker("destroy");
+            $.getJSON('@Url.Action("AwrNos", "AwrPrinting")', { fromDate: from, toDate: to, units: $.trim($("#Unit").val() || "") }, function (list) {
+                if (list && list.error) { alertBox(list.error); return; }
+                var data = $.map(list || [], function (a) { return { CODE: a.CODE, DESCN: a.DESCN }; });
+                if (data.length === 0) { alertBox("No AWR in this period."); return; }
+                $input.inputpicker({
+                    data: data,
+                    fields: [
+                        { name: "CODE", text: "AWR No", width: "110px" },
+                        { name: "DESCN", text: "Date", width: "100px" }
+                    ],
+                    fieldValue: "CODE",
+                    fieldText: "CODE",
+                    showName: false,
+                    filterOpen: true,
+                    headShow: true,
+                    autoOpen: true,
+                    width: "auto",
+                    height: "220px"
+                });
+            }).fail(function () { alertBox("Unable to load the AWR numbers."); });
+        });
+
+        function requestFailed(xhr) {
+            var body = (xhr && xhr.responseText) || "";
+            if (!xhr || xhr.status === 0) { alertBox("Unable to generate the report: the server could not be reached."); return; }
+            if (/id="Password"|name="Password"/i.test(body)) { alertBox("Your session has expired. Please log in again."); return; }
+            var m = body.match(/<title>([\s\S]*?)<\/title>/i);
+            var detail = $.trim(m ? $("<div>").html(m[1]).text() : body.substring(0, 200));
+            alertBox("Unable to generate the report (HTTP " + xhr.status + ")" + (detail ? ": " + $("<div>").text(detail).html() : "."));
+        }
+
+        function params() {
+            var from = $.trim($("#FromDate").val()), to = $.trim($("#ToDate").val());
+            var f = parseDate(from), t = parseDate(to);
+            if (!f) { alertBox("Please enter the From date (dd/mm/yyyy)."); return null; }
+            if (!t) { alertBox("Please enter the To date (dd/mm/yyyy)."); return null; }
+            if (f > t) { alertBox("From date cannot be after To date."); return null; }
+            var opt = $("input[name='ReportOpt']:checked").val() || "gardenwise";
+            return $.param({
+                fromDate: from,
+                toDate: to,
+                units: $.trim($("#Unit").val() || ""),
+                awrFrom: $.trim($("#AwrFrom").val() || ""),
+                awrTo: $.trim($("#AwrTo").val() || ""),
+                warehouses: $.trim($("#Warehouse").val() || ""),
+                gardens: $.trim($("#Garden").val() || ""),
+                sellers: opt === "sellerwise" ? $.trim($("#Seller").val() || "") : "",
+                reportOpt: opt
+            });
+        }
+
+        $("#graphics").on("click", function () {
+            var q = params();
+            if (!q) return;
+            window.open('@Url.Action("Graphics", "AwrRegister")?' + q, "_blank");
+        });
+
+        $("#html").on("click", function () {
+            var q = params();
+            if (!q) return;
+            window.open('@Url.Action("Html", "AwrRegister")?' + q, "_blank");
+        });
+
+        $("#excel").on("click", function () {
+            var q = params();
+            if (!q) return;
+            var $btn = $(this).prop("disabled", true).text("Please wait...");
+            $.getJSON('@Url.Action("Excel", "AwrRegister")?' + q)
+                .done(function (r) {
+                    if (!r || !r.success) { alertBox((r && r.message) || "Unable to generate the report."); return; }
+                    if (!r.opened) {
+                        window.location.href = '@Url.Action("DownloadExcel", "AwrRegister")?token=' + encodeURIComponent(r.token);
+                    }
+                    alertBox((r.opened ? "Report generated and opened: C:\\classic\\" : "Report downloaded: ") + r.fileName, "green");
+                })
+                .fail(requestFailed)
+                .always(function () { $btn.prop("disabled", false).text("Excel"); });
+        });
+    });
+</script>

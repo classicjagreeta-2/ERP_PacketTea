@@ -557,6 +557,126 @@
             height: 100px;
         }
     </style>
+    @* ===== Classic ERP skin (design only, 2026-11-04) =====
+       Same look as Views\Module\SelectModule.cshtml. Only overrides the pcoded theme's header, side menu and the
+       Menu/Index page - forms, grids and reports keep the old styles. Header stays 56px: the theme and the entry pages
+       (#target sticks at 60px) depend on it. Icons are the theme's feather icons (Font Awesome 4 is already loaded
+       here, so Font Awesome 5 is not added). Remove this block to get the old look back. See CLAUDE.md. *@
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style id="cc-skin">
+        :root {
+            --cc-navy: #002164; --cc-navy-800: #0B2C73; --cc-navy-900: #00163F; --cc-navy-50: #EEF2FA; --cc-navy-100: #E1E8F5;
+            --cc-orange: #FE4D00; --cc-orange-50: #FFF2EB;
+            --cc-bg: #F5F7FB; --cc-border: #E3E8F2; --cc-muted: #5B6B8C; --cc-text: #0B1B3F;
+            --cc-shadow-sm: 0 1px 2px rgba(0,33,100,.06), 0 1px 3px rgba(0,33,100,.05);
+            --cc-shadow-lg: 0 10px 24px rgba(0,33,100,.10), 0 24px 56px rgba(0,33,100,.10);
+            --cc-ring: 0 0 0 .22rem rgba(254,77,0,.22);
+            --cc-ease: 200ms cubic-bezier(.2,.7,.3,1);
+            --cc-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* ---- Top bar ---- */
+        .pcoded .pcoded-header, .pcoded .pcoded-header[header-theme] {
+            background: #fff !important; color: var(--cc-text) !important; font-family: var(--cc-font);
+            border-bottom: 1px solid var(--cc-border); box-shadow: none !important;
+        }
+        .pcoded .pcoded-header .navbar-logo, .pcoded .pcoded-header .navbar-logo[logo-theme] { background: #fff !important; display: flex; align-items: center; }
+        .pcoded .pcoded-header .cc-brand-link { display: flex; align-items: center; padding-left: 6px; text-decoration: none; }
+        .cc-logo { display: block; width: 150px; height: auto; color: var(--cc-navy); }
+        .cc-logo .cc-dot, .cc-logo .cc-tag { fill: var(--cc-orange); }
+        .pcoded .pcoded-header .cc-logo, .pcoded .pcoded-header .cc-logo text { text-transform: none !important; }
+        .pcoded .pcoded-header .cc-icon-btn {
+            width: 34px; height: 34px; padding: 0 !important; border-radius: 6px !important; border: 1px solid var(--cc-border);
+            background: #fff; color: var(--cc-muted) !important; display: inline-flex; align-items: center; justify-content: center;
+            font-size: 15px; line-height: 32px; text-align: center; vertical-align: middle; transition: all var(--cc-ease);
+        }
+        .pcoded .pcoded-header .cc-icon-btn:hover { color: var(--cc-navy) !important; border-color: #CBD4E6; background: var(--cc-bg); }
+        .pcoded .pcoded-header .cc-icon-btn:focus-visible { outline: none; box-shadow: var(--cc-ring); }
+        .pcoded .pcoded-header .navbar-logo a.mobile-menu.cc-icon-btn { top: 11px; right: 14px; }
+        .pcoded .pcoded-header .navbar-container .nav-left > li, .pcoded .pcoded-header .navbar-container .nav-right > li { display: flex; align-items: center; height: 56px; line-height: normal; }
+        .pcoded .pcoded-header .cc-product { font-size: .78rem; font-weight: 600; color: var(--cc-muted); white-space: nowrap; padding-right: 4px; }
+        .pcoded .pcoded-header .cc-pill {
+            display: inline-flex; align-items: center; gap: .45rem; max-width: 360px; height: 30px; padding: 0 .7rem; border-radius: 6px;
+            background: #fff; border: 1px solid var(--cc-border); color: var(--cc-text) !important; font-size: 12px !important; font-weight: 500;
+            line-height: 1; white-space: nowrap; text-decoration: none; cursor: pointer; transition: border-color var(--cc-ease), background var(--cc-ease);
+        }
+        .pcoded .pcoded-header .cc-pill:hover { background: var(--cc-bg); border-color: #CBD4E6; }
+        .pcoded .pcoded-header .cc-pill i { color: var(--cc-muted); font-size: 12px; flex: none; }
+        .pcoded .pcoded-header .cc-pill-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+        .pcoded .pcoded-header .cc-user { display: flex; align-items: center; gap: .65rem; cursor: pointer; }
+        .pcoded .pcoded-header .cc-user-text { display: flex; flex-direction: column; text-align: right; line-height: 1.15; }
+        .pcoded .pcoded-header .cc-user-name { font-weight: 600; font-size: .88rem; color: var(--cc-navy); }
+        .pcoded .pcoded-header .cc-user-role { font-size: .72rem; color: var(--cc-muted); }
+        .pcoded .pcoded-header .cc-avatar {
+            width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none;
+            background: var(--cc-navy); color: #fff; font-weight: 700; font-size: .78rem; box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--cc-border);
+        }
+        .pcoded .pcoded-header .cc-user > .feather { color: var(--cc-muted); font-size: 14px; }
+        .pcoded .pcoded-header .profile-notification { border: 1px solid var(--cc-border); border-radius: 12px; box-shadow: var(--cc-shadow-lg); overflow: hidden; font-family: var(--cc-font); }
+        .pcoded .pcoded-header .profile-notification li a { color: var(--cc-text) !important; font-size: .85rem; }
+        .pcoded .pcoded-header .profile-notification li:hover { background: var(--cc-navy-50); }
+        @@media (max-width: 1199.98px) { .pcoded .pcoded-header .cc-pill { max-width: 240px; } }
+        @@media (max-width: 991.98px) { .pcoded .pcoded-header .cc-pill-item, .pcoded .pcoded-header .cc-product-item { display: none !important; } }
+        @@media (max-width: 575.98px) { .pcoded .pcoded-header .cc-user-text { display: none; } .cc-logo { width: 128px; } }
+
+        /* ---- Side menu (calm, enterprise style - 2026-11-04 rev. 2) ----
+           Solid navy, one text weight, no rounded "pills". An open group gets a slightly darker band; only the screen
+           you are on gets the orange marker. The theme's own salmon left lines (a:before, !important) are switched off. */
+        .pcoded .pcoded-navbar, .pcoded .pcoded-navbar[navbar-theme] { background: #002164 !important; font-family: var(--cc-font); box-shadow: none; }
+        .pcoded .pcoded-navbar .pcoded-inner-navbar, .pcoded .pcoded-navbar .main-menu { background: transparent !important; }
+        .pcoded .pcoded-navbar .pcoded-item.pcoded-left-item { margin: 0; padding: 0; }
+        .pcoded .pcoded-navbar .pcoded-item.pcoded-left-item:first-child { padding-top: 8px; }
+        .pcoded .pcoded-navbar .pcoded-item > li > a {
+            border-radius: 0 !important; margin: 0 !important; color: rgba(255,255,255,.80) !important;
+            font-size: 13px !important; font-weight: 500; line-height: 1.35 !important; letter-spacing: 0;
+            transition: background var(--cc-ease), color var(--cc-ease);
+        }
+        .pcoded .pcoded-navbar .pcoded-item > li > a .pcoded-micon i { color: rgba(255,255,255,.55) !important; font-size: 15px; }
+        .pcoded .pcoded-navbar .pcoded-item > li > a:hover { background: rgba(255,255,255,.05) !important; color: #fff !important; }
+        .pcoded .pcoded-navbar .pcoded-item > li.pcoded-trigger > a { background: rgba(0,0,0,.18) !important; color: #fff !important; }
+        .pcoded .pcoded-navbar .pcoded-item > li.pcoded-trigger > a .pcoded-micon i { color: #fff !important; }
+        .pcoded .pcoded-navbar .pcoded-item > li.pcoded-trigger > .pcoded-submenu,
+        .pcoded .pcoded-navbar .pcoded-item li .pcoded-submenu { background: rgba(0,0,0,.18) !important; }
+        .pcoded .pcoded-navbar .pcoded-item li .pcoded-submenu .pcoded-submenu { background: transparent !important; }
+        .pcoded .pcoded-navbar .pcoded-item li .pcoded-submenu li > a {
+            color: rgba(255,255,255,.68) !important; border-radius: 0; font-size: 12.5px !important; font-weight: 400; line-height: 1.35 !important;
+            transition: background var(--cc-ease), color var(--cc-ease);
+        }
+        .pcoded .pcoded-navbar .pcoded-item li .pcoded-submenu li > a:hover { color: #fff !important; background: rgba(255,255,255,.05) !important; }
+        .pcoded .pcoded-navbar .pcoded-item li .pcoded-submenu li.pcoded-trigger > a { color: #fff !important; font-weight: 500; }
+        /* long names wrap instead of running under the arrow (the theme puts the text in an absolute box as wide
+           as the menu); only in the normal open menu, the theme's collapsed / hidden modes are left alone */
+        .pcoded[vertical-nav-type="expanded"] .pcoded-navbar .pcoded-item > li > a { display: flex !important; align-items: center; gap: 2px; }
+        .pcoded[vertical-nav-type="expanded"] .pcoded-navbar .pcoded-item > li > a > .pcoded-micon { flex: none; }
+        .pcoded[vertical-nav-type="expanded"] .pcoded-navbar .pcoded-item > li > a > .pcoded-mtext {
+            position: static !important; flex: 1; min-width: 0; width: auto !important; white-space: normal !important; padding-left: 6px;
+        }
+        .pcoded .pcoded-navbar .pcoded-item li > a .pcoded-mtext { white-space: normal !important; }
+        .pcoded .pcoded-navbar .pcoded-item li.pcoded-hasmenu > a { padding-right: 34px !important; }
+        /* The theme's active colours / left lines use 5-class selectors with !important; the :not(.cc-x) parts only
+           raise the specificity so these win. */
+        .pcoded .pcoded-navbar[active-item-theme] .pcoded-item li:not(.cc-x):not(.cc-y) > a:before { border-left-width: 0 !important; border-left-color: transparent !important; }
+        /* the screen you are on */
+        .pcoded .pcoded-navbar[active-item-theme] .pcoded-item li.active:not(.cc-x):not(.cc-y) > a,
+        .pcoded .pcoded-navbar[active-item-theme] .pcoded-item li.active:not(.cc-x):not(.cc-y) > a .pcoded-mtext {
+            color: #fff !important; background: rgba(255,255,255,.08) !important; box-shadow: inset 3px 0 0 var(--cc-orange);
+        }
+        .pcoded .pcoded-navbar[active-item-theme] .pcoded-item li.active:not(.cc-x):not(.cc-y) > a .pcoded-mtext { background: transparent !important; box-shadow: none; }
+        /* chevron: always "right", turned down when the group is open */
+        .pcoded[theme-layout="vertical"] .pcoded-navbar .pcoded-item li.pcoded-hasmenu > a:after,
+        .pcoded[theme-layout="vertical"] .pcoded-navbar .pcoded-item li.pcoded-hasmenu[dropdown-icon] > a:after {
+            content: "\e844" !important; color: rgba(255,255,255,.40); font-size: 13px !important; padding-top: 0 !important;
+            top: 50% !important; margin-top: -8px; line-height: 16px; transition: transform var(--cc-ease), color var(--cc-ease) !important;
+        }
+        .pcoded[theme-layout="vertical"] .pcoded-navbar .pcoded-item li.pcoded-hasmenu.pcoded-trigger > a:after { transform: rotate(90deg); color: rgba(255,255,255,.75); }
+        .pcoded .pcoded-navbar .mCSB_scrollTools .mCSB_dragger_bar { background: rgba(255,255,255,.25) !important; }
+
+        /* ---- Content area ---- */
+        .pcoded .pcoded-main-container, .pcoded .pcoded-content, .pcoded .pcoded-inner-content { background: var(--cc-bg); }
+        @@media (prefers-reduced-motion: reduce) { .pcoded .pcoded-header *, .pcoded .pcoded-navbar * { transition: none !important; } }
+    </style>
+
 </head>
 <body>
     @*<div>
@@ -648,12 +768,27 @@
             <nav class="navbar header-navbar pcoded-header">
                 <div class="navbar-wrapper">
 
-                    <div class="navbar-logo" style="background-color: white;" logo-theme="theme1">
-                        <a class="mobile-menu" id="mobile-collapse" href="#!">
+                    @{
+                        // Design only (2026-11-04): values for the Classic top bar - see CLAUDE.md.
+                        var ccUser = PacketTea.Utility.SessionHelper.GetUser();
+                        var ccUserName = ccUser.getUserName ?? "";
+                        var ccInitials = ccUserName.Length >= 2 ? ccUserName.Substring(0, 2).ToUpper() : ccUserName.ToUpper();
+                        var ccModuleName = ccUser.ModuleName;
+                        var ccCompany = Session["currentCompany"] as string;
+                        var ccHasCompany = (ccCompany ?? "").Trim(' ', ',', '[', ']') != "";
+                    }
+                    <div class="navbar-logo cc-logo-area" style="background-color: white;" logo-theme="theme1">
+                        <a class="mobile-menu cc-icon-btn" id="mobile-collapse" href="#!" title="Show / hide menu">
                             <i class="feather icon-menu icon-toggle-right"></i>
                         </a>
-                        <a href="/">
-                            <img class="img-fluid" style="width: 150px;" src="~/Content/libraries/assets/images/logo.png" alt="Theme-Logo">
+                        <a href="/" class="cc-brand-link" aria-label="Classic ERP home">
+                            <svg class="cc-logo" viewBox="0 0 600 165" role="img" aria-label="Classic Consultants">
+                                <path d="M62 12 A50 50 0 0 0 62 112" fill="none" stroke="currentColor" stroke-width="12" />
+                                <circle class="cc-dot" cx="62" cy="62" r="24" />
+                                <text x="140" y="60" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="700" fill="currentColor" letter-spacing="-1.5">classic</text>
+                                <text x="140" y="118" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="700" fill="currentColor" textLength="440" lengthAdjust="spacingAndGlyphs">consultants</text>
+                                <text class="cc-tag" x="142" y="158" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="500" textLength="436" lengthAdjust="spacing">solutions. not just softwares.</text>
+                            </svg>
                         </a>
                         <a class="mobile-options">
                             <i class="feather icon-more-horizontal"></i>
@@ -662,10 +797,25 @@
 
                     <div class="navbar-container container-fluid">
                         <ul class="nav-left">
+                            <li class="cc-product-item"><span class="cc-product">Classic ERP</span></li>
                             <li>
-                                <a href="#!" onclick="javascript:toggleFullScreen()">
+                                <a href="#!" onclick="javascript:toggleFullScreen()" class="cc-icon-btn" title="Full screen">
                                     <i class="feather icon-maximize full-screen"></i>
                                 </a>
+                            </li>
+                            @if (!string.IsNullOrWhiteSpace(ccModuleName))
+                            {
+                                <li class="cc-pill-item">
+                                    <a href="@Url.Action("SelectModule", "Module")" class="cc-pill" title="@ccModuleName - change module">
+                                        <i class="feather icon-grid"></i><span class="cc-pill-text">@ccModuleName</span>
+                                    </a>
+                                </li>
+                            }
+                            @* Same .displayChatbox as before: opens the company / location / year switcher (#sidebar). *@
+                            <li class="cc-pill-item header-notification">
+                                <div class="displayChatbox cc-pill" title="@(ccHasCompany ? ccCompany : "Company") - change company, location or year">
+                                    <i class="feather icon-map-pin"></i><span class="cc-pill-text">@(ccHasCompany ? ccCompany : "Company")</span>
+                                </div>
                             </li>
                             @*<li><label>Current Unit:</label></li>
                                 <li>
@@ -676,18 +826,14 @@
                                 </li>*@
                         </ul>
                         <ul class="nav-right">
-                            <li class="header-notification b-r-default">
-                                <div class="dropdown-primary dropdown">
-                                    <div class="displayChatbox dropdown-toggle" data-toggle="dropdown">
-                                        <i class="feather icon-map-pin"></i>
-                                        <span style="background: #eee; font-weight: bold; ">@Session["currentCompany"]</span>
-                                    </div>
-                                </div>
-                            </li>
                             <li class="user-profile header-notification">
                                 <div class="dropdown-primary dropdown show">
-                                    <div class="dropdown-toggle" data-toggle="dropdown" aria-expanded="true">
-                                        <span>@PacketTea.Utility.SessionHelper.GetUser().getUserName</span>
+                                    <div class="dropdown-toggle cc-user" data-toggle="dropdown" aria-expanded="true">
+                                        <span class="cc-user-text">
+                                            <span class="cc-user-name">@PacketTea.Utility.SessionHelper.GetUser().getUserName</span>
+                                            <span class="cc-user-role">Signed in</span>
+                                        </span>
+                                        <span class="cc-avatar" aria-hidden="true">@ccInitials</span>
                                         <i class="feather icon-chevron-down"></i>
                                     </div>
                                     <ul class="show-notification profile-notification dropdown-menu" data-dropdown-in="fadeIn" data-dropdown-out="fadeOut">
@@ -698,7 +844,7 @@
                                         </li>
                                         <li>
 
-                                            <a href="@Url.Action("Login","Auth")">
+                                            <a href="@(!string.IsNullOrWhiteSpace(System.Configuration.ConfigurationManager.AppSettings["LogoutUrl"]) ? System.Configuration.ConfigurationManager.AppSettings["LogoutUrl"] : Url.Action("Login","Auth"))">
                                                 <i class="feather icon-log-out"></i> Logout
                                             </a>
                                         </li>

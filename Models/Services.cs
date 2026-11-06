@@ -45,11 +45,25 @@ namespace PacketTea.Models
             _client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
+
+        // One HttpClient per call (the connection pool is shared through _handler). The headers set on a
+        // client are per user - a single shared client had them cleared and overwritten by concurrent
+        // requests, so a call could go out with another user's token / database, or none (401 -> login page).
+        private static readonly HttpClientHandler _handler = new HttpClientHandler();
+
+        private static HttpClient NewClient()
+        {
+            var client = new HttpClient(_handler, false);
+            client.BaseAddress = _client.BaseAddress;
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            return client;
+        }
+
         public static async Task<ResponseApiModel<TData>> PostAsync<TData>(string url, object model, Type type = null)
         {
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
             JsonContent content = JsonContent.Create(model);
-            _client.DefaultRequestHeaders.Clear();
+            var _client = NewClient();
             _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
             _client.DefaultRequestHeaders.Add("x-docyear", Utility.SessionHelper.GetUser().DocYear);
 
@@ -77,7 +91,7 @@ namespace PacketTea.Models
         public static async Task<ResponseApiModel<TData>> GetAsync<TData>(string url)
         {
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
-            _client.DefaultRequestHeaders.Clear();
+            var _client = NewClient();
             _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
             _client.DefaultRequestHeaders.Add("x-docyear", Utility.SessionHelper.GetUser().DocYear);
             //_client.DefaultRequestHeaders.Add("x-username", Utility.SessionHelper.GetUser().getUserName ?? "");// Utility.SessionHelper.GetUser().getUserName
@@ -109,6 +123,7 @@ namespace PacketTea.Models
                 if (refresh)
                 {
                     // Retry with new token
+                    _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Utility.SessionHelper.GetUser().getToken);
                     rest = await _client.GetAsync(url);
                 }
             }
@@ -226,7 +241,7 @@ namespace PacketTea.Models
         {
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
             JsonContent content = JsonContent.Create(model);
-            _client.DefaultRequestHeaders.Clear();
+            var _client = NewClient();
             _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
             _client.DefaultRequestHeaders.Add("x-docyear", Utility.SessionHelper.GetUser().DocYear);
             if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getToken))
@@ -253,7 +268,7 @@ namespace PacketTea.Models
         {
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
 
-            _client.DefaultRequestHeaders.Clear();
+            var _client = NewClient();
 
             _client.DefaultRequestHeaders.Add("x-module", "Finance");
 
@@ -302,7 +317,7 @@ namespace PacketTea.Models
 
             JsonContent content = JsonContent.Create(model);
 
-            _client.DefaultRequestHeaders.Clear();
+            var _client = NewClient();
 
             _client.DefaultRequestHeaders.Add("x-module", "Finance");
 
@@ -357,7 +372,7 @@ namespace PacketTea.Models
         {
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
 
-            _client.DefaultRequestHeaders.Clear();
+            var _client = NewClient();
 
             _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
 
@@ -406,7 +421,7 @@ namespace PacketTea.Models
 
             JsonContent content = JsonContent.Create(model);
 
-            _client.DefaultRequestHeaders.Clear();
+            var _client = NewClient();
 
             _client.DefaultRequestHeaders.Add("x-module", "PacketTea");
 
@@ -454,7 +469,7 @@ namespace PacketTea.Models
         {
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
 
-            _client.DefaultRequestHeaders.Clear();
+            var _client = NewClient();
 
             _client.DefaultRequestHeaders.Add("x-module", "Boughtleaf");
 

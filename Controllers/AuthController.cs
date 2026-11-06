@@ -61,6 +61,7 @@ namespace PacketTea.Controllers
                         getUserName = Return.Data.username,
                         UserPassword = model_User.Password,
                         getUserfullName = Return.Data.firstName,
+                        lastLoginDt = Return.Data.lastLoginDt, // shown on Select Module / Company Selection
                     };
                     SessionHelper.SetUser(user);
 
@@ -130,5 +131,6 @@ namespace PacketTea.Controllers
         public string refreshToken { get; set; }
         public double expiresMin { get; set; }
         public TimeSpan expiresTime { get; set; }
+        public DateTime? lastLoginDt { get; set; } // sent by /Users/authenticate (USER LASTLOGGEDON)
     }
 }

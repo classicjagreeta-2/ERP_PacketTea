@@ -8,118 +8,118 @@
 
 <html>
 <head>
-    <meta name="viewport" content="width=device-width" />
-    <link rel="icon" href="~/Content/libraries/assets/images/faviconcc.ico" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="~/Content/libraries/assets/images/favicon.ico" type="image/x-icon">
 
     <title>Classic ERP PacketTea - @System.Configuration.ConfigurationManager.AppSettings["DatabaseType"]</title>
 
+    @* Design only (2026-11-03): Classic navy #002164 / orange #FE4D00 split layout. Self-contained - no Bootstrap,
+       no new files. Field names, ids, the Ajax form and every script below are unchanged; see CLAUDE.md. *@
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Importing fonts from Google */
-        @@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
-
-        /* Reseting */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Poppins', sans-serif;
+        :root {
+            --cc-navy: #002164;
+            --cc-navy-800: #0B2C73;
+            --cc-navy-50: #EEF2FA;
+            --cc-orange: #FE4D00;
+            --cc-border: #E3E8F2;
+            --cc-muted: #5B6B8C;
+            --cc-text: #0B1B3F;
+            --cc-ring: 0 0 0 3.5px rgba(254, 77, 0, .22);
+            --cc-ease: 200ms cubic-bezier(.2, .7, .3, 1);
         }
 
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
         body {
-            background: #ecf0f3;
+            font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            color: var(--cc-text); background: #fff; -webkit-font-smoothing: antialiased;
         }
 
-        .wrapper {
-            max-width: 350px;
-            min-height: 500px;
-            margin: 80px auto;
-            padding: 40px 30px 30px 30px;
-            background-color: #ecf0f3;
-            border-radius: 15px;
-            /*box-shadow: 13px 13px 20px #cbced1, -13px -13px 20px #fff;*/
+        .auth { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr); }
+        @@media (min-width: 992px) { .auth { grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); } }
+
+        /* ----- Left: brand panel ----- */
+        .brand-panel {
+            position: relative; overflow: hidden; color: #fff; display: none; flex-direction: column;
+            padding: 3rem 3.5rem;
+            background:
+                radial-gradient(1200px 600px at 10% -10%, #0E3A93 0%, transparent 60%),
+                radial-gradient(900px 700px at 110% 110%, #0A2C78 0%, transparent 55%),
+                linear-gradient(160deg, #002164 0%, #001A52 55%, #00143F 100%);
         }
+        @@media (min-width: 992px) { .brand-panel { display: flex; } }
+        .brand-art { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+        .brand-panel > *:not(.brand-art) { position: relative; }
+        .brand-logo { width: 250px; color: #fff; }
+        .brand-copy { flex: 1; } /* middle text left blank for now */
+        .brand-foot { display: flex; justify-content: space-between; color: #8EA0C9; font-size: .78rem; }
 
-        .logo {
-            width: 80px;
-            margin: auto;
+        /* ----- Logo ----- */
+        .cc-logo { display: block; height: auto; }
+        .cc-logo .cc-dot { fill: var(--cc-orange); }
+        .cc-logo .cc-tag { fill: var(--cc-orange); }
+        .brand-logo .cc-tag { fill: #FF8A57; }
+
+        /* ----- Right: sign-in form ----- */
+        .form-side { display: flex; flex-direction: column; padding: 2rem 1.25rem; background: #fff; }
+        @@media (min-width: 576px) { .form-side { padding: 2.5rem 3rem; } }
+        .form-wrap { width: 100%; max-width: 400px; margin: auto; }
+        .mobile-logo { width: 190px; color: var(--cc-navy); margin-bottom: 2.5rem; }
+        @@media (min-width: 992px) { .mobile-logo { display: none; } }
+        .form-sub { color: var(--cc-muted); font-size: 1rem; margin-bottom: 2rem; }
+
+        .form-1 { width: 100%; }
+        .cc-group { margin-bottom: 1.1rem; }
+        .cc-label { display: block; font-size: .85rem; font-weight: 600; color: var(--cc-navy); margin-bottom: .4rem; }
+        .cc-field { position: relative; }
+        .cc-field .cc-icon {
+            position: absolute; left: .95rem; top: 50%; transform: translateY(-50%);
+            color: #8A97B3; font-size: .95rem; pointer-events: none; transition: color var(--cc-ease);
         }
-
-            .logo img {
-                width: 100%;
-                height: 80px;
-                object-fit: cover;
-                border-radius: 50%;
-                box-shadow: 0px 0px 3px #5f5f5f, 0px 0px 0px 5px #ecf0f3, 8px 8px 15px #a7aaa7, -8px -8px 15px #fff;
-            }
-
-        .wrapper .name {
-            font-weight: 600;
-            font-size: 1.4rem;
-            letter-spacing: 1.3px;
-            padding-left: 33px;
-            padding-top: 12px;
-            padding-bottom: 12px;
-            color: #555;
+        .cc-field:focus-within .cc-icon { color: var(--cc-orange); }
+        .cc-field input {
+            width: 100%; display: block; font: inherit; font-size: .95rem; color: var(--cc-text);
+            background: #fff; border: 1px solid var(--cc-border); border-radius: 10px;
+            padding: .78rem 2.9rem .78rem 2.7rem; outline: none;
+            transition: border-color var(--cc-ease), box-shadow var(--cc-ease);
         }
-
-        .wrapper .form-field input {
-            width: 100%;
-            display: block;
-            border: none;
-            outline: none;
-            background: none;
-            font-size: 1.2rem;
-            color: #666;
-            padding: 10px 15px 10px 10px;
+        .cc-field input::placeholder { color: #9AA6BF; }
+        .cc-field input:focus { border-color: var(--cc-orange); box-shadow: var(--cc-ring); }
+        .cc-eye {
+            position: absolute; right: .5rem; top: 50%; transform: translateY(-50%);
+            border: 0; background: transparent; color: #8A97B3; cursor: pointer;
+            padding: .35rem .5rem; border-radius: 8px; font-size: .95rem;
         }
+        .cc-eye:hover { color: var(--cc-navy); background: var(--cc-navy-50); }
+        .cc-eye:focus-visible { outline: none; box-shadow: var(--cc-ring); }
 
-        /*.wrapper .form-field {
-            padding-left: 10px;
-            margin-bottom: 20px;
-            border-radius: 20px;
-            box-shadow: inset 8px 8px 8px #cbced1, inset -8px -8px 8px #fff;
+        .cc-row { display: flex; justify-content: flex-end; margin: .2rem 0 1.5rem; }
+        .cc-link { font-size: .87rem; font-weight: 600; color: var(--cc-navy); text-decoration: none; transition: color var(--cc-ease); }
+        .cc-link:hover { color: var(--cc-orange); }
+
+        .btn-signin {
+            width: 100%; height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+            font: inherit; font-size: 1rem; font-weight: 600; color: #fff; cursor: pointer;
+            background: var(--cc-navy); border: 1px solid var(--cc-navy); border-radius: 10px;
+            transition: background var(--cc-ease), transform var(--cc-ease), box-shadow var(--cc-ease);
         }
+        /* arrow drawn in CSS: buttonLoader('stop') puts back the plain text only */
+        .btn-signin::after { content: "\2192"; font-size: 1.1rem; line-height: 1; }
+        .btn-signin.active::after { content: none; }
+        .btn-signin:hover { background: var(--cc-navy-800); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0, 33, 100, .22); }
+        .btn-signin:focus-visible { outline: none; box-shadow: var(--cc-ring); }
+        .btn-signin[disabled] { opacity: .88; cursor: progress; transform: none; box-shadow: none; }
 
-            .wrapper .form-field .fas {
-                color: #555;
-            }*/
+        #notification { display: block; color: #C62828; font-size: .85rem; margin-top: .75rem; }
+        .secure-note { display: flex; align-items: center; justify-content: center; gap: .45rem; font-size: .78rem; color: var(--cc-muted); margin-top: 1.75rem; }
+        .mobile-foot { text-align: center; font-size: .78rem; color: var(--cc-muted); padding-top: 2rem; }
+        @@media (min-width: 992px) { .mobile-foot { display: none; } }
 
-        .wrapper .btn {
-            margin-top: 38px;
-            margin-bottom: 63px;
-            box-shadow: none;
-            width: 100%;
-            height: 40px;
-            background-color: #03A9F4;
-            color: #fff;
-            border-radius: 25px;
-            box-shadow: 3px 3px 3px #b1b1b1, -3px -3px 3px #fff;
-            letter-spacing: 1.3px;
-        }
-
-            .wrapper .btn:hover {
-                background-color: #039BE5;
-            }
-
-        .wrapper a {
-            text-decoration: none;
-            font-size: 0.8rem;
-            color: #03A9F4;
-        }
-
-            .wrapper a:hover {
-                color: #039BE5;
-            }
-
-        @@media(max-width: 380px) {
-            .wrapper {
-                margin: 30px 20px;
-                padding: 40px 15px 15px 15px;
-            }
-        }
+        @@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
     </style>
 
-    <link href="~/Content/login/css/style.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css"
           integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
     <script src="~/Scripts/jquery-3.4.1.min.js"></script>
@@ -129,14 +129,64 @@
 
 </head>
 <body>
-    <div class="wrapper">
-        <div class="logo">
-            @*<img src="https://www.freepnglogos.com/uploads/twitter-logo-png/twitter-bird-symbols-png-logo-0.png" alt="">*@
-            <img src="~/img/lg.png" alt="">
-        </div>
-        <div class="text-center mt-12 name">
-            Classic ERP Login
-        </div>
+    <main class="auth">
+
+        <!-- ============ Left: brand panel ============ -->
+        <section class="brand-panel" aria-label="Classic Consultants">
+            <!-- tea-leaf / garden-row line art -->
+            <svg class="brand-art" viewBox="0 0 800 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <defs>
+                    <g id="ccLeaf">
+                        <path d="M0 0 C 40 -55 130 -60 190 0 C 130 60 40 55 0 0 Z" fill="none" stroke="#fff" stroke-width="1.4" />
+                        <path d="M0 0 L 190 0" stroke="#fff" stroke-width="1.1" />
+                        <path d="M40 0 L 62 -24 M80 0 L 104 -30 M120 0 L 142 -24 M40 0 L 62 24 M80 0 L 104 30 M120 0 L 142 24" stroke="#fff" stroke-width=".9" fill="none" />
+                    </g>
+                </defs>
+                <g fill="none" stroke="#fff" stroke-opacity=".06" stroke-width="1.2">
+                    <path d="M-50 720 C 150 650, 350 790, 550 700 S 850 640, 900 680" />
+                    <path d="M-50 760 C 150 690, 350 830, 550 740 S 850 680, 900 720" />
+                    <path d="M-50 800 C 150 730, 350 870, 550 780 S 850 720, 900 760" />
+                    <path d="M-50 840 C 150 770, 350 910, 550 820 S 850 760, 900 800" />
+                    <path d="M-50 880 C 150 810, 350 950, 550 860 S 850 800, 900 840" />
+                </g>
+                <g opacity=".09">
+                    <use href="#ccLeaf" transform="translate(560 120) rotate(-35) scale(1.5)" />
+                    <use href="#ccLeaf" transform="translate(640 330) rotate(20) scale(1.05)" />
+                    <use href="#ccLeaf" transform="translate(470 250) rotate(-80) scale(.7)" />
+                </g>
+                <circle cx="700" cy="160" r="220" fill="none" stroke="#fff" stroke-opacity=".05" />
+                <circle cx="700" cy="160" r="300" fill="none" stroke="#fff" stroke-opacity=".035" />
+            </svg>
+
+            <svg class="cc-logo brand-logo" viewBox="0 0 600 165" role="img" aria-label="Classic Consultants">
+                <path d="M62 12 A50 50 0 0 0 62 112" fill="none" stroke="currentColor" stroke-width="12" />
+                <circle class="cc-dot" cx="62" cy="62" r="24" />
+                <text x="140" y="60" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="700" fill="currentColor" letter-spacing="-1.5">classic</text>
+                <text x="140" y="118" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="700" fill="currentColor" textLength="440" lengthAdjust="spacingAndGlyphs">consultants</text>
+                <text class="cc-tag" x="142" y="158" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="500" textLength="436" lengthAdjust="spacing">solutions. not just softwares.</text>
+            </svg>
+
+            @* Middle text (headline / value points) left blank for now. *@
+            <div class="brand-copy"></div>
+
+            <div class="brand-foot">
+                <span>&copy; @DateTime.Now.Year Classic Consultants</span>
+                <span>Version @ViewContext.Controller.GetType().Assembly.GetName().Version.ToString(3)</span>
+            </div>
+        </section>
+
+        <!-- ============ Right: sign-in form ============ -->
+        <section class="form-side">
+            <div class="form-wrap">
+                <svg class="cc-logo mobile-logo" viewBox="0 0 600 165" role="img" aria-label="Classic Consultants">
+                    <path d="M62 12 A50 50 0 0 0 62 112" fill="none" stroke="currentColor" stroke-width="12" />
+                    <circle class="cc-dot" cx="62" cy="62" r="24" />
+                    <text x="140" y="60" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="700" fill="currentColor" letter-spacing="-1.5">classic</text>
+                    <text x="140" y="118" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="700" fill="currentColor" textLength="440" lengthAdjust="spacingAndGlyphs">consultants</text>
+                    <text class="cc-tag" x="142" y="158" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="500" textLength="436" lengthAdjust="spacing">solutions. not just softwares.</text>
+                </svg>
+
+                <p class="form-sub">Sign in to continue to Classic ERP.</p>
 
         @using (Ajax.BeginForm("Auth", "Login22", new AjaxOptions
         {
@@ -148,19 +198,25 @@
         }, new { @class = "form-1" }))
         {
 
-            <div class="form-field d-flex align-items-center">
-                <p class="field">
-                    @Html.TextBoxFor(model => model.UserName, new { @class = "userName", @placeholder = "Username", @required = "true" })
-                    <i class="icon-user icon-large"></i>
-                </p>
+            <div class="cc-group">
+                <label class="cc-label" for="UserName">Username</label>
+                <div class="cc-field">
+                    <i class="far fa-user cc-icon" aria-hidden="true"></i>
+                    @Html.TextBoxFor(model => model.UserName, new { @class = "userName", @placeholder = "Enter your username", @required = "true", autocomplete = "username" })
+                </div>
             </div>
-            <div class="form-field d-flex align-items-center">
-                <p class="field">
-                    @Html.PasswordFor(model => model.Password, new { @class = "password", @placeholder = "Password", @required = "true" })
-                    <i class="icon-lock icon-large"></i>
-                </p>
+            <div class="cc-group">
+                <label class="cc-label" for="Password">Password</label>
+                <div class="cc-field">
+                    <i class="fas fa-lock cc-icon" aria-hidden="true"></i>
+                    @Html.PasswordFor(model => model.Password, new { @class = "password", @placeholder = "Enter your password", @required = "true", autocomplete = "current-password" })
+                    <button type="button" class="cc-eye" id="ccTogglePwd" aria-label="Show password"><i class="far fa-eye"></i></button>
+                </div>
             </div>
-            <button type="submit" class="btn mt-3 has-spinner notification" id="btnsubmit">Login</button>
+            <div class="cc-row">
+                <a href="#" class="cc-link">Reset password?</a>
+            </div>
+            <button type="submit" class="btn-signin has-spinner notification" id="btnsubmit">Sign in</button>
             @*@Html.ValidationSummary()*@
             if (!string.IsNullOrEmpty(ViewBag.ErrorMsg))
             {
@@ -181,15 +237,26 @@
         }
         @*@Html.ValidationMessage("CustomError", new { @class = "text-danger" })*@
 
-        <div class="text-center fs-6">
-            <hr style="color:white" />
-        </div>
-        <div class="text-center fs-6">
-            <center>
-                <a href="#" class="text-center">Reset password?</a>
-            </center>
-        </div>
-    </div>
+                <p class="secure-note"><i class="fas fa-shield-alt" aria-hidden="true"></i> Secured connection &middot; Your session is encrypted</p>
+            </div>
+
+            <div class="mobile-foot">&copy; @DateTime.Now.Year Classic Consultants</div>
+        </section>
+    </main>
+
+    <script>
+        // Show / hide password (design only - does not touch the sign-in code below)
+        (function () {
+            var btn = document.getElementById("ccTogglePwd"), pwd = document.getElementById("Password");
+            if (!btn || !pwd) return;
+            btn.addEventListener("click", function () {
+                var show = pwd.type === "password";
+                pwd.type = show ? "text" : "password";
+                btn.innerHTML = show ? '<i class="far fa-eye-slash"></i>' : '<i class="far fa-eye"></i>';
+                btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+            });
+        })();
+    </script>
 
     @if (Session["exception"] != null)
     {
@@ -204,8 +271,6 @@
     }
 
     <script>
-
-
         function OnBegin() {
             debugger;
             $("#btnsubmit").buttonLoader('stop', '');

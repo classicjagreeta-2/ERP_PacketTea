@@ -57,7 +57,7 @@ namespace HRMS
 
         // Controllers of reports implemented in this app (menu items mapped to them in VBMENU_DONE
         // carry MId=REPRT). Add a new ported report's controller name here.
-        private static readonly string[] NativeReportControllers = { "fullsstockactual", "stockreport" };
+        private static readonly string[] NativeReportControllers = { "fullsstockactual", "stockreport", "awrprinting", "awrregister", "teapurchaseregister", "samplegainloss" };
 
         // `lowerPath` is the request's AbsolutePath, which on the server carries the IIS virtual
         // application prefix ("/pt/fullsstockactual/index"); locally the app sits at the site root

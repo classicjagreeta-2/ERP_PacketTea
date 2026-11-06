@@ -3,166 +3,304 @@
 @{
     Layout = null;
     ViewBag.Title = "Classic ERP PacketTea";
+    var ccUser = PacketTea.Utility.SessionHelper.GetUser();
+    var ccUserName = ccUser.getUserName ?? "";
+    var ccInitials = ccUserName.Length >= 2 ? ccUserName.Substring(0, 2).ToUpper() : ccUserName.ToUpper();
+    var ccModuleName = ccUser.ModuleName;
+    var ccCompany = Session["currentCompany"] as string;
 }
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewBag.Title</title>
+    <!-- Favicon icon -->
+    <link rel="icon" href="~/Content/libraries/assets/images/favicon.ico" type="image/x-icon">
 
-<title>@ViewBag.Title</title>
-<!-- Favicon icon -->
-<link rel="icon" href="~/Content/libraries/assets/images/faviconcc.ico" type="image/x-icon">
-<!-- Google font-->
-<link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600,800" rel="stylesheet">
-<!-- Required Fremwork -->
-<link rel="stylesheet" type="text/css" href="/Content/libraries/bower_components/bootstrap/css/bootstrap.min.css">
-<!-- feather Awesome -->
-<link rel="stylesheet" type="text/css" href="/Content/libraries/assets/icon/feather/css/feather.css">
-<!-- Style.css -->
-<link rel="stylesheet" type="text/css" href="/Content/libraries/assets/css/style.css">
-<!-- jpro forms css -->
-<link href="/Content/libraries/assets/pages/j-pro/css/demo.css" rel="stylesheet" />
-<link href="/Content/libraries/assets/pages/j-pro/css/font-awesome.min.css" rel="stylesheet" />
-<link href="/Content/libraries/assets/pages/j-pro/css/j-forms.css" rel="stylesheet" />
-<link href="/Content/libraries/assets/pages/j-pro/css/j-pro-modern.css" rel="stylesheet" />
-<style>
-    .select2-container--default .select2-selection--single {
-        color: #fff;
-        height: 41px;
-    }
+    @* Design only (2026-11-03): same Classic navy / orange look as the login page. Self-contained - no Bootstrap, no new
+       files. The Ajax form, the three DropDownListFor (ids, onchange submit), checkbox1 and the BACK / NEXT targets are
+       unchanged; see CLAUDE.md. *@
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" crossorigin="anonymous">
+    <style>
+        :root {
+            --cc-navy: #002164; --cc-navy-800: #0B2C73; --cc-navy-50: #EEF2FA; --cc-navy-100: #E1E8F5;
+            --cc-orange: #FE4D00; --cc-orange-50: #FFF2EB;
+            --cc-bg: #F5F7FB; --cc-border: #E3E8F2; --cc-muted: #5B6B8C; --cc-text: #0B1B3F;
+            --cc-radius: 14px; --cc-radius-sm: 10px;
+            --cc-shadow-sm: 0 1px 2px rgba(0,33,100,.06), 0 1px 3px rgba(0,33,100,.05);
+            --cc-shadow: 0 4px 12px rgba(0,33,100,.06), 0 12px 32px rgba(0,33,100,.06);
+            --cc-ring: 0 0 0 .22rem rgba(254,77,0,.22);
+            --cc-ease: 200ms cubic-bezier(.2,.7,.3,1);
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { margin: 0; min-height: 100%; }
+        body {
+            font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: radial-gradient(900px 420px at 50% -120px, #E6ECF8 0%, transparent 70%), var(--cc-bg);
+            color: var(--cc-text); -webkit-font-smoothing: antialiased;
+            display: flex; flex-direction: column; min-height: 100vh;
+        }
+        .wrap { width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 24px; }
+        @@media (max-width: 575.98px) { .wrap { padding: 0 16px; } }
 
-    input[type="checkbox"] {
-        background-color: #fff;
-        margin: 0;
-        font: inherit;
-        color: currentColor;
-        width: 1.5em;
-        height: 1.5em;
-        border: 0.15em solid currentColor;
-        border-radius: 0.15em;
-        transform: translateY(-0.075em);
-        border: 2px solid #01a9ac;
-    }
+        /* Top bar */
+        .cc-topbar { position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,.9); backdrop-filter: saturate(160%) blur(10px); border-bottom: 1px solid var(--cc-border); }
+        .cc-topbar .wrap { height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+        .cc-brand { display: flex; align-items: center; min-width: 0; }
+        .cc-context { display: flex; align-items: center; gap: .5rem; margin-left: 1rem; min-width: 0; }
+        .cc-context-item { display: inline-flex; align-items: center; gap: .45rem; max-width: 360px; padding: .35rem .75rem; border-radius: 999px; background: var(--cc-navy-50); color: var(--cc-navy); font-size: .78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cc-context-item i { color: var(--cc-orange); font-size: .72rem; flex: none; }
+        .cc-context-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+        @@media (max-width: 1199.98px) { .cc-context-item { max-width: 220px; } }
+        @@media (max-width: 991.98px) { .cc-context { display: none; } }
+        .cc-logo { display: block; width: 168px; height: auto; color: var(--cc-navy); }
+        .cc-logo .cc-dot, .cc-logo .cc-tag { fill: var(--cc-orange); }
+        .cc-product { font-size: .78rem; font-weight: 600; color: var(--cc-muted); border-left: 1px solid var(--cc-border); padding-left: 1rem; margin-left: 1rem; white-space: nowrap; }
+        .cc-user { display: flex; align-items: center; gap: .75rem; }
+        .cc-user-text { text-align: right; }
+        .cc-user-name { font-weight: 600; font-size: .9rem; color: var(--cc-navy); line-height: 1.15; }
+        .cc-user-role { font-size: .75rem; color: var(--cc-muted); }
+        .cc-avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--cc-navy); color: #fff; font-weight: 700; font-size: .8rem; box-shadow: 0 0 0 3px #fff, 0 0 0 4px var(--cc-border); flex: none; }
+        @@media (max-width: 767.98px) { .cc-product { display: none; } }
+        @@media (max-width: 575.98px) { .cc-user-text { display: none; } .cc-logo { width: 132px; } }
 
-    /* .pull-center {
-        text-align: -moz-center;
-        text-align: -webkit-center;
-    }*/
-    .pull-center {
-        text-align: center;
-    }
-</style>
-<div class="pcoded">
-    <div class="pcoded-container navbar-wrapper">
-        @*<nav class="navbar header-navbar pcoded-header">
-            </nav>*@
-        <!-- Sidebar chat start -->
-        <!-- Sidebar inner chat start-->
-        <!-- Sidebar inner chat end-->
-        <div class="pcoded-main-container">
-            <div>
-                <div class="pcoded-content">
-                    <div class="pcoded-inner-content">
-                        <!-- Main-body start -->
-                        <div class="main-body">
-                            <div class="page-wrapper">
-                                <!-- Page-header start -->
-                                <div class="page-header">
-                                    <div class="row align-items-end">
-                                        <div class="col-lg-8">
-                                            <div class="page-header-title">
-                                                <div class="d-inline">
-                                                    <h4>COMPANY SELECTION</h4>
-                                                    <span style="color:darkblue"> User Name : @PacketTea.Utility.SessionHelper.GetUser().getUserName </span>
-                                                    <span style="color:darkblue"> , Your Last Login Date :  @PacketTea.Utility.SessionHelper.GetUser().lastLoginDt</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-lg-4">
-                                            <div class="page-header-breadcrumb">
+        /* Stepper + module chip */
+        .page-head { padding: 1rem 0 0; display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+        .cc-stepper { display: flex; align-items: center; gap: .5rem; list-style: none; padding: 0; margin: 0; flex-wrap: wrap; justify-content: center; }
+        .cc-step { display: flex; align-items: center; gap: .5rem; font-size: .82rem; font-weight: 600; color: #8A97B3; }
+        .cc-step-dot { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; border: 2px solid #C9D2E3; background: #fff; font-size: .62rem; }
+        .cc-step.is-done, .cc-step.is-current { color: var(--cc-navy); }
+        .cc-step.is-done .cc-step-dot { background: var(--cc-navy); border-color: var(--cc-navy); color: #fff; }
+        .cc-step.is-current .cc-step-dot { border-color: var(--cc-orange); box-shadow: 0 0 0 4px var(--cc-orange-50); }
+        .cc-step.is-current .cc-step-dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cc-orange); }
+        .cc-step-line { width: 40px; height: 2px; background: #D6DDEA; border-radius: 2px; }
+        .cc-step-line.is-done { background: var(--cc-navy); }
+        .module-chip { display: inline-flex; align-items: center; gap: .6rem; flex-wrap: wrap; justify-content: center; max-width: 100%; background: #fff; border: 1px solid var(--cc-border); border-radius: 999px; padding: .3rem .4rem .3rem .85rem; font-size: .8rem; box-shadow: var(--cc-shadow-sm); }
+        .module-chip i { color: var(--cc-muted); }
+        .module-chip .label { color: var(--cc-muted); }
+        .module-chip strong { color: var(--cc-navy); font-weight: 600; }
+        .module-chip a { font-weight: 600; font-size: .8rem; text-decoration: none; color: var(--cc-navy); background: var(--cc-navy-50); border-radius: 999px; padding: .25rem .75rem; transition: all var(--cc-ease); }
+        .module-chip a:hover { color: var(--cc-orange); background: var(--cc-orange-50); }
 
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <!-- Page-header end -->
-                                <!-- Page body start -->
-                                <div class="page-body pull-center">
+        /* Card */
+        .ws-card { max-width: 420px; margin: 1rem auto 0; padding: 1.25rem 1.5rem; background: #fff; border: 1px solid var(--cc-border); border-radius: var(--cc-radius); box-shadow: var(--cc-shadow); text-align: left; }
+        @@media (max-width: 575.98px) { .ws-card { padding: 1.1rem 1rem 1rem; margin-top: .75rem; } }
+        .ws-head { display: flex; align-items: center; gap: .75rem; margin-bottom: .35rem; }
+        .ws-badge { width: 38px; height: 38px; border-radius: 11px; flex: none; display: grid; place-items: center; background: linear-gradient(145deg, #0B2C73, #002164); color: #fff; font-size: .95rem; box-shadow: 0 6px 14px rgba(0,33,100,.22); position: relative; }
+        .ws-badge::after { content: ""; position: absolute; right: -3px; top: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--cc-orange); border: 2px solid #fff; }
+        .ws-title { font-size: 1.25rem; font-weight: 700; letter-spacing: -.02em; color: var(--cc-navy); margin: 0; }
+        .ws-meta { font-size: .78rem; color: var(--cc-muted); display: flex; flex-direction: column; gap: .1rem; margin-bottom: 1rem; }
+        .ws-meta strong { color: var(--cc-navy); font-weight: 600; }
 
-                                    @using (Ajax.BeginForm("CompanySelection", "ProjectStartUp_CompanySelection",
-                                                  new AjaxOptions
-                                                  {
-                                                      OnSuccess = "OnSuccess",
-                                                      OnFailure = "OnFailure",
-                                                      LoadingElementId = "OnLoading",
-                                                      OnBegin = "OnBegin"
+        /* The old j-pro wrapper elements stay in the markup; they are only reset here. */
+        .ws-card form, .ws-card .j-wrapper, .ws-card .j-content { margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+        .j-unit { margin-bottom: .7rem; }
+        .j-input { position: relative; }
+        .j-input label { display: block; font-size: .8rem; font-weight: 600; color: var(--cc-navy); margin-bottom: .3rem; }
+        .cc-select { position: relative; }
+        .cc-select > i { position: absolute; left: .95rem; top: 50%; transform: translateY(-50%); color: #8A97B3; font-size: .9rem; pointer-events: none; transition: color var(--cc-ease); z-index: 1; }
+        .cc-select::after { content: "\f107"; font-family: "Font Awesome 5 Free"; font-weight: 900; position: absolute; right: .95rem; top: 50%; transform: translateY(-50%); color: #8A97B3; pointer-events: none; font-size: .9rem; }
+        .cc-select:focus-within > i { color: var(--cc-orange); }
+        .cc-select select {
+            width: 100%; font: inherit; font-size: .88rem; color: var(--cc-text);
+            padding: .5rem 2.5rem .5rem 2.5rem; border: 1px solid var(--cc-border); border-radius: var(--cc-radius-sm);
+            background: #fff; -webkit-appearance: none; -moz-appearance: none; appearance: none; cursor: pointer; outline: none;
+            transition: border-color var(--cc-ease), box-shadow var(--cc-ease);
+        }
+        .cc-select select:hover { border-color: #CBD4E6; }
+        .cc-select select:focus { border-color: var(--cc-orange); box-shadow: var(--cc-ring); }
 
-                                                  }, new { @class = "form-1 form-group pull-center" }))
-                                    {
-                                        <div>
-                                            <div class="col-sm-12">
-                                                <!-- Login card start -->
-                                                <div class="card">
-                                                    <div class="card-block">
-                                                        <div class="j-wrapper j-wrapper-400">
-                                                            <form action="j-pro/php/action.php" method="post" class="j-pro" id="j-pro" novalidate="">
-                                                                <!-- end /.header -->
-                                                                <div class="well well-lg j-content col-sm-12">
-                                                                    <!-- start login -->
-                                                                    <div class="j-unit">
-                                                                        <div class="j-input" style="text-align:left;">
-                                                                            <label for="exampleInputName1">Select Company</label>
-                                                                            @Html.DropDownListFor(m => m.CompanyName, @Model.CompanyList, "Please select", new { @class = "js-example-disabled-results col-sm-11", @id = "ddlcompany", @required = "required", onchange = "document.forms[0].submit();" })
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="j-unit" style="text-align:left;">
-                                                                        <div class="j-input">
-                                                                            <label for="exampleInputName1">Select Location</label>
-                                                                            @Html.DropDownListFor(m => m.LocationName, @Model.LocationList, "Please select", new { @class = "js-example-disabled-results col-sm-11", @id = "ddlcompany", @required = "required", onchange = "document.forms[0].submit();" })
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="j-unit" style="text-align:left;">
-                                                                        <div class="j-input">
-                                                                            <label for="exampleInputName1">Select Financial Year</label>
-                                                                            @Html.DropDownListFor(m => m.FinancialYear, @Model.FinancialYearList, "Please select", new { @class = "js-example-disabled-results col-sm-11", @id = "ddlcompany", @required = "required", onchange = "document.forms[0].submit();" })
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="j-unit">
-                                                                        <div class="j-input" style="text-align: left">
-                                                                            <div class="checkbox-zoom zoom-primary" style="margin: 10px 0px 0px 0px;">
-                                                                                <div class="border-checkbox-group border-checkbox-group-primary">
-                                                                                    <input class="border-checkbox" type="checkbox" id="checkbox1" checked>
-                                                                                    <label class="border-checkbox-label" for="checkbox1">SET AS DEFAULT</label>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                    <!-- end /.content -->
-                                                                    <div class="modal-footer">
-                                                                        <div class="form-group">
-                                                                            <a href=@Url.Action("Index","Menu") class="btn btn-danger m-r-20">
-                                                                                <i class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></i> BACK
-                                                                            </a>
-                                                                            <a href=@Url.Action("Index","Menu") class="btn btn-primary pull-right">
-                                                                                <i class="glyphicon glyphicon-floppy-disk" aria-hidden="true"></i> NEXT
-                                                                            </a>
-                                                                            @*<button type="submit" class="btn btn-primary pull-right">NEXT</button>*@
-                                                                        </div>
-                                                                    </div>
-                                                                    <!-- end /.footer -->
-                                                                </div>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!-- Login card end -->
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                                <!-- Page body end -->
-                            </div>
-                        </div>
-                        <!-- Main-body end -->
-                    </div>
+        /* Set as default: the existing checkbox, drawn as a switch */
+        .default-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: var(--cc-bg); border: 1px solid var(--cc-border); border-radius: var(--cc-radius-sm); padding: .55rem .85rem; margin: 1rem 0; }
+        .default-row label { cursor: pointer; margin: 0; }
+        .default-row label strong { display: block; font-size: .82rem; color: var(--cc-navy); font-weight: 600; }
+        .default-row label span { font-size: .74rem; color: var(--cc-muted); }
+        #checkbox1 { -webkit-appearance: none; -moz-appearance: none; appearance: none; flex: none; width: 2.6em; height: 1.45em; margin: 0; border-radius: 999px; background: #D6DDEA; position: relative; cursor: pointer; outline: none; border: 0; transition: background var(--cc-ease), box-shadow var(--cc-ease); }
+        #checkbox1::after { content: ""; position: absolute; top: 3px; left: 3px; width: calc(1.45em - 6px); height: calc(1.45em - 6px); border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,33,100,.25); transition: transform var(--cc-ease); }
+        #checkbox1:checked { background: var(--cc-orange); }
+        #checkbox1:checked::after { transform: translateX(1.15em); }
+        #checkbox1:focus-visible { box-shadow: var(--cc-ring); }
+
+        .ws-actions { display: flex; justify-content: flex-end; gap: .75rem; }
+        .ws-actions .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-width: 110px; padding: .55rem 1.1rem; border-radius: var(--cc-radius-sm); font-size: .88rem; font-weight: 600; text-decoration: none; transition: all var(--cc-ease); }
+        .ws-actions .btn:focus-visible { outline: none; box-shadow: var(--cc-ring); }
+        .btn-back { background: transparent; color: var(--cc-navy); border: 1px solid var(--cc-border); }
+        .btn-back:hover { background: var(--cc-navy-50); border-color: var(--cc-navy-100); }
+        .btn-next { background: var(--cc-navy); color: #fff; border: 1px solid var(--cc-navy); }
+        .btn-next:hover { background: var(--cc-navy-800); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,33,100,.22); }
+        @@media (max-width: 400px) { .ws-actions .btn { flex: 1; min-width: 0; } }
+
+        .help-note { text-align: center; font-size: .76rem; color: var(--cc-muted); margin: .75rem 0; }
+        main { flex: 1; }
+        .cc-footer { font-size: .74rem; color: var(--cc-muted); padding-bottom: .75rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
+        /* Fits the window: no page scrollbar on a normal screen; a short window still scrolls. */
+        @@media (min-height: 720px) and (min-width: 576px) { html, body { height: 100%; overflow: hidden; } body { min-height: 0; } }
+        @@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+    </style>
+</head>
+<body>
+
+    <header class="cc-topbar">
+        <div class="wrap">
+            <div class="cc-brand">
+                <svg class="cc-logo" viewBox="0 0 600 165" role="img" aria-label="Classic Consultants">
+                    <path d="M62 12 A50 50 0 0 0 62 112" fill="none" stroke="currentColor" stroke-width="12" />
+                    <circle class="cc-dot" cx="62" cy="62" r="24" />
+                    <text x="140" y="60" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="700" fill="currentColor" letter-spacing="-1.5">classic</text>
+                    <text x="140" y="118" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="700" fill="currentColor" textLength="440" lengthAdjust="spacingAndGlyphs">consultants</text>
+                    <text class="cc-tag" x="142" y="158" font-family="Inter, Arial, sans-serif" font-size="21" font-weight="500" textLength="436" lengthAdjust="spacing">solutions. not just softwares.</text>
+                </svg>
+                <span class="cc-product">Classic ERP</span>
+                @if (!string.IsNullOrWhiteSpace(ccModuleName) || (ccCompany ?? "").Trim(' ', ',', '[', ']') != "")
+                {
+                    @* Design only: what was chosen in this session - module (user info) and Session["currentCompany"]. *@
+                    <span class="cc-context" title="@ccModuleName @(string.IsNullOrWhiteSpace(ccCompany) ? "" : "· " + ccCompany)">
+                        @if (!string.IsNullOrWhiteSpace(ccModuleName))
+                        {
+                            <span class="cc-context-item"><i class="fas fa-th-large" aria-hidden="true"></i><span class="cc-context-text">@ccModuleName</span></span>
+                        }
+                        @if ((ccCompany ?? "").Trim(' ', ',', '[', ']') != "")
+                        {
+                            <span class="cc-context-item"><i class="fas fa-building" aria-hidden="true"></i><span class="cc-context-text">@ccCompany</span></span>
+                        }
+                    </span>
+                }
+            </div>
+            <div class="cc-user">
+                <div class="cc-user-text">
+                    <div class="cc-user-name">@ccUserName</div>
+                    <div class="cc-user-role">Signed in</div>
                 </div>
+                <div class="cc-avatar" aria-hidden="true">@ccInitials</div>
             </div>
         </div>
-    </div>
-</div>
+    </header>
+
+    <main class="wrap">
+        <div class="page-head">
+            <ol class="cc-stepper" aria-label="Progress">
+                <li class="cc-step is-done"><span class="cc-step-dot"><i class="fas fa-check"></i></span>Sign in</li>
+                <li class="cc-step-line is-done" aria-hidden="true"></li>
+                <li class="cc-step is-done"><span class="cc-step-dot"><i class="fas fa-check"></i></span>Module</li>
+                <li class="cc-step-line is-done" aria-hidden="true"></li>
+                <li class="cc-step is-current" aria-current="step"><span class="cc-step-dot"></span>Company</li>
+            </ol>
+            @if (!string.IsNullOrWhiteSpace(ccUser.ModuleName))
+            {
+                <div class="module-chip">
+                    <i class="fas fa-th-large" aria-hidden="true"></i>
+                    <span class="label">Module</span>
+                    <strong>@ccUser.ModuleName</strong>
+                    <a href="@Url.Action("SelectModule","Module")">Change</a>
+                </div>
+            }
+        </div>
+
+        @using (Ajax.BeginForm("CompanySelection", "ProjectStartUp_CompanySelection",
+                      new AjaxOptions
+                      {
+                          OnSuccess = "OnSuccess",
+                          OnFailure = "OnFailure",
+                          LoadingElementId = "OnLoading",
+                          OnBegin = "OnBegin"
+
+                      }, new { @class = "form-1 form-group pull-center" }))
+        {
+            <section class="ws-card" aria-labelledby="wsTitle">
+                <div class="ws-head">
+                    <div class="ws-badge"><i class="fas fa-building" aria-hidden="true"></i></div>
+                    <h1 class="ws-title" id="wsTitle">Company selection</h1>
+                </div>
+                <div class="ws-meta">
+                    <span>User Name : <strong>@PacketTea.Utility.SessionHelper.GetUser().getUserName</strong></span>
+                    @if (PacketTea.Utility.SessionHelper.GetUser().lastLoginDt != null)
+                    {
+                        <span>Your Last Login Date : @PacketTea.Utility.SessionHelper.GetUser().lastLoginDt.Value.ToString("dd MMM yyyy, hh:mm tt")</span>
+                    }
+                </div>
+
+                <div class="j-wrapper j-wrapper-400">
+                    <form action="j-pro/php/action.php" method="post" class="j-pro" id="j-pro" novalidate="">
+                        <div class="well well-lg j-content col-sm-12">
+                            <div class="j-unit">
+                                <div class="j-input">
+                                    <label for="ddlcompany">Select Company</label>
+                                    <div class="cc-select">
+                                        <i class="fas fa-building" aria-hidden="true"></i>
+                                        @Html.DropDownListFor(m => m.CompanyName, @Model.CompanyList, "Please select", new { @class = "js-example-disabled-results col-sm-12", @id = "ddlcompany", @required = "required", onchange = "document.forms[0].submit();" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="j-unit">
+                                <div class="j-input">
+                                    <label>Select Location</label>
+                                    <div class="cc-select">
+                                        <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                                        @Html.DropDownListFor(m => m.LocationName, @Model.LocationList, "Please select", new { @class = "js-example-disabled-results col-sm-12", @id = "ddlcompany", @required = "required", onchange = "document.forms[0].submit();" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="j-unit">
+                                <div class="j-input">
+                                    <label>Select Financial Year</label>
+                                    <div class="cc-select">
+                                        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+                                        @Html.DropDownListFor(m => m.FinancialYear, @Model.FinancialYearList, "Please select", new { @class = "js-example-disabled-results col-sm-12", @id = "ddlcompany", @required = "required", onchange = "document.forms[0].submit();" })
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="default-row">
+                                <label class="border-checkbox-label" for="checkbox1">
+                                    <strong>SET AS DEFAULT</strong>
+                                    <span>Open this company automatically next time</span>
+                                </label>
+                                <input class="border-checkbox" type="checkbox" id="checkbox1" checked>
+                            </div>
+
+                            <div class="ws-actions">
+                                <a href=@Url.Action("Index","Menu") class="btn btn-back">
+                                    <i class="fas fa-arrow-left" aria-hidden="true"></i> BACK
+                                </a>
+                                <a href=@Url.Action("Index","Menu") class="btn btn-next">
+                                    NEXT <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                                </a>
+                                @*<button type="submit" class="btn btn-primary pull-right">NEXT</button>*@
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        }
+
+        <p class="help-note"><i class="fas fa-info-circle" aria-hidden="true"></i>&nbsp; Pick the company, location and financial year to work in.</p>
+    </main>
+
+    <footer class="wrap cc-footer">
+        <span>© @DateTime.Now.Year Classic Consultants · solutions. not just softwares.</span>
+        <span>Version @ViewContext.Controller.GetType().Assembly.GetName().Version.ToString(3)</span>
+    </footer>
+
+    <script>
+        // "SET AS DEFAULT": when the switch is on, NEXT first saves the chosen company / location / year as this
+        // user's default (Module/SaveDefaultCompany), then goes on to the same page as before. It never blocks NEXT.
+        (function () {
+            var next = document.querySelector('.ws-actions .btn-next');
+            var sw = document.getElementById('checkbox1');
+            if (!next || !sw || !window.fetch) return;
+            next.addEventListener('click', function (e) {
+                if (!sw.checked) return;
+                e.preventDefault();
+                var href = next.href, gone = false;
+                function go() { if (!gone) { gone = true; window.location.href = href; } }
+                fetch('@Url.Action("SaveDefaultCompany", "Module")', {
+                    method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).then(go, go);
+                setTimeout(go, 3000);
+            });
+        })();
+    </script>
+</body>
+</html>
