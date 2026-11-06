@@ -266,6 +266,7 @@ namespace PacketTea.Models
 
         public static async Task<ResponseApiModel<TData>> FinanceGetAsync<TData>(string url)
         {
+            var userinfo = Utility.SessionHelper.GetUser();
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
 
             var _client = NewClient();
@@ -287,9 +288,11 @@ namespace PacketTea.Models
 
             if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getDbName))
             {
-                var financedb = Utility.SessionHelper.GetUser().Financedb;
+                var financedb = userinfo.ClassicControl.FirstOrDefault().SCHEMA_FINANCE;
                 _client.DefaultRequestHeaders.Add(
-                    "x-database", financedb);
+                    "x-database",
+                    financedb
+                );
             }
 
             if (!string.IsNullOrEmpty(_dbType))
@@ -313,6 +316,7 @@ namespace PacketTea.Models
     object model,
     Type type = null)
         {
+            var userinfo = Utility.SessionHelper.GetUser();
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
 
             JsonContent content = JsonContent.Create(model);
@@ -336,8 +340,7 @@ namespace PacketTea.Models
 
             if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getDbName))
             {
-                var financedb = Utility.SessionHelper.GetUser().Financedb;
-
+                var financedb = userinfo.ClassicControl.FirstOrDefault().SCHEMA_FINANCE;
                 _client.DefaultRequestHeaders.Add(
                     "x-database",
                     financedb
@@ -370,6 +373,7 @@ namespace PacketTea.Models
         // working unchanged -- only the schema/connection changes.
         public static async Task<ResponseApiModel<TData>> SalesGetAsync<TData>(string url)
         {
+            var userinfo = Utility.SessionHelper.GetUser();
             ResponseApiModel<TData> tdata = new ResponseApiModel<TData>();
 
             var _client = NewClient();
@@ -391,7 +395,7 @@ namespace PacketTea.Models
 
             if (!string.IsNullOrEmpty(Utility.SessionHelper.GetUser().getDbName))
             {
-                var salesdb = Utility.SessionHelper.GetUser().Salesdb;
+                var salesdb = userinfo.ClassicControl.FirstOrDefault().SCHEMA_SALES;
                 _client.DefaultRequestHeaders.Add(
                     "x-database", salesdb);
             }

@@ -1,19 +1,20 @@
-﻿using System;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using PacketTea.Models;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
+using System.Data.Common;
+using System.Data.OleDb;
+using System.IO;
 using System.Linq;
-using System.Net.Http.Headers;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Web;
 using System.Web.Script.Serialization;
-using System.IO;
-using System.Security.Cryptography;
-using System.Data.OleDb;
-using System.Data;
-using System.Data.Common;
-using System.Reflection;
-using DocumentFormat.OpenXml.Spreadsheet;
 
 namespace PacketTea
 {
@@ -43,10 +44,17 @@ namespace PacketTea
             private string _firstname;
             private string _financedb;
             private string _salesdb;
+            private List<CLASSIC_CONTROL> _classicControl = new List<CLASSIC_CONTROL>();   // NEW
             public string DocYear
             {
                 get { return _docyear; }
                 set { _docyear = value; }
+            }
+
+            public List<CLASSIC_CONTROL> ClassicControl
+            {
+                get { return _classicControl; }
+                set { _classicControl = value ?? new List<CLASSIC_CONTROL>(); }
             }
             public string Address
             {

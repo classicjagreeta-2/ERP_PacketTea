@@ -27,15 +27,32 @@ namespace Finance.Controllers.TEA
 
         private async Task<Dictionary<string, string>> GetAllowedTypesAsync()
         {
-            var response = await Services.SalesGetAsync<Dictionary<string, string>>("/api/ProductionEntry/GetAllowedTypes");
-            return (response.IsSuccessStatusCode ? response.Data : null) ?? new Dictionary<string, string> { { "PT", "Packet Tea" } };
+            var defaultTypes = new Dictionary<string, string> { { "PT", "Packet Tea" } };
+
+            // check failed: return null, the caller shows the error
+            if (!await DbSchemaCheck.IsSalesSchemaValidAsync())
+                return null;
+
+            var response = await Services.SalesGetAsync<Dictionary<string, string>>(
+                "/api/ProductionEntry/GetAllowedTypes");
+
+            return (response != null && response.IsSuccessStatusCode && response.Data != null && response.Data.Count > 0)
+                ? response.Data
+                : defaultTypes;
         }
 
         // Backs the list page's "New" inline row Unit picker.
         private async Task<List<UnitOption>> GetUnitsForUserAsync()
         {
-            var response = await Services.SalesGetAsync<List<UnitOption>>("/api/ProductionEntry/GetUnitsForUser");
-            return (response.IsSuccessStatusCode ? response.Data : null) ?? new List<UnitOption>();
+            // check failed: return null, the caller shows the error
+            if (!await DbSchemaCheck.IsSalesSchemaValidAsync())
+                return null;
+
+            var response = await Services.SalesGetAsync<List<UnitOption>>(
+                "/api/ProductionEntry/GetUnitsForUser");
+
+            return (response != null && response.IsSuccessStatusCode ? response.Data : null)
+                   ?? new List<UnitOption>();
         }
 
         // GET: ProductionEntry

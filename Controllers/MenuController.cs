@@ -48,6 +48,7 @@ namespace PacketTea.Controllers
                         throw new Exception("Finance schema not declare in control file .");
                     }
                     var userinfo = Utility.SessionHelper.GetUser();
+                    userinfo.ClassicControl = new List<CLASSIC_CONTROL> { dbResp.Data };   // wrap in a list     // the whole list
                     userinfo.Financedb = dbResp.Data.SCHEMA_FINANCE;
                     userinfo.Factorydb = dbResp.Data.SCHEMA_FACTORY;
                     userinfo.Salesdb = dbResp.Data.SCHEMA_SALES;
