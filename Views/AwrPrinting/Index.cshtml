@@ -134,7 +134,9 @@
             $($(this).data("target")).datepicker("show");
         });
 
+        $.ajaxPrefilter(function (o, orig, jq) { jq.fail(function (x) { window.__ajaxInfo = " [HTTP " + x.status + " " + (x.statusText || "") + " - " + o.url + "] " + String(x.responseText || "").replace(/<[^>]*>/g, " ").replace(/ +/g, " ").substring(0, 300); }); });
         function alertBox(msg, type) {
+            if (/Unable to load/.test(msg) && window.__ajaxInfo) msg += window.__ajaxInfo;
             $.confirm({
                 title: 'AWR Printing',
                 type: type || 'red',

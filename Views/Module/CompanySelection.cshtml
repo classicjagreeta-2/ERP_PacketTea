@@ -132,6 +132,9 @@
         .btn-next:hover { background: var(--cc-navy-800); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,33,100,.22); }
         @@media (max-width: 400px) { .ws-actions .btn { flex: 1; min-width: 0; } }
 
+        .cc-select.is-invalid select { border-color: #D92D20; box-shadow: 0 0 0 .2rem rgba(217,45,32,.15); }
+        .cc-field-error { display: none; margin-top: .25rem; font-size: .74rem; font-weight: 600; color: #D92D20; }
+        .cc-select.is-invalid + .cc-field-error { display: block; }
         .help-note { text-align: center; font-size: .76rem; color: var(--cc-muted); margin: .75rem 0; }
         main { flex: 1; }
         .cc-footer { font-size: .74rem; color: var(--cc-muted); padding-bottom: .75rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
@@ -261,7 +264,7 @@
                             </div>
 
                             <div class="ws-actions">
-                                <a href=@Url.Action("Index","Menu") class="btn btn-back">
+                                <a href=@Url.Action("SelectModule","Module") class="btn btn-back">
                                     <i class="fas fa-arrow-left" aria-hidden="true"></i> BACK
                                 </a>
                                 <a href=@Url.Action("Index","Menu") class="btn btn-next">
@@ -283,6 +286,34 @@
         <span>Version @ViewContext.Controller.GetType().Assembly.GetName().Version.ToString(3)</span>
     </footer>
 
+    <script>
+        // Validation: NEXT is blocked until Company, Location and Financial Year are all selected.
+        (function () {
+            var next = document.querySelector('.ws-actions .btn-next');
+            var card = document.querySelector('.ws-card');
+            if (!next || !card) return;
+            var selects = card.querySelectorAll('.cc-select select');
+            Array.prototype.forEach.call(selects, function (s) {
+                var box = s.parentNode;
+                var lbl = box.parentNode.querySelector('label');
+                var msg = document.createElement('div');
+                msg.className = 'cc-field-error';
+                msg.setAttribute('role', 'alert');
+                msg.textContent = 'Please select ' + (lbl ? lbl.textContent.replace(/^Select\s+/i, '') : 'a value') + '.';
+                box.parentNode.insertBefore(msg, box.nextSibling);
+                s.addEventListener('change', function () { if (s.value) box.classList.remove('is-invalid'); });
+            });
+            next.addEventListener('click', function (e) {
+                var firstBad = null;
+                Array.prototype.forEach.call(selects, function (s) {
+                    var empty = !s.value || !String(s.value).trim();
+                    s.parentNode.classList.toggle('is-invalid', empty);
+                    if (empty && !firstBad) firstBad = s;
+                });
+                if (firstBad) { e.preventDefault(); e.stopImmediatePropagation(); firstBad.focus(); }
+            });
+        })();
+    </script>
     <script>
         // "SET AS DEFAULT": when the switch is on, NEXT first saves the chosen company / location / year as this
         // user's default (Module/SaveDefaultCompany), then goes on to the same page as before. It never blocks NEXT.
